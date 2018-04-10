@@ -12,15 +12,17 @@ type Kong struct {
 	Terminate func(int)
 }
 
+// New creates a new Kong parser into grammar.
 func New(name, description string, grammar interface{}) (*Kong, error) {
 	if name == "" {
 		name = filepath.Base(os.Args[0])
 	}
+	model := &ApplicationModel{
+		Name:        name,
+		Description: description,
+	}
 	return &Kong{
-		Model: &ApplicationModel{
-			Name:        name,
-			Description: description,
-		},
+		Model:     model,
 		Terminate: os.Exit,
 	}, nil
 }
