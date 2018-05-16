@@ -1,14 +1,18 @@
 package kong
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+	"strconv"
+)
 
 type Decoder interface {
-	Decode(input string, target reflect.Value) error
+	Decode(scan *Scanner, target reflect.Value) error
 }
 
-type DecoderFunc func(input string, target reflect.Value) error
+type DecoderFunc func(scan *Scanner, target reflect.Value) error
 
-func (d DecoderFunc) Decode(input string, target reflect.Value) error { return d(input, target) }
+func (d DecoderFunc) Decode(scan *Scanner, target reflect.Value) error { return d(scan, target) }
 
 var _ Decoder = DecoderFunc(nil)
 
@@ -69,8 +73,29 @@ var _ NamedDecoder = &namedDecoder{}
 var (
 	namedDecoders = map[string]NamedDecoder{}
 	typeDecoders  = map[reflect.Type]TypeDecoder{}
-	kindDecoders  = map[reflect.Kind]KindDecoder{}
+	kindDecoders  map[reflect.Kind]KindDecoder
 )
+
+func DecoderForField(field reflect.StructField) Decoder {
+	name, ok := field.Tag.Lookup("type")
+	if ok {
+		if decoder, ok := namedDecoders[name]; ok {
+			return decoder
+		}
+	}
+	return DecoderForType(field.Type)
+}
+
+func DecoderForType(typ reflect.Type) Decoder {
+	var decoder Decoder
+	var ok bool
+	if decoder, ok = typeDecoders[typ]; ok {
+		return decoder
+	} else if decoder, ok = kindDecoders[typ.Kind()]; ok {
+		return decoder
+	}
+	return missingDecoder
+}
 
 // RegisterDecoder registers decoders.
 //
@@ -91,5 +116,60 @@ func RegisterDecoder(decoders ...Decoder) {
 }
 
 func init() {
-	RegisterDecoder()
+	intDecoder := NewKindDecoder(reflect.Int, func(scan *Scanner, target reflect.Value) error {
+		n, err := strconv.ParseInt(scan.PopValue("int"), 10, 64)
+		if err != nil {
+			return err
+		}
+		target.SetInt(n)
+		return nil
+	})
+	uintDecoder := NewKindDecoder(reflect.Uint, func(scan *Scanner, target reflect.Value) error {
+		n, err := strconv.ParseUint(scan.PopValue("uint"), 10, 64)
+		if err != nil {
+			return err
+		}
+		target.SetUint(n)
+		return nil
+	})
+	kindDecoders = map[reflect.Kind]KindDecoder{
+		reflect.Int:    intDecoder,
+		reflect.Int8:   intDecoder,
+		reflect.Int16:  intDecoder,
+		reflect.Int32:  intDecoder,
+		reflect.Int64:  intDecoder,
+		reflect.Uint:   uintDecoder,
+		reflect.Uint8:  uintDecoder,
+		reflect.Uint16: uintDecoder,
+		reflect.Uint32: uintDecoder,
+		reflect.Uint64: uintDecoder,
+		reflect.Float32: NewKindDecoder(reflect.Float32, func(scan *Scanner, target reflect.Value) error {
+			n, err := strconv.ParseFloat(scan.PopValue("float"), 32)
+			if err != nil {
+				return err
+			}
+			target.SetFloat(n)
+			return nil
+		}),
+		reflect.Float64: NewKindDecoder(reflect.Float64, func(scan *Scanner, target reflect.Value) error {
+			n, err := strconv.ParseFloat(scan.PopValue("float"), 64)
+			if err != nil {
+				return err
+			}
+			target.SetFloat(n)
+			return nil
+		}),
+		reflect.String: NewKindDecoder(reflect.String, func(scan *Scanner, target reflect.Value) error {
+			target.SetString(scan.PopValue("string"))
+			return nil
+		}),
+		reflect.Bool: NewKindDecoder(reflect.Bool, func(scan *Scanner, target reflect.Value) error {
+			target.SetBool(true)
+			return nil
+		}),
+	}
+}
+
+var missingDecoder DecoderFunc = func(scan *Scanner, target reflect.Value) error {
+	return fmt.Errorf("no decoder for %q (of type %T)", target.String(), target.Type())
 }

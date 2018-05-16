@@ -1,44 +1,44 @@
 package kong
 
-import "flag"
+import "reflect"
 
-type Value = flag.Getter
+type Application = Node
 
-type ApplicationModel struct {
-	Name        string
-	Description string
-
-	NodeModel
+// A Branch is a command or positional argument that results in a branch in the command tree.
+type Branch struct {
+	Command  *Command
+	Argument *Argument
 }
 
-type NodeModel struct {
-	Groups []*GroupModel
-	// Positional arguments.
-	Arguments []*ArgumentModel
+type Command = Node
+
+type Node struct {
+	Name       string
+	Help       string
+	Flags      []*Flag
+	Positional []*Value
+	Children   []*Branch
 }
 
-type GroupModel struct {
-	// Flags.
-	Flags []*FlagModel
-	// Command hierarchy.
-	Commands []*CommandModel
+type Value struct {
+	Name     string
+	Help     string
+	Decoder  Decoder
+	Value    reflect.Value
+	Required bool
 }
 
-type ValueModel struct {
-	Name  string
-	Help  string
-	Value flag.Value
+type Positional = Value
+
+type Argument struct {
+	Node
+	Argument *Value
 }
 
-type CommandModel struct {
-	NodeModel
-}
-
-type ArgumentModel struct {
-	ValueModel
-}
-
-type FlagModel struct {
-	ValueModel
-	Short rune
+type Flag struct {
+	Value
+	Placeholder string
+	Env         string
+	Short       rune
+	Default     string
 }
