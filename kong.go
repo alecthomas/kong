@@ -49,10 +49,9 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
 func (k *Kong) reset(node *Node) {
 	for _, flag := range node.Flags {
+		flag.Value.Value.Set(reflect.Zero(flag.Value.Value.Type()))
 		if flag.Default != "" {
-			flag.Decoder.Decode(Scan(flag.Default), flag.Value.Value)
-		} else {
-			flag.Value.Value.Set(reflect.Zero(flag.Value.Value.Type()))
+			flag.Decoder.Decode(&DecoderContext{Value: &flag.Value}, Scan(flag.Default), flag.Value.Value)
 		}
 	}
 	for _, pos := range node.Positional {
@@ -76,35 +75,39 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 			switch {
 			// -- indicates end of parsing. All remaining arguments are treated as positional arguments only.
 			case token.Value == "--":
+				args := []string{}
 				for {
 					token = scan.Pop()
 					if token.Type == EOLToken {
 						break
 					}
-					scan.PushTyped(token.Value, PositionalArgumentToken)
+					args = append(args, token.Value)
+				}
+				for i := range args {
+					scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
 			// Long flag.
 			case strings.HasPrefix(token.Value, "--"):
 				// Parse it and push the tokens.
 				parts := strings.SplitN(token.Value[2:], "=", 2)
-				scan.PushTyped(parts[0], FlagToken)
 				if len(parts) > 1 {
 					scan.PushTyped(parts[1], FlagValueToken)
 				}
+				scan.PushTyped(parts[0], FlagToken)
 
 				// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
-				scan.PushTyped(token.Value[1:2], ShortFlagToken)
 				scan.PushTyped(token.Value[2:], ShortFlagTailToken)
+				scan.PushTyped(token.Value[1:2], ShortFlagToken)
 
 			default:
 				scan.PushTyped(token.Value, PositionalArgumentToken)
 			}
 
 		case ShortFlagTailToken:
-			scan.PushTyped(token.Value[0:1], ShortFlagToken)
 			scan.PushTyped(token.Value[1:], ShortFlagTailToken)
+			scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
 			if err := matchFlags(node.Flags, token, scan, func(f *Flag) bool {
@@ -140,7 +143,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 
 				case branch.Argument != nil:
 					arg := branch.Argument.Argument
-					if err := arg.Decoder.Decode(scan, arg.Value); err == nil {
+					if err := arg.Decoder.Decode(&DecoderContext{Value: arg}, scan, arg.Value); err == nil {
 						command = append(command, "<"+arg.Name+">")
 						cmd, err := k.applyNode(scan, &branch.Argument.Node)
 						if err != nil {
@@ -171,7 +174,7 @@ func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag)
 	for _, flag := range flags {
 		// Found a matching flag.
 		if flag.Name == token.Value {
-			err := flag.Decoder.Decode(scan, flag.Value.Value)
+			err := flag.Decoder.Decode(&DecoderContext{Value: &flag.Value}, scan, flag.Value.Value)
 			if err != nil {
 				return err
 			}

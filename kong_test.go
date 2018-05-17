@@ -1,12 +1,9 @@
 package kong
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/alecthomas/repr"
 )
 
 func mustNew(t *testing.T, cli interface{}) *Kong {
@@ -41,7 +38,6 @@ func TestArgument(t *testing.T) {
 		} `arg:"true"`
 	}
 	p := mustNew(t, &cli)
-	repr.Println(p.Model, repr.Hide(reflect.Value{}))
 	cmd, err := p.Parse([]string{"10", "delete"})
 	require.NoError(t, err)
 	require.Equal(t, 10, cli.Id.Id)
@@ -60,4 +56,14 @@ func TestResetWithDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", cli.Flag)
 	require.Equal(t, "default", cli.FlagWithDefault)
+}
+
+func TestSlice(t *testing.T) {
+	var cli struct {
+		Slice []int
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"--slice=1,2,3"})
+	require.NoError(t, err)
+	require.Equal(t, []int{1, 2, 3}, cli.Slice)
 }

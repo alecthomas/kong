@@ -85,6 +85,7 @@ func buildNode(v reflect.Value) *Node {
 				Help:     help,
 				Decoder:  decoder,
 				Value:    fv,
+				Field:    ft,
 				Required: !optional || required,
 			}
 			if arg {

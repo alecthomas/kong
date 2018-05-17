@@ -4,15 +4,23 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
-type Decoder interface {
-	Decode(scan *Scanner, target reflect.Value) error
+type DecoderContext struct {
+	// Value being decoded into.
+	Value *Value
 }
 
-type DecoderFunc func(scan *Scanner, target reflect.Value) error
+type Decoder interface {
+	Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
+}
 
-func (d DecoderFunc) Decode(scan *Scanner, target reflect.Value) error { return d(scan, target) }
+type DecoderFunc func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
+
+func (d DecoderFunc) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	return d(ctx, scan, target)
+}
 
 var _ Decoder = DecoderFunc(nil)
 
@@ -76,6 +84,8 @@ var (
 	kindDecoders  map[reflect.Kind]KindDecoder
 )
 
+// DecoderForField finds a decoder for a struct field.
+//
 func DecoderForField(field reflect.StructField) Decoder {
 	name, ok := field.Tag.Lookup("type")
 	if ok {
@@ -116,7 +126,7 @@ func RegisterDecoder(decoders ...Decoder) {
 }
 
 func init() {
-	intDecoder := NewKindDecoder(reflect.Int, func(scan *Scanner, target reflect.Value) error {
+	intDecoder := NewKindDecoder(reflect.Int, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 		n, err := strconv.ParseInt(scan.PopValue("int"), 10, 64)
 		if err != nil {
 			return err
@@ -124,7 +134,7 @@ func init() {
 		target.SetInt(n)
 		return nil
 	})
-	uintDecoder := NewKindDecoder(reflect.Uint, func(scan *Scanner, target reflect.Value) error {
+	uintDecoder := NewKindDecoder(reflect.Uint, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 		n, err := strconv.ParseUint(scan.PopValue("uint"), 10, 64)
 		if err != nil {
 			return err
@@ -143,7 +153,7 @@ func init() {
 		reflect.Uint16: uintDecoder,
 		reflect.Uint32: uintDecoder,
 		reflect.Uint64: uintDecoder,
-		reflect.Float32: NewKindDecoder(reflect.Float32, func(scan *Scanner, target reflect.Value) error {
+		reflect.Float32: NewKindDecoder(reflect.Float32, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 			n, err := strconv.ParseFloat(scan.PopValue("float"), 32)
 			if err != nil {
 				return err
@@ -151,7 +161,7 @@ func init() {
 			target.SetFloat(n)
 			return nil
 		}),
-		reflect.Float64: NewKindDecoder(reflect.Float64, func(scan *Scanner, target reflect.Value) error {
+		reflect.Float64: NewKindDecoder(reflect.Float64, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 			n, err := strconv.ParseFloat(scan.PopValue("float"), 64)
 			if err != nil {
 				return err
@@ -159,17 +169,35 @@ func init() {
 			target.SetFloat(n)
 			return nil
 		}),
-		reflect.String: NewKindDecoder(reflect.String, func(scan *Scanner, target reflect.Value) error {
+		reflect.String: NewKindDecoder(reflect.String, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 			target.SetString(scan.PopValue("string"))
 			return nil
 		}),
-		reflect.Bool: NewKindDecoder(reflect.Bool, func(scan *Scanner, target reflect.Value) error {
+		reflect.Bool: NewKindDecoder(reflect.Bool, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 			target.SetBool(true)
+			return nil
+		}),
+		reflect.Slice: NewKindDecoder(reflect.Slice, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+			el := target.Type().Elem()
+			sep, ok := ctx.Value.Field.Tag.Lookup("sep")
+			if !ok {
+				sep = ","
+			}
+			childScanner := Scan(strings.Split(scan.PopValue("slice"), sep)...)
+			childDecoder := DecoderForType(el)
+			for childScanner.Peek().Type != EOLToken {
+				childValue := reflect.New(el).Elem()
+				err := childDecoder.Decode(ctx, childScanner, childValue)
+				if err != nil {
+					return err
+				}
+				target.Set(reflect.Append(target, childValue))
+			}
 			return nil
 		}),
 	}
 }
 
-var missingDecoder DecoderFunc = func(scan *Scanner, target reflect.Value) error {
-	return fmt.Errorf("no decoder for %q (of type %T)", target.String(), target.Type())
+var missingDecoder DecoderFunc = func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	return fmt.Errorf("no decoder for %q (of type %T) for field %q", target.String(), target.Type(), ctx.Value.Field.Name)
 }

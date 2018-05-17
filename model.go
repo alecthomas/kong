@@ -24,6 +24,7 @@ type Value struct {
 	Name     string
 	Help     string
 	Decoder  Decoder
+	Field    reflect.StructField
 	Value    reflect.Value
 	Required bool
 }

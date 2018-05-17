@@ -60,16 +60,19 @@ func (t Token) IsValue() bool {
 }
 
 type Scanner struct {
-	raw  []string
 	args []Token
 }
 
 func Scan(args ...string) *Scanner {
-	s := &Scanner{raw: args}
+	s := &Scanner{}
 	for _, arg := range args {
 		s.args = append(s.args, Token{Value: arg})
 	}
 	return s
+}
+
+func (s *Scanner) Len() int {
+	return len(s.args)
 }
 
 func (s *Scanner) Pop() Token {
