@@ -21,6 +21,7 @@ type Node struct {
 }
 
 type Value struct {
+	Flag     bool // True if flag, false if positional argument.
 	Name     string
 	Help     string
 	Decoder  Decoder

@@ -76,7 +76,7 @@ func TestResetWithDefaults(t *testing.T) {
 	require.Equal(t, "default", cli.FlagWithDefault)
 }
 
-func TestSlice(t *testing.T) {
+func TestFlagSlice(t *testing.T) {
 	var cli struct {
 		Slice []int `help:""`
 	}
@@ -84,6 +84,18 @@ func TestSlice(t *testing.T) {
 	_, err := parser.Parse([]string{"--slice=1,2,3"})
 	require.NoError(t, err)
 	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+}
+
+func TestArgSlice(t *testing.T) {
+	var cli struct {
+		Slice []int `help:"" arg:""`
+		Flag  bool  `help:""`
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"1", "2", "3", "--flag"})
+	require.NoError(t, err)
+	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+	require.Equal(t, true, cli.Flag)
 }
 
 func TestUnsupportedfieldErrors(t *testing.T) {

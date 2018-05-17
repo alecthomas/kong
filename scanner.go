@@ -86,6 +86,22 @@ func (s *Scanner) PopValue(context string) string {
 	return t.Value
 }
 
+// PopWhile predicate returns true.
+func (s *Scanner) PopWhile(predicate func(Token) bool) (values []string) {
+	for predicate(s.Peek()) {
+		values = append(values, s.Pop().Value)
+	}
+	return
+}
+
+// PopUntil predicate returns true.
+func (s *Scanner) PopUntil(predicate func(Token) bool) (values []string) {
+	for !predicate(s.Peek()) {
+		values = append(values, s.Pop().Value)
+	}
+	return
+}
+
 func (s *Scanner) Peek() Token {
 	if len(s.args) == 0 {
 		return Token{Type: EOLToken}

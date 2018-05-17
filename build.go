@@ -100,6 +100,7 @@ func buildNode(v reflect.Value) *Node {
 			if arg {
 				node.Positional = append(node.Positional, &value)
 			} else {
+				value.Flag = true
 				node.Flags = append(node.Flags, &Flag{
 					Value:       value,
 					Short:       short,

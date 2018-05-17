@@ -181,18 +181,20 @@ func timeDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
 }
 
 func intDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	n, err := strconv.ParseInt(scan.PopValue("int"), 10, 64)
+	value := scan.PopValue("int")
+	n, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid int %q", value)
 	}
 	target.SetInt(n)
 	return nil
 }
 
 func uintDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	n, err := strconv.ParseUint(scan.PopValue("uint"), 10, 64)
+	value := scan.PopValue("uint")
+	n, err := strconv.ParseUint(value, 10, 64)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid uint %q", value)
 	}
 	target.SetUint(n)
 	return nil
@@ -200,9 +202,10 @@ func uintDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
 
 func floatDecoder(bits int) DecoderFunc {
 	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-		n, err := strconv.ParseFloat(scan.PopValue("float"), bits)
+		value := scan.PopValue("float")
+		n, err := strconv.ParseFloat(value, bits)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid float %q", value)
 		}
 		target.SetFloat(n)
 		return nil
@@ -215,7 +218,15 @@ func sliceDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) erro
 	if !ok {
 		sep = ","
 	}
-	childScanner := Scan(strings.Split(scan.PopValue("list"), sep)...)
+	var childScanner *Scanner
+	if ctx.Value.Flag {
+		childScanner = Scan(strings.Split(scan.PopValue("list"), sep)...)
+	} else {
+		tokens := scan.PopUntil(func(t Token) bool {
+			return !t.IsValue() || (t.Type == UntypedToken && strings.HasPrefix(t.Value, "-"))
+		})
+		childScanner = Scan(tokens...)
+	}
 	childDecoder := DecoderForType(el)
 	if childDecoder == nil {
 		return fmt.Errorf("no decoder for element type of %s", target.Type())
