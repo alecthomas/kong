@@ -37,7 +37,10 @@ func buildNode(v reflect.Value) *Node {
 			name = strings.ToLower(strings.Join(camelCase(ft.Name), "-"))
 		}
 		help := ft.Tag.Get("help")
-		decoder := DecoderForField(ft)
+		decoder, err := DecoderForField(ft)
+		if err != nil && ft.Type.Kind() != reflect.Struct {
+			panic(err)
+		}
 		dflt := ft.Tag.Get("default")
 		placeholder := ft.Tag.Get("placeholder")
 		if placeholder == "" {
