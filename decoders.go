@@ -13,7 +13,12 @@ type DecoderContext struct {
 	Value *Value
 }
 
+// A Decoder knows how to decode text into a Go value.
 type Decoder interface {
+	// Decode scan into target.
+	//
+	// "ctx" contains context about the value being decoded that may be useful
+	// to some decoders.
 	Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
 }
 
@@ -61,6 +66,12 @@ func (k *kindDecoder) Kind() reflect.Kind { return k.kind }
 
 var _ KindDecoder = &kindDecoder{}
 
+// A NamedDecoder will be used if the value field has a "type" tag matching Name().
+//
+// eg.
+//
+// 		Field string `type:"colour"`
+//   	kong.RegisterDecoder(kong.NewNamedDecoder("colour", ...))
 type NamedDecoder interface {
 	Name() string
 	Decoder
@@ -98,7 +109,7 @@ func DecoderForField(field reflect.StructField) Decoder {
 	return DecoderForType(field.Type)
 }
 
-// DecoderForType finds a decoder via a type or kind.
+// DecoderForType finds a decoder from a type or kind.
 //
 // Will return nil if a decoder can not be determined.
 func DecoderForType(typ reflect.Type) Decoder {
@@ -125,7 +136,7 @@ func RegisterDecoder(decoders ...Decoder) {
 		case NamedDecoder:
 			namedDecoders[decoder.Name()] = decoder
 		default:
-			fail("unsupported decoder type " + reflect.TypeOf(decoder).String())
+			fail("unsupported decoder type %T", decoder)
 		}
 	}
 }
@@ -220,11 +231,10 @@ func sliceDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) erro
 	}
 	var childScanner *Scanner
 	if ctx.Value.Flag {
+		// If decoding a flag, we need an argument.
 		childScanner = Scan(strings.Split(scan.PopValue("list"), sep)...)
 	} else {
-		tokens := scan.PopUntil(func(t Token) bool {
-			return !t.IsValue() || (t.Type == UntypedToken && strings.HasPrefix(t.Value, "-"))
-		})
+		tokens := scan.PopUntil(func(t Token) bool { return !t.IsValue() })
 		childScanner = Scan(tokens...)
 	}
 	childDecoder := DecoderForType(el)

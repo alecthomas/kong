@@ -61,7 +61,7 @@ func (k *Kong) reset(node *Node) {
 	for _, flag := range node.Flags {
 		flag.Value.Value.Set(reflect.Zero(flag.Value.Value.Type()))
 		if flag.Default != "" {
-			flag.Decoder.Decode(&DecoderContext{Value: &flag.Value}, Scan(flag.Default), flag.Value.Value)
+			flag.Decode(Scan(flag.Default))
 		}
 	}
 	for _, pos := range node.Positional {
@@ -144,7 +144,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
-				err := arg.Decoder.Decode(&DecoderContext{Value: arg}, scan, arg.Value)
+				err := arg.Decode(scan)
 				if err != nil {
 					return nil, err
 				}
@@ -169,7 +169,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 
 				case branch.Argument != nil:
 					arg := branch.Argument.Argument
-					if err := arg.Decoder.Decode(&DecoderContext{Value: arg}, scan, arg.Value); err == nil {
+					if err := arg.Decode(scan); err == nil {
 						command = append(command, "<"+arg.Name+">")
 						cmd, err := k.applyNode(scan, &branch.Argument.Node)
 						if err != nil {
@@ -200,7 +200,7 @@ func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag)
 	for _, flag := range flags {
 		// Found a matching flag.
 		if flag.Name == token.Value {
-			err := flag.Decoder.Decode(&DecoderContext{Value: &flag.Value}, scan, flag.Value.Value)
+			err := flag.Decode(scan)
 			if err != nil {
 				return err
 			}

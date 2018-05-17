@@ -2,6 +2,7 @@ package kong
 
 import (
 	"strconv"
+	"strings"
 )
 
 //go:generate stringer -type=TokenType
@@ -48,8 +49,12 @@ func (t Token) IsAny(types ...TokenType) bool {
 	return false
 }
 
+// IsValue returns true if token is usable as a parseable value.
+//
+// A parseable value is either a value typed token, or an untyped token NOT starting with a hyphen.
 func (t Token) IsValue() bool {
-	return t.IsAny(FlagValueToken, ShortFlagTailToken, PositionalArgumentToken, UntypedToken)
+	return t.IsAny(FlagValueToken, ShortFlagTailToken, PositionalArgumentToken) ||
+		(t.Type == UntypedToken && !strings.HasPrefix(t.Value, "-"))
 }
 
 type Scanner struct {
@@ -77,7 +82,7 @@ func (s *Scanner) Pop() Token {
 	return arg
 }
 
-// PopValue or panic with Error.
+// PopValue token, or panic with Error.
 func (s *Scanner) PopValue(context string) string {
 	t := s.Pop()
 	if !t.IsValue() {

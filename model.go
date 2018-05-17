@@ -31,6 +31,10 @@ type Value struct {
 	Format   string // Formatting directive, if applicable.
 }
 
+func (v *Value) Decode(scan *Scanner) error {
+	return v.Decoder.Decode(&DecoderContext{Value: v}, scan, v.Value)
+}
+
 type Positional = Value
 
 type Argument struct {
