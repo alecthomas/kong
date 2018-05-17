@@ -36,10 +36,10 @@ func buildNode(v reflect.Value) *Node {
 		if name == "" {
 			name = strings.ToLower(strings.Join(camelCase(ft.Name), "-"))
 		}
-		help := ft.Tag.Get("help")
-		decoder, err := DecoderForField(ft)
-		if err != nil && ft.Type.Kind() != reflect.Struct {
-			panic(err)
+		decoder := DecoderForField(ft)
+		help, ok := ft.Tag.Lookup("help")
+		if !ok {
+			continue
 		}
 		dflt := ft.Tag.Get("default")
 		placeholder := ft.Tag.Get("placeholder")
@@ -53,11 +53,13 @@ func buildNode(v reflect.Value) *Node {
 		// group := ft.Tag.Get("group")
 		_, required := ft.Tag.Lookup("required")
 		_, optional := ft.Tag.Lookup("optional")
+		// Force field to be an argument, not a flag.
 		_, arg := ft.Tag.Lookup("arg")
 		env := ft.Tag.Get("env")
+		format := ft.Tag.Get("format")
 
-		// Nested structs are commands.
-		if ft.Type.Kind() == reflect.Struct {
+		// Nested structs are either commands or args.
+		if ft.Type.Kind() == reflect.Struct && decoder == nil {
 			child := buildNode(fv)
 			child.Help = help
 
@@ -65,8 +67,8 @@ func buildNode(v reflect.Value) *Node {
 			// a positional argument is provided to the child, and move it to the branching argument field.
 			if arg {
 				if len(child.Positional) == 0 {
-					panic(fmt.Errorf("positional branch %s.%s must have at least one child positional argument",
-						v.Type().Name(), ft.Name))
+					fail("positional branch %s.%s must have at least one child positional argument",
+						v.Type().Name(), ft.Name)
 				}
 				value := child.Positional[0]
 				child.Positional = child.Positional[1:]
@@ -83,6 +85,9 @@ func buildNode(v reflect.Value) *Node {
 				node.Children = append(node.Children, &Branch{Command: child})
 			}
 		} else {
+			if decoder == nil {
+				fail("no decoder for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
+			}
 			value := Value{
 				Name:     name,
 				Help:     help,
@@ -90,6 +95,7 @@ func buildNode(v reflect.Value) *Node {
 				Value:    fv,
 				Field:    ft,
 				Required: !optional || required,
+				Format:   format,
 			}
 			if arg {
 				node.Positional = append(node.Positional, &value)

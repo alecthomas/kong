@@ -1,7 +1,6 @@
 package kong
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -18,12 +17,6 @@ const (
 	ShortFlagTailToken      // <tail>
 	PositionalArgumentToken // <arg>
 )
-
-type TokenAssertionError struct{ err error }
-
-func (t TokenAssertionError) Error() string {
-	return t.err.Error()
-}
 
 type Token struct {
 	Value string
@@ -84,11 +77,11 @@ func (s *Scanner) Pop() Token {
 	return arg
 }
 
-// PopValue or panic with TokenAssertionError.
+// PopValue or panic with Error.
 func (s *Scanner) PopValue(context string) string {
 	t := s.Pop()
 	if !t.IsValue() {
-		panic(TokenAssertionError{fmt.Errorf("expected %s value but got %s", context, t)})
+		fail("expected %s value but got %s", context, t)
 	}
 	return t.Value
 }

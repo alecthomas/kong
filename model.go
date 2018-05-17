@@ -27,6 +27,7 @@ type Value struct {
 	Field    reflect.StructField
 	Value    reflect.Value
 	Required bool
+	Format   string // Formatting directive, if applicable.
 }
 
 type Positional = Value

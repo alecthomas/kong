@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+type Error struct {
+	msg string
+}
+
+func (e Error) Error() string { return e.msg }
+
+func fail(format string, args ...interface{}) {
+	panic(Error{fmt.Sprintf(format, args...)})
+}
+
 type Kong struct {
 	Model *Application
 	// Termination function (defaults to os.Exit)
@@ -35,7 +45,7 @@ func New(name, description string, ast interface{}) (*Kong, error) {
 func (k *Kong) Parse(args []string) (command string, err error) {
 	defer func() {
 		msg := recover()
-		if test, ok := msg.(TokenAssertionError); ok {
+		if test, ok := msg.(Error); ok {
 			err = test
 		} else if msg != nil {
 			panic(msg)
@@ -68,7 +78,8 @@ func (k *Kong) reset(node *Node) {
 	}
 }
 
-func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error) {
+func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error) { // nolint: gocyclo
+	positional := 0
 	for token := scan.Pop(); token.Type != EOLToken; token = scan.Pop() {
 		switch token.Type {
 		case UntypedToken:
@@ -98,6 +109,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 
 				// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
+				// Note: tokens must be pushed in reverse order.
 				scan.PushTyped(token.Value[2:], ShortFlagTailToken)
 				scan.PushTyped(token.Value[1:2], ShortFlagToken)
 
@@ -106,6 +118,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 			}
 
 		case ShortFlagTailToken:
+			// Note: tokens must be pushed in reverse order.
 			scan.PushTyped(token.Value[1:], ShortFlagTailToken)
 			scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
@@ -128,6 +141,19 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 
 		case PositionalArgumentToken:
 			scan.PushToken(token)
+			// Ensure we've consumed all positional arguments.
+			if positional < len(node.Positional) {
+				arg := node.Positional[positional]
+				err := arg.Decoder.Decode(&DecoderContext{Value: arg}, scan, arg.Value)
+				if err != nil {
+					return nil, err
+				}
+				command = append(command, "<"+arg.Name+">")
+				positional++
+				break
+			}
+
+			// After positional arguments have been consumed, handle commands and branching arguments.
 			for _, branch := range node.Children {
 				switch {
 				case branch.Command != nil:
@@ -165,7 +191,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag) bool) (err error) {
 	defer func() {
 		msg := recover()
-		if test, ok := msg.(TokenAssertionError); ok {
+		if test, ok := msg.(Error); ok {
 			err = fmt.Errorf("%s %s", token, test)
 		} else if msg != nil {
 			panic(msg)

@@ -13,7 +13,23 @@ func mustNew(t *testing.T, cli interface{}) *Kong {
 	return parser
 }
 
-func TestArgument(t *testing.T) {
+func TestArgumentSequence(t *testing.T) {
+	var cli struct {
+		User struct {
+			Create struct {
+				ID    int    `arg:"" help:""`
+				First string `arg:"" help:""`
+				Last  string `arg:"" help:""`
+			} `help:""`
+		} `help:""`
+	}
+	p := mustNew(t, &cli)
+	cmd, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
+	require.NoError(t, err)
+	require.Equal(t, "user create <id> <first> <last>", cmd)
+}
+
+func TestBranchingArgument(t *testing.T) {
 	/*
 		app user create <id> <first> <last>
 		app	user <id> delete
@@ -21,33 +37,35 @@ func TestArgument(t *testing.T) {
 
 	*/
 	var cli struct {
-		Create struct {
-			Id    string `arg:"true"`
-			First string `arg:"true"`
-			Last  string `arg:"true"`
-		}
+		User struct {
+			Create struct {
+				ID    string `arg:"" help:""`
+				First string `arg:"" help:""`
+				Last  string `arg:"" help:""`
+			} `help:""`
 
-		// Branching argument.
-		Id struct {
-			Id     int `arg:"true"`
-			Flag   int
-			Delete struct{}
-			Rename struct {
-				To string
-			}
-		} `arg:"true"`
+			// Branching argument.
+			ID struct {
+				ID     int      `arg:"" help:""`
+				Flag   int      `help:""`
+				Delete struct{} `help:""`
+				Rename struct {
+					To string
+				} `help:""`
+			} `arg:"" help:""`
+		} `help:"Manage users."`
 	}
 	p := mustNew(t, &cli)
-	cmd, err := p.Parse([]string{"10", "delete"})
+	cmd, err := p.Parse([]string{"user", "10", "delete"})
 	require.NoError(t, err)
-	require.Equal(t, 10, cli.Id.Id)
-	require.Equal(t, "<id> delete", cmd)
+	require.Equal(t, 10, cli.User.ID.ID)
+	require.Equal(t, "user <id> delete", cmd)
 }
 
 func TestResetWithDefaults(t *testing.T) {
 	var cli struct {
-		Flag            string
-		FlagWithDefault string `default:"default"`
+		Flag            string `help:""`
+		FlagWithDefault string `default:"default" help:""`
 	}
 	cli.Flag = "BLAH"
 	cli.FlagWithDefault = "BLAH"
@@ -60,10 +78,17 @@ func TestResetWithDefaults(t *testing.T) {
 
 func TestSlice(t *testing.T) {
 	var cli struct {
-		Slice []int
+		Slice []int `help:""`
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"--slice=1,2,3"})
 	require.NoError(t, err)
 	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+}
+
+func TestUnsupportedfieldErrors(t *testing.T) {
+	var cli struct {
+		Keys map[string]string `help:""`
+	}
+	require.Panics(t, func() { mustNew(t, &cli) })
 }

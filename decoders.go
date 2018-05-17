@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DecoderContext struct {
@@ -81,29 +82,34 @@ var _ NamedDecoder = &namedDecoder{}
 var (
 	namedDecoders = map[string]NamedDecoder{}
 	typeDecoders  = map[reflect.Type]TypeDecoder{}
-	kindDecoders  map[reflect.Kind]KindDecoder
+	kindDecoders  = map[reflect.Kind]KindDecoder{}
 )
 
 // DecoderForField finds a decoder for a struct field.
-func DecoderForField(field reflect.StructField) (Decoder, error) {
+//
+// Will return nil if a decoder can not be determined.
+func DecoderForField(field reflect.StructField) Decoder {
 	name, ok := field.Tag.Lookup("type")
 	if ok {
 		if decoder, ok := namedDecoders[name]; ok {
-			return decoder, nil
+			return decoder
 		}
 	}
 	return DecoderForType(field.Type)
 }
 
-func DecoderForType(typ reflect.Type) (Decoder, error) {
+// DecoderForType finds a decoder via a type or kind.
+//
+// Will return nil if a decoder can not be determined.
+func DecoderForType(typ reflect.Type) Decoder {
 	var decoder Decoder
 	var ok bool
 	if decoder, ok = typeDecoders[typ]; ok {
-		return decoder, nil
+		return decoder
 	} else if decoder, ok = kindDecoders[typ.Kind()]; ok {
-		return decoder, nil
+		return decoder
 	}
-	return nil, fmt.Errorf("no decoder for type %s", typ)
+	return nil
 }
 
 // RegisterDecoder registers decoders.
@@ -119,35 +125,59 @@ func RegisterDecoder(decoders ...Decoder) {
 		case NamedDecoder:
 			namedDecoders[decoder.Name()] = decoder
 		default:
-			panic("unsupported decoder type " + reflect.TypeOf(decoder).String())
+			fail("unsupported decoder type " + reflect.TypeOf(decoder).String())
 		}
 	}
 }
 
 func init() {
-	kindDecoders = map[reflect.Kind]KindDecoder{
-		reflect.Int:     NewKindDecoder(reflect.Int, intDecoder),
-		reflect.Int8:    NewKindDecoder(reflect.Int8, intDecoder),
-		reflect.Int16:   NewKindDecoder(reflect.Int16, intDecoder),
-		reflect.Int32:   NewKindDecoder(reflect.Int32, intDecoder),
-		reflect.Int64:   NewKindDecoder(reflect.Int64, intDecoder),
-		reflect.Uint:    NewKindDecoder(reflect.Uint, uintDecoder),
-		reflect.Uint8:   NewKindDecoder(reflect.Uint8, uintDecoder),
-		reflect.Uint16:  NewKindDecoder(reflect.Uint16, uintDecoder),
-		reflect.Uint32:  NewKindDecoder(reflect.Uint32, uintDecoder),
-		reflect.Uint64:  NewKindDecoder(reflect.Uint64, uintDecoder),
-		reflect.Float32: NewKindDecoder(reflect.Float32, floatDecoder(32)),
-		reflect.Float64: NewKindDecoder(reflect.Float64, floatDecoder(64)),
-		reflect.String: NewKindDecoder(reflect.String, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	RegisterDecoder(
+		NewKindDecoder(reflect.Int, intDecoder),
+		NewKindDecoder(reflect.Int8, intDecoder),
+		NewKindDecoder(reflect.Int16, intDecoder),
+		NewKindDecoder(reflect.Int32, intDecoder),
+		NewKindDecoder(reflect.Int64, intDecoder),
+		NewKindDecoder(reflect.Uint, uintDecoder),
+		NewKindDecoder(reflect.Uint8, uintDecoder),
+		NewKindDecoder(reflect.Uint16, uintDecoder),
+		NewKindDecoder(reflect.Uint32, uintDecoder),
+		NewKindDecoder(reflect.Uint64, uintDecoder),
+		NewKindDecoder(reflect.Float32, floatDecoder(32)),
+		NewKindDecoder(reflect.Float64, floatDecoder(64)),
+		NewKindDecoder(reflect.String, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 			target.SetString(scan.PopValue("string"))
 			return nil
 		}),
-		reflect.Bool: NewKindDecoder(reflect.Bool, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+		NewKindDecoder(reflect.Bool, func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 			target.SetBool(true)
 			return nil
 		}),
-		reflect.Slice: NewKindDecoder(reflect.Slice, sliceDecoder),
+		NewKindDecoder(reflect.Slice, sliceDecoder),
+		NewTypeDecoder(reflect.TypeOf(time.Time{}), timeDecoder),
+		NewTypeDecoder(reflect.TypeOf(time.Duration(0)), durationDecoder),
+	)
+}
+
+func durationDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	d, err := time.ParseDuration(scan.PopValue("duration"))
+	if err != nil {
+		return err
 	}
+	target.Set(reflect.ValueOf(d))
+	return nil
+}
+
+func timeDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	fmt := time.RFC3339
+	if ctx.Value.Format != "" {
+		fmt = ctx.Value.Format
+	}
+	t, err := time.Parse(fmt, scan.PopValue("time"))
+	if err != nil {
+		return err
+	}
+	target.Set(reflect.ValueOf(t))
+	return nil
 }
 
 func intDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
@@ -186,9 +216,9 @@ func sliceDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) erro
 		sep = ","
 	}
 	childScanner := Scan(strings.Split(scan.PopValue("list"), sep)...)
-	childDecoder, err := DecoderForType(el)
-	if err != nil {
-		return err
+	childDecoder := DecoderForType(el)
+	if childDecoder == nil {
+		return fmt.Errorf("no decoder for element type of %s", target.Type())
 	}
 	for childScanner.Peek().Type != EOLToken {
 		childValue := reflect.New(el).Elem()
