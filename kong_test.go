@@ -8,12 +8,12 @@ import (
 
 func mustNew(t *testing.T, cli interface{}) *Kong {
 	t.Helper()
-	parser, err := New("", "", cli)
+	parser, err := New(cli)
 	require.NoError(t, err)
 	return parser
 }
 
-func TestArgumentSequence(t *testing.T) {
+func TestPositionalArguments(t *testing.T) {
 	var cli struct {
 		User struct {
 			Create struct {
@@ -27,6 +27,10 @@ func TestArgumentSequence(t *testing.T) {
 	cmd, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
 	require.NoError(t, err)
 	require.Equal(t, "user create <id> <first> <last>", cmd)
+	t.Run("Missing", func(t *testing.T) {
+		_, err := p.Parse([]string{"user", "create", "10"})
+		require.Error(t, err)
+	})
 }
 
 func TestBranchingArgument(t *testing.T) {
@@ -60,6 +64,10 @@ func TestBranchingArgument(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 10, cli.User.ID.ID)
 	require.Equal(t, "user <id> delete", cmd)
+	t.Run("Missing", func(t *testing.T) {
+		_, err = p.Parse([]string{"user"})
+		require.Error(t, err)
+	})
 }
 
 func TestResetWithDefaults(t *testing.T) {
@@ -102,7 +110,7 @@ func TestUnsupportedFieldErrors(t *testing.T) {
 	var cli struct {
 		Keys map[string]string
 	}
-	_, err := New("", "", &cli)
+	_, err := New(&cli)
 	require.Error(t, err)
 }
 
@@ -113,6 +121,6 @@ func TestMatchingArgField(t *testing.T) {
 		} `arg:""`
 	}
 
-	_, err := New("", "", &cli)
+	_, err := New(&cli)
 	require.Error(t, err)
 }

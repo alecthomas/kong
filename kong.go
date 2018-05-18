@@ -2,10 +2,12 @@ package kong
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"text/template"
 )
 
 type Error struct{ msg string }
@@ -16,27 +18,40 @@ func fail(format string, args ...interface{}) {
 	panic(Error{fmt.Sprintf(format, args...)})
 }
 
+// Kong is the main parser type.
 type Kong struct {
 	Model *Application
 	// Termination function (defaults to os.Exit)
-	Terminate func(int)
+	terminate func(int)
+
+	stdout io.Writer
+	stderr io.Writer
+
+	help        *template.Template
+	helpContext map[string]interface{}
+	helpFuncs   template.FuncMap
 }
 
 // New creates a new Kong parser into ast.
-func New(name, description string, ast interface{}) (*Kong, error) {
-	if name == "" {
-		name = filepath.Base(os.Args[0])
-	}
+func New(ast interface{}, options ...Option) (*Kong, error) {
 	model, err := build(ast)
 	if err != nil {
 		return nil, err
 	}
-	model.Name = name
-	model.Help = description
-	return &Kong{
-		Model:     model,
-		Terminate: os.Exit,
-	}, nil
+	model.Name = filepath.Base(os.Args[0])
+	k := &Kong{
+		Model:       model,
+		terminate:   os.Exit,
+		stdout:      os.Stdout,
+		stderr:      os.Stderr,
+		help:        defaultHelpTemplate,
+		helpContext: map[string]interface{}{},
+		helpFuncs:   template.FuncMap{},
+	}
+	for _, option := range options {
+		option(k)
+	}
+	return k, nil
 }
 
 // Parse arguments into target.
@@ -183,6 +198,24 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 			return nil, fmt.Errorf("unexpected token %s", token)
 		}
 	}
+	if positional < len(node.Positional) {
+		missing := []string{}
+		for ; positional < len(node.Positional); positional++ {
+			missing = append(missing, "<"+node.Positional[positional].Name+">")
+		}
+		return nil, fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+	}
+	if len(node.Children) > 0 {
+		missing := []string{}
+		for _, child := range node.Children {
+			if child.Argument != nil {
+				missing = append(missing, "<"+child.Argument.Name+">")
+			} else {
+				missing = append(missing, child.Command.Name)
+			}
+		}
+		return nil, fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
+	}
 	return
 }
 
@@ -221,5 +254,5 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		msg = fmt.Sprintf(args[0].(string), args...) + ": " + err.Error()
 	}
 	k.Errorf("%s", msg)
-	k.Terminate(1)
+	k.terminate(1)
 }
