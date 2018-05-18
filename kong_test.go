@@ -106,11 +106,11 @@ func TestUnsupportedFieldErrors(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestRequiredArgField(t *testing.T) {
+func TestMatchingArgField(t *testing.T) {
 	var cli struct {
 		ID struct {
-			NotID int
-		}
+			NotID int `arg:""`
+		} `arg:""`
 	}
 
 	_, err := New("", "", &cli)

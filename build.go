@@ -79,6 +79,10 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 					child.Help = value.Help
 				}
 				child.Name = value.Name
+				if child.Name != name {
+					fail("first field in positional branch %s.%s must have the same name as the parent field (%s).",
+						v.Type().Name(), ft.Name, child.Name)
+				}
 				node.Children = append(node.Children, &Branch{Argument: &Argument{
 					Node:     *child,
 					Argument: value,
