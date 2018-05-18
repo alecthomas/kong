@@ -91,6 +91,8 @@ func (s *Scanner) Pop() Token {
 }
 
 // PopValue token, or panic with Error.
+//
+// "context" is used to assist the user if the value can not be popped, eg. "expected <context> value but got <type>"
 func (s *Scanner) PopValue(context string) string {
 	t := s.Pop()
 	if !t.IsValue() {

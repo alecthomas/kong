@@ -3,24 +3,24 @@ package kong
 import (
 	"testing"
 
-	"github.com/gotestyourself/gotestyourself/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestScannerTake(t *testing.T) {
 	s := Scan("a", "b", "c")
-	assert.Assert(t, s.Pop().Value == "a")
-	assert.Assert(t, s.Pop().Value == "b")
-	assert.Assert(t, s.Pop().Value == "c")
-	assert.Assert(t, s.Pop().Type == EOLToken)
+	require.Equal(t, s.Pop().Value, "a")
+	require.Equal(t, s.Pop().Value, "b")
+	require.Equal(t, s.Pop().Value, "c")
+	require.Equal(t, s.Pop().Type, EOLToken)
 }
 
 func TestScannerPeek(t *testing.T) {
 	s := Scan("a", "b", "c")
-	assert.Assert(t, s.Peek().Value == "a")
-	assert.Assert(t, s.Pop().Value == "a")
-	assert.Assert(t, s.Peek().Value == "b")
-	assert.Assert(t, s.Pop().Value == "b")
-	assert.Assert(t, s.Peek().Value == "c")
-	assert.Assert(t, s.Pop().Value == "c")
-	assert.Assert(t, s.Peek().Type == EOLToken)
+	require.Equal(t, s.Peek().Value, "a")
+	require.Equal(t, s.Pop().Value, "a")
+	require.Equal(t, s.Peek().Value, "b")
+	require.Equal(t, s.Pop().Value, "b")
+	require.Equal(t, s.Peek().Value, "c")
+	require.Equal(t, s.Pop().Value, "c")
+	require.Equal(t, s.Peek().Type, EOLToken)
 }
