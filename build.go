@@ -10,7 +10,7 @@ import (
 func build(ast interface{}) (app *Application, err error) {
 	defer func() {
 		msg := recover()
-		if test, ok := recover().(error); ok {
+		if test, ok := msg.(error); ok {
 			app = nil
 			err = test
 		} else if msg != nil {
@@ -23,13 +23,16 @@ func build(ast interface{}) (app *Application, err error) {
 		return nil, fmt.Errorf("expected a pointer to a struct but got %T", ast)
 	}
 
-	return buildNode(iv), nil
+	return buildNode(iv, true), nil
 }
 
-func buildNode(v reflect.Value) *Node {
+func buildNode(v reflect.Value, cmd bool) *Node {
 	node := &Node{}
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
+		if strings.ToLower(ft.Name[0:1]) == ft.Name[0:1] {
+			continue
+		}
 		fv := v.Field(i)
 
 		name := ft.Tag.Get("name")
@@ -37,10 +40,7 @@ func buildNode(v reflect.Value) *Node {
 			name = strings.ToLower(strings.Join(camelCase(ft.Name), "-"))
 		}
 		decoder := DecoderForField(ft)
-		help, ok := ft.Tag.Lookup("help")
-		if !ok {
-			continue
-		}
+		help, _ := ft.Tag.Lookup("help")
 		dflt := ft.Tag.Get("default")
 		placeholder := ft.Tag.Get("placeholder")
 		if placeholder == "" {
@@ -55,12 +55,15 @@ func buildNode(v reflect.Value) *Node {
 		_, optional := ft.Tag.Lookup("optional")
 		// Force field to be an argument, not a flag.
 		_, arg := ft.Tag.Lookup("arg")
+		if !cmd {
+			_, cmd = ft.Tag.Lookup("cmd")
+		}
 		env := ft.Tag.Get("env")
 		format := ft.Tag.Get("format")
 
 		// Nested structs are either commands or args.
-		if ft.Type.Kind() == reflect.Struct && decoder == nil {
-			child := buildNode(fv)
+		if ft.Type.Kind() == reflect.Struct && (cmd || arg) {
+			child := buildNode(fv, false)
 			child.Help = help
 
 			// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that

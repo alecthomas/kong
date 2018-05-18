@@ -17,11 +17,11 @@ func TestArgumentSequence(t *testing.T) {
 	var cli struct {
 		User struct {
 			Create struct {
-				ID    int    `arg:"" help:""`
-				First string `arg:"" help:""`
-				Last  string `arg:"" help:""`
-			} `help:""`
-		} `help:""`
+				ID    int    `arg:""`
+				First string `arg:""`
+				Last  string `arg:""`
+			} `cmd:""`
+		} `cmd:""`
 	}
 	p := mustNew(t, &cli)
 	cmd, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
@@ -39,21 +39,21 @@ func TestBranchingArgument(t *testing.T) {
 	var cli struct {
 		User struct {
 			Create struct {
-				ID    string `arg:"" help:""`
-				First string `arg:"" help:""`
-				Last  string `arg:"" help:""`
-			} `help:""`
+				ID    string `arg:""`
+				First string `arg:""`
+				Last  string `arg:""`
+			} `cmd:""`
 
 			// Branching argument.
 			ID struct {
-				ID     int      `arg:"" help:""`
-				Flag   int      `help:""`
-				Delete struct{} `help:""`
+				ID     int `arg:""`
+				Flag   int
+				Delete struct{} `cmd:""`
 				Rename struct {
-					To string `help:""`
-				} `help:""`
-			} `arg:"" help:""`
-		} `help:"Manage users."`
+					To string
+				} `cmd:""`
+			} `arg:""`
+		} `cmd:""  help:"User management."`
 	}
 	p := mustNew(t, &cli)
 	cmd, err := p.Parse([]string{"user", "10", "delete"})
@@ -64,8 +64,8 @@ func TestBranchingArgument(t *testing.T) {
 
 func TestResetWithDefaults(t *testing.T) {
 	var cli struct {
-		Flag            string `help:""`
-		FlagWithDefault string `default:"default" help:""`
+		Flag            string
+		FlagWithDefault string `default:"default" `
 	}
 	cli.Flag = "BLAH"
 	cli.FlagWithDefault = "BLAH"
@@ -78,7 +78,7 @@ func TestResetWithDefaults(t *testing.T) {
 
 func TestFlagSlice(t *testing.T) {
 	var cli struct {
-		Slice []int `help:""`
+		Slice []int
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"--slice=1,2,3"})
@@ -88,8 +88,8 @@ func TestFlagSlice(t *testing.T) {
 
 func TestArgSlice(t *testing.T) {
 	var cli struct {
-		Slice []int `help:"" arg:""`
-		Flag  bool  `help:""`
+		Slice []int `arg:""`
+		Flag  bool
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"1", "2", "3", "--flag"})
@@ -100,7 +100,8 @@ func TestArgSlice(t *testing.T) {
 
 func TestUnsupportedfieldErrors(t *testing.T) {
 	var cli struct {
-		Keys map[string]string `help:""`
+		Keys map[string]string
 	}
-	require.Panics(t, func() { mustNew(t, &cli) })
+	_, err := New("", "", &cli)
+	require.Error(t, err)
 }

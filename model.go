@@ -20,6 +20,7 @@ type Node struct {
 	Children   []*Branch
 }
 
+// A Value is either a flag or a variaable positional argument.
 type Value struct {
 	Flag     bool // True if flag, false if positional argument.
 	Name     string
