@@ -98,10 +98,21 @@ func TestArgSlice(t *testing.T) {
 	require.Equal(t, true, cli.Flag)
 }
 
-func TestUnsupportedfieldErrors(t *testing.T) {
+func TestUnsupportedFieldErrors(t *testing.T) {
 	var cli struct {
 		Keys map[string]string
 	}
+	_, err := New("", "", &cli)
+	require.Error(t, err)
+}
+
+func TestRequiredArgField(t *testing.T) {
+	var cli struct {
+		ID struct {
+			NotID int
+		}
+	}
+
 	_, err := New("", "", &cli)
 	require.Error(t, err)
 }
