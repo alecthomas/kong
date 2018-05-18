@@ -57,6 +57,14 @@ func (t Token) IsValue() bool {
 		(t.Type == UntypedToken && !strings.HasPrefix(t.Value, "-"))
 }
 
+// Scanner is a stack-based scanner over command-line tokens.
+//
+// Initially all tokens are untyped. As the parser consumes tokens it assigns types, splits tokens, and pushes them back
+// onto the stream.
+//
+// For example, the token "--foo=bar" will be split into the following by the parser:
+//
+// 		[{FlagToken, "foo"}, {FlagValueToken, "bar"}]
 type Scanner struct {
 	args []Token
 }

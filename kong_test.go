@@ -50,7 +50,7 @@ func TestBranchingArgument(t *testing.T) {
 				Flag   int      `help:""`
 				Delete struct{} `help:""`
 				Rename struct {
-					To string
+					To string `help:""`
 				} `help:""`
 			} `arg:"" help:""`
 		} `help:"Manage users."`
