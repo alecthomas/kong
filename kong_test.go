@@ -124,3 +124,13 @@ func TestMatchingArgField(t *testing.T) {
 	_, err := New(&cli)
 	require.Error(t, err)
 }
+
+func TestCantMixPositionalAndBranches(t *testing.T) {
+	var cli struct {
+		Arg     string `arg:""`
+		Command struct {
+		} `cmd:""`
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}

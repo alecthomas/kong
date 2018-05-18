@@ -23,7 +23,11 @@ func build(ast interface{}) (app *Application, err error) {
 		return nil, fmt.Errorf("expected a pointer to a struct but got %T", ast)
 	}
 
-	return buildNode(iv, true), nil
+	node := buildNode(iv, true)
+	if len(node.Positional) > 0 && len(node.Children) > 0 {
+		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
+	}
+	return node, nil
 }
 
 func buildNode(v reflect.Value, cmd bool) *Node {
@@ -91,6 +95,10 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 				child.Name = name
 				node.Children = append(node.Children, &Branch{Command: child})
 			}
+
+			if len(child.Positional) > 0 && len(child.Children) > 0 {
+				fail("can't mix positional arguments and branching arguments on %s.%s", v.Type().Name(), ft.Name)
+			}
 		} else {
 			if decoder == nil {
 				fail("no decoder for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
@@ -118,6 +126,5 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 			}
 		}
 	}
-
 	return node
 }
