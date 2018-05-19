@@ -236,23 +236,33 @@ func chickMissingFlags(children []*Branch, flags []*Flag) error {
 }
 
 func checkMissingChildren(children []*Branch) error {
-	if len(children) == 0 {
-		return nil
-	}
 	missing := []string{}
 	for _, child := range children {
 		if child.Argument != nil {
+			if !child.Argument.Argument.Required {
+				continue
+			}
 			missing = append(missing, "<"+child.Argument.Name+">")
 		} else {
 			missing = append(missing, child.Command.Name)
 		}
 	}
+	if len(missing) == 0 {
+		return nil
+	}
+
 	return fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
 }
 
 // If we're missing any positionals and they're required, return an error.
 func checkMissingPositionals(positional int, values []*Value) error {
-	if positional == len(values) || !values[positional].Required {
+	// All the positionals are in.
+	if positional == len(values) {
+		return nil
+	}
+
+	// We're low on supplied positionals, but the missing one is optional.
+	if !values[positional].Required {
 		return nil
 	}
 
