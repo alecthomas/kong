@@ -107,16 +107,22 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 			flag := !arg
 
 			value := Value{
-				Name:     name,
-				Flag:     flag,
-				Help:     help,
-				Decoder:  decoder,
-				Value:    fv,
-				Field:    ft,
+				Name:    name,
+				Flag:    flag,
+				Help:    help,
+				Decoder: decoder,
+				Value:   fv,
+				Field:   ft,
+
+				// Flags are optional by default, and args are required by default.
 				Required: (flag && required) || (arg && !optional),
 				Format:   format,
 			}
 			if arg {
+				var prev = node.Positional[len(node.Positional) - 2]
+				if prev.Required && !value.Required {
+					fail("optional args can't be placed before required args: %v -> %v", )
+				}
 				node.Positional = append(node.Positional, &value)
 			} else {
 				node.Flags = append(node.Flags, &Flag{

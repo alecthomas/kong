@@ -183,7 +183,7 @@ func TestRequiredArg(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestRequiredAfterOptional(t *testing.T) {
+func TestInvalidRequiredAfterOptional(t *testing.T) {
 	var cli struct {
 		ID   int    `arg:"" optional:""`
 		Name string `arg:""`
@@ -191,6 +191,30 @@ func TestRequiredAfterOptional(t *testing.T) {
 
 	_, err := New(&cli)
 	require.Error(t, err)
+}
+
+func TestOptionalStructArg(t *testing.T) {
+	var cli struct {
+		Name struct {
+			Name    string `arg:"" optional:""`
+			Enabled bool
+		} `arg:"" optional:""`
+	}
+
+	parser := mustNew(t, &cli)
+
+	t.Run("WithFlag", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak", "--enabled"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name)
+		require.Equal(t, true, cli.Name.Enabled)
+	})
+
+	t.Run("WithoutFlag", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name)
+	})
 }
 
 func TestMixedRequiredArgs(t *testing.T) {
@@ -201,12 +225,16 @@ func TestMixedRequiredArgs(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 
-	_, err := parser.Parse([]string{"gak", "5"})
-	require.NoError(t, err)
-	require.Equal(t, "gak", cli.Name)
-	require.Equal(t, 5, cli.ID)
+	t.Run("SingleRequired", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak", "5"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name)
+		require.Equal(t, 5, cli.ID)
+	})
 
-	_, err = parser.Parse([]string{"gak"})
-	require.NoError(t, err)
-	require.Equal(t, "gak", cli.Name)
+	t.Run("ExtraOptional", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name)
+	})
 }
