@@ -1,7 +1,6 @@
 package kong
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -159,7 +158,6 @@ func TestRequiredFlag(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	fmt.Println(err)
 	require.Error(t, err)
 }
 
