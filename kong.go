@@ -65,11 +65,11 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 			panic(msg)
 		}
 	}()
-	k.reset(k.Model)
+	k.reset(&k.Model.Node)
 	ctx := &ParseContext{
 		Scan: Scan(args...),
 	}
-	err = ctx.applyNode(k.Model)
+	err = ctx.applyNode(&k.Model.Node)
 	return strings.Join(ctx.Command, " "), err
 }
 

@@ -2,7 +2,10 @@ package kong
 
 import "reflect"
 
-type Application = Node
+type Application struct {
+	Node
+	HelpFlag bool // Target of --help flag.
+}
 
 // A Branch is a command or positional argument that results in a branch in the command tree.
 type Branch struct {
