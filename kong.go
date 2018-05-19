@@ -109,6 +109,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 					}
 					args = append(args, token.Value)
 				}
+				// Note: tokens must be pushed in reverse order.
 				for i := range args {
 					scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}

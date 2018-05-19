@@ -8,6 +8,8 @@ import (
 const defaultHelp = `{{- with .Application -}}
 usage: {{.Name}}
 
+{{.Help}}
+
 {{- end -}}
 `
 

@@ -1,4 +1,4 @@
-# Kong is a command-line parser for Go
+# Kong is a command-line parser for Go [![CircleCI](https://circleci.com/gh/alecthomas/kong.svg?style=svg&circle-token=477fecac758383bf281453187269b913130f17d2)](https://circleci.com/gh/alecthomas/kong)
 
 It parses a command-line into a struct. eg.
 
