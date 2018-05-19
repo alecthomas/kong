@@ -1,9 +1,9 @@
 package kong
 
 import (
+	"fmt"
 	"testing"
 
-	"fmt"
 	"github.com/stretchr/testify/require"
 )
 
