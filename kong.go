@@ -65,7 +65,7 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 		}
 	}()
 	k.reset(k.Model)
-	cmd, err := k.applyNode(Scan(args...), k.Model)
+	cmd, err := k.applyNode(Scan(args...), k.Model, nil)
 	return strings.Join(cmd, " "), err
 }
 
@@ -91,8 +91,10 @@ func (k *Kong) reset(node *Node) {
 	}
 }
 
-func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error) { // nolint: gocyclo
+func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []string, err error) { // nolint: gocyclo
 	positional := 0
+	flags = append(flags, node.Flags...) // Track all parent flags.
+
 	for token := scan.Pop(); token.Type != EOLToken; token = scan.Pop() {
 		switch token.Type {
 		case UntypedToken:
@@ -120,7 +122,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 				}
 				scan.PushTyped(parts[0], FlagToken)
 
-				// Short flag.
+			// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
 				// Note: tokens must be pushed in reverse order.
 				scan.PushTyped(token.Value[2:], ShortFlagTailToken)
@@ -136,14 +138,14 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 			scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := matchFlags(node.Flags, token, scan, func(f *Flag) bool {
+			if err := matchFlags(flags, token, scan, func(f *Flag) bool {
 				return f.Name == token.Value
 			}); err != nil {
 				return nil, err
 			}
 
 		case ShortFlagToken:
-			if err := matchFlags(node.Flags, token, scan, func(f *Flag) bool {
+			if err := matchFlags(flags, token, scan, func(f *Flag) bool {
 				return string(f.Name) == token.Value
 			}); err != nil {
 				return nil, err
@@ -173,7 +175,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 					if branch.Command.Name == token.Value {
 						scan.Pop()
 						command = append(command, branch.Command.Name)
-						cmd, err := k.applyNode(scan, branch.Command)
+						cmd, err := k.applyNode(scan, branch.Command, flags)
 						if err != nil {
 							return nil, err
 						}
@@ -184,7 +186,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node) (command []string, err error
 					arg := branch.Argument.Argument
 					if err := arg.Decode(scan); err == nil {
 						command = append(command, "<"+arg.Name+">")
-						cmd, err := k.applyNode(scan, &branch.Argument.Node)
+						cmd, err := k.applyNode(scan, &branch.Argument.Node, flags)
 						if err != nil {
 							return nil, err
 						}

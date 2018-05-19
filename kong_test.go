@@ -134,3 +134,19 @@ func TestCantMixPositionalAndBranches(t *testing.T) {
 	_, err := New(&cli)
 	require.Error(t, err)
 }
+
+func TestPropagatedFlags(t *testing.T) {
+	var cli struct {
+		Flag1    string
+		Command1 struct {
+			Flag2    bool
+			Command2 struct{} `cmd:""`
+		} `cmd:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"command-1", "command-2", "--flag-2", "--flag-1=moo"})
+	require.NoError(t, err)
+	require.Equal(t, "moo", cli.Flag1)
+	require.Equal(t, true, cli.Command1.Flag2)
+}
