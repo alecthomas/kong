@@ -42,6 +42,14 @@ func (v *Value) Decode(scan *Scanner) error {
 	return err
 }
 
+func (v *Value) Reset() {
+	v.Value.Set(reflect.Zero(v.Value.Type()))
+	if v.Default != "" {
+		v.Decode(Scan(v.Default))
+		v.Set = false
+	}
+}
+
 type Positional = Value
 
 type Argument struct {

@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"text/template"
 )
@@ -75,23 +74,15 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
 func (k *Kong) reset(node *Node) {
 	for _, flag := range node.Flags {
-		flag.Value.Value.Set(reflect.Zero(flag.Value.Value.Type()))
-		if flag.Default != "" {
-			flag.Decode(Scan(flag.Default))
-			flag.Set = false
-		}
+		flag.Value.Reset()
 	}
 	for _, pos := range node.Positional {
-		pos.Value.Set(reflect.Zero(pos.Value.Type()))
-		if pos.Default != "" {
-			pos.Decode(Scan(pos.Default))
-			pos.Set = false
-		}
+		pos.Reset()
 	}
 	for _, branch := range node.Children {
 		if branch.Argument != nil {
 			arg := branch.Argument.Argument
-			arg.Value.Set(reflect.Zero(arg.Value.Type()))
+			arg.Reset()
 			k.reset(&branch.Argument.Node)
 		} else {
 			k.reset(branch.Command)
