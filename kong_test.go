@@ -3,6 +3,7 @@ package kong
 import (
 	"testing"
 
+	"fmt"
 	"github.com/stretchr/testify/require"
 )
 
@@ -149,4 +150,63 @@ func TestPropagatedFlags(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "moo", cli.Flag1)
 	require.Equal(t, true, cli.Command1.Flag2)
+}
+
+func TestRequiredFlag(t *testing.T) {
+	var cli struct {
+		Flag string `required:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	fmt.Println(err)
+	require.Error(t, err)
+}
+
+func TestOptionalArg(t *testing.T) {
+	var cli struct {
+		Arg string `arg:"" optional:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+}
+
+func TestRequiredArg(t *testing.T) {
+	var cli struct {
+		Arg string `arg:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.Error(t, err)
+}
+
+func TestRequiredAfterOptional(t *testing.T) {
+	var cli struct {
+		ID   int    `arg:"" optional:""`
+		Name string `arg:""`
+	}
+
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
+func TestMixedRequiredArgs(t *testing.T) {
+	var cli struct {
+		Name string `arg:""`
+		ID   int    `arg:"" optional:""`
+	}
+
+	parser := mustNew(t, &cli)
+
+	_, err := parser.Parse([]string{"gak", "5"})
+	require.NoError(t, err)
+	require.Equal(t, "gak", cli.Name)
+	require.Equal(t, 5, cli.ID)
+
+	_, err = parser.Parse([]string{"gak"})
+	require.NoError(t, err)
+	require.Equal(t, "gak", cli.Name)
 }

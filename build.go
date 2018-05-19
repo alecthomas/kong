@@ -103,19 +103,22 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 			if decoder == nil {
 				fail("no decoder for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
 			}
+
+			flag := !arg
+
 			value := Value{
 				Name:     name,
+				Flag:     flag,
 				Help:     help,
 				Decoder:  decoder,
 				Value:    fv,
 				Field:    ft,
-				Required: !optional || required,
+				Required: (flag && required) || (arg && !optional),
 				Format:   format,
 			}
 			if arg {
 				node.Positional = append(node.Positional, &value)
 			} else {
-				value.Flag = true
 				node.Flags = append(node.Flags, &Flag{
 					Value:       value,
 					Short:       short,

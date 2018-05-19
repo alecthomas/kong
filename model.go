@@ -29,6 +29,7 @@ type Value struct {
 	Field    reflect.StructField
 	Value    reflect.Value
 	Required bool
+	Set      bool   // Used with Required to test if a value has been given.
 	Format   string // Formatting directive, if applicable.
 }
 
