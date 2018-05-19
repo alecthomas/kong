@@ -150,3 +150,94 @@ func TestPropagatedFlags(t *testing.T) {
 	require.Equal(t, "moo", cli.Flag1)
 	require.Equal(t, true, cli.Command1.Flag2)
 }
+
+func TestRequiredFlag(t *testing.T) {
+	var cli struct {
+		Flag string `required:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.Error(t, err)
+}
+
+func TestOptionalArg(t *testing.T) {
+	var cli struct {
+		Arg string `arg:"" optional:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+}
+
+func TestRequiredArg(t *testing.T) {
+	var cli struct {
+		Arg string `arg:""`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.Error(t, err)
+}
+
+func TestInvalidRequiredAfterOptional(t *testing.T) {
+	var cli struct {
+		ID   int    `arg:"" optional:""`
+		Name string `arg:""`
+	}
+
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
+func TestOptionalStructArg(t *testing.T) {
+	var cli struct {
+		Name struct {
+			Name    string `arg:"" optional:""`
+			Enabled bool
+		} `arg:"" optional:""`
+	}
+
+	parser := mustNew(t, &cli)
+
+	t.Run("WithFlag", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak", "--enabled"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name.Name)
+		require.Equal(t, true, cli.Name.Enabled)
+	})
+
+	t.Run("WithoutFlag", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name.Name)
+	})
+
+	t.Run("WithNothing", func(t *testing.T) {
+		_, err := parser.Parse([]string{})
+		require.NoError(t, err)
+	})
+}
+
+func TestMixedRequiredArgs(t *testing.T) {
+	var cli struct {
+		Name string `arg:""`
+		ID   int    `arg:"" optional:""`
+	}
+
+	parser := mustNew(t, &cli)
+
+	t.Run("SingleRequired", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak", "5"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name)
+		require.Equal(t, 5, cli.ID)
+	})
+
+	t.Run("ExtraOptional", func(t *testing.T) {
+		_, err := parser.Parse([]string{"gak"})
+		require.NoError(t, err)
+		require.Equal(t, "gak", cli.Name)
+	})
+}
