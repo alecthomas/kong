@@ -206,14 +206,19 @@ func TestOptionalStructArg(t *testing.T) {
 	t.Run("WithFlag", func(t *testing.T) {
 		_, err := parser.Parse([]string{"gak", "--enabled"})
 		require.NoError(t, err)
-		require.Equal(t, "gak", cli.Name)
+		require.Equal(t, "gak", cli.Name.Name)
 		require.Equal(t, true, cli.Name.Enabled)
 	})
 
 	t.Run("WithoutFlag", func(t *testing.T) {
 		_, err := parser.Parse([]string{"gak"})
 		require.NoError(t, err)
-		require.Equal(t, "gak", cli.Name)
+		require.Equal(t, "gak", cli.Name.Name)
+	})
+
+	t.Run("WithNothing", func(t *testing.T) {
+		_, err := parser.Parse([]string{})
+		require.NoError(t, err)
 	})
 }
 

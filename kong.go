@@ -200,37 +200,67 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 			return nil, fmt.Errorf("unexpected token %s", token)
 		}
 	}
-	if positional < len(node.Positional) {
-		missing := []string{}
-		for ; positional < len(node.Positional); positional++ {
-			missing = append(missing, "<"+node.Positional[positional].Name+">")
-		}
-		return nil, fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+
+	if err := checkMissingPositionals(positional, node.Positional); err != nil {
+		return nil, err
 	}
-	if len(node.Children) > 0 {
-		missing := []string{}
-		for _, child := range node.Children {
-			if child.Argument != nil {
-				missing = append(missing, "<"+child.Argument.Name+">")
-			} else {
-				missing = append(missing, child.Command.Name)
-			}
-		}
-		return nil, fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
-	} else {
-		// Check for required flags at the last child.
-		missing := []string{}
-		for _, flag := range flags {
-			if !flag.Required || flag.Set {
-				continue
-			}
-			missing = append(missing, flag.Name)
-		}
-		if len(missing) > 0 {
-			return nil, fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
-		}
+
+	if err := checkMissingChildren(node.Children); err != nil {
+		return nil, err
 	}
+
+	if err := chickMissingFlags(node.Children, flags); err != nil {
+		return nil, err
+	}
+
 	return
+}
+
+func chickMissingFlags(children []*Branch, flags []*Flag) error {
+	// Only check required missing fields at the last child.
+	if len(children) > 0 {
+		return nil
+	}
+	missing := []string{}
+	for _, flag := range flags {
+		if !flag.Required || flag.Set {
+			continue
+		}
+		missing = append(missing, flag.Name)
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
+}
+
+func checkMissingChildren(children []*Branch) error {
+	if len(children) == 0 {
+		return nil
+	}
+	missing := []string{}
+	for _, child := range children {
+		if child.Argument != nil {
+			missing = append(missing, "<"+child.Argument.Name+">")
+		} else {
+			missing = append(missing, child.Command.Name)
+		}
+	}
+	return fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
+}
+
+// If we're missing any positionals and they're required, return an error.
+func checkMissingPositionals(positional int, values []*Value) error {
+	if positional == len(values) || !values[positional].Required {
+		return nil
+	}
+
+	missing := []string{}
+	for ; positional < len(values); positional++ {
+		missing = append(missing, "<"+values[positional].Name+">")
+	}
+	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
 
 func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag) bool) (err error) {
