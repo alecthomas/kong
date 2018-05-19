@@ -65,8 +65,11 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 		}
 	}()
 	k.reset(k.Model)
-	cmd, err := k.applyNode(Scan(args...), k.Model, nil)
-	return strings.Join(cmd, " "), err
+	ctx := &ParseContext{
+		Scan: Scan(args...),
+	}
+	err = ctx.applyNode(k.Model)
+	return strings.Join(ctx.Command, " "), err
 }
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
@@ -96,11 +99,17 @@ func (k *Kong) reset(node *Node) {
 	}
 }
 
-func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []string, err error) { // nolint: gocyclo
-	positional := 0
-	flags = append(flags, node.Flags...) // Track all parent flags.
+type ParseContext struct {
+	Scan    *Scanner
+	Command []string
+	Flags   []*Flag
+}
 
-	for token := scan.Pop(); token.Type != EOLToken; token = scan.Pop() {
+func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
+	positional := 0
+	p.Flags = append(p.Flags, node.Flags...)
+
+	for token := p.Scan.Pop(); token.Type != EOLToken; token = p.Scan.Pop() {
 		switch token.Type {
 		case UntypedToken:
 			switch {
@@ -108,7 +117,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 			case token.Value == "--":
 				args := []string{}
 				for {
-					token = scan.Pop()
+					token = p.Scan.Pop()
 					if token.Type == EOLToken {
 						break
 					}
@@ -116,7 +125,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 				}
 				// Note: tokens must be pushed in reverse order.
 				for i := range args {
-					scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
+					p.Scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
 			// Long flag.
@@ -124,52 +133,52 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 				// Parse it and push the tokens.
 				parts := strings.SplitN(token.Value[2:], "=", 2)
 				if len(parts) > 1 {
-					scan.PushTyped(parts[1], FlagValueToken)
+					p.Scan.PushTyped(parts[1], FlagValueToken)
 				}
-				scan.PushTyped(parts[0], FlagToken)
+				p.Scan.PushTyped(parts[0], FlagToken)
 
 			// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
 				// Note: tokens must be pushed in reverse order.
-				scan.PushTyped(token.Value[2:], ShortFlagTailToken)
-				scan.PushTyped(token.Value[1:2], ShortFlagToken)
+				p.Scan.PushTyped(token.Value[2:], ShortFlagTailToken)
+				p.Scan.PushTyped(token.Value[1:2], ShortFlagToken)
 
 			default:
-				scan.PushTyped(token.Value, PositionalArgumentToken)
+				p.Scan.PushTyped(token.Value, PositionalArgumentToken)
 			}
 
 		case ShortFlagTailToken:
 			// Note: tokens must be pushed in reverse order.
-			scan.PushTyped(token.Value[1:], ShortFlagTailToken)
-			scan.PushTyped(token.Value[0:1], ShortFlagToken)
+			p.Scan.PushTyped(token.Value[1:], ShortFlagTailToken)
+			p.Scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := matchFlags(flags, token, scan, func(f *Flag) bool {
+			if err := matchFlags(p.Flags, token, p.Scan, func(f *Flag) bool {
 				return f.Name == token.Value
 			}); err != nil {
-				return nil, err
+				return err
 			}
 
 		case ShortFlagToken:
-			if err := matchFlags(flags, token, scan, func(f *Flag) bool {
+			if err := matchFlags(p.Flags, token, p.Scan, func(f *Flag) bool {
 				return string(f.Name) == token.Value
 			}); err != nil {
-				return nil, err
+				return err
 			}
 
 		case FlagValueToken:
-			return nil, fmt.Errorf("unexpected flag argument %q", token.Value)
+			return fmt.Errorf("unexpected flag argument %q", token.Value)
 
 		case PositionalArgumentToken:
-			scan.PushToken(token)
+			p.Scan.PushToken(token)
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
-				err := arg.Decode(scan)
+				err := arg.Decode(p.Scan)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				command = append(command, "<"+arg.Name+">")
+				p.Command = append(p.Command, "<"+arg.Name+">")
 				positional++
 				break
 			}
@@ -179,47 +188,39 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 				switch {
 				case branch.Command != nil:
 					if branch.Command.Name == token.Value {
-						scan.Pop()
-						command = append(command, branch.Command.Name)
-						cmd, err := k.applyNode(scan, branch.Command, flags)
-						if err != nil {
-							return nil, err
-						}
-						return append(command, cmd...), nil
+						p.Scan.Pop()
+						p.Command = append(p.Command, branch.Command.Name)
+						return p.applyNode(branch.Command)
 					}
 
 				case branch.Argument != nil:
 					arg := branch.Argument.Argument
-					if err := arg.Decode(scan); err == nil {
-						command = append(command, "<"+arg.Name+">")
-						cmd, err := k.applyNode(scan, &branch.Argument.Node, flags)
-						if err != nil {
-							return nil, err
-						}
-						return append(command, cmd...), nil
+					if err := arg.Decode(p.Scan); err == nil {
+						p.Command = append(p.Command, "<"+arg.Name+">")
+						return p.applyNode(&branch.Argument.Node)
 					}
 				}
 			}
-			return nil, fmt.Errorf("unexpected positional argument %s", token)
+			return fmt.Errorf("unexpected positional argument %s", token)
 
 		default:
-			return nil, fmt.Errorf("unexpected token %s", token)
+			return fmt.Errorf("unexpected token %s", token)
 		}
 	}
 
 	if err := checkMissingPositionals(positional, node.Positional); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := checkMissingChildren(node.Children); err != nil {
-		return nil, err
+		return err
 	}
 
-	if err := checkMissingFlags(node.Children, flags); err != nil {
-		return nil, err
+	if err := checkMissingFlags(node.Children, p.Flags); err != nil {
+		return err
 	}
 
-	return
+	return nil
 }
 
 func checkMissingFlags(children []*Branch, flags []*Flag) error {
