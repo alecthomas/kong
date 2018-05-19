@@ -25,6 +25,7 @@ type Value struct {
 	Flag     bool // True if flag, false if positional argument.
 	Name     string
 	Help     string
+	Default  string
 	Decoder  Decoder
 	Field    reflect.StructField
 	Value    reflect.Value
@@ -34,7 +35,11 @@ type Value struct {
 }
 
 func (v *Value) Decode(scan *Scanner) error {
-	return v.Decoder.Decode(&DecoderContext{Value: v}, scan, v.Value)
+	err := v.Decoder.Decode(&DecoderContext{Value: v}, scan, v.Value)
+	if err == nil {
+		v.Set = true
+	}
+	return err
 }
 
 type Positional = Value
@@ -49,5 +54,4 @@ type Flag struct {
 	Placeholder string
 	Env         string
 	Short       rune
-	Default     string
 }

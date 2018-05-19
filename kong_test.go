@@ -241,3 +241,13 @@ func TestMixedRequiredArgs(t *testing.T) {
 		require.Equal(t, "gak", cli.Name)
 	})
 }
+
+func TestDefaultValueForOptionalArg(t *testing.T) {
+	var cli struct {
+		Arg string `arg:"" optional:"" default:"default"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "default", cli.Arg)
+}

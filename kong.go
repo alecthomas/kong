@@ -75,10 +75,15 @@ func (k *Kong) reset(node *Node) {
 		flag.Value.Value.Set(reflect.Zero(flag.Value.Value.Type()))
 		if flag.Default != "" {
 			flag.Decode(Scan(flag.Default))
+			flag.Set = false
 		}
 	}
 	for _, pos := range node.Positional {
 		pos.Value.Set(reflect.Zero(pos.Value.Type()))
+		if pos.Default != "" {
+			pos.Decode(Scan(pos.Default))
+			pos.Set = false
+		}
 	}
 	for _, branch := range node.Children {
 		if branch.Argument != nil {
@@ -210,14 +215,14 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 		return nil, err
 	}
 
-	if err := chickMissingFlags(node.Children, flags); err != nil {
+	if err := checkMissingFlags(node.Children, flags); err != nil {
 		return nil, err
 	}
 
 	return
 }
 
-func chickMissingFlags(children []*Branch, flags []*Flag) error {
+func checkMissingFlags(children []*Branch, flags []*Flag) error {
 	// Only check required missing fields at the last child.
 	if len(children) > 0 {
 		return nil
@@ -290,7 +295,6 @@ func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag)
 			if err != nil {
 				return err
 			}
-			flag.Set = true
 			return nil
 		}
 	}

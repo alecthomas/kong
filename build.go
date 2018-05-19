@@ -110,6 +110,7 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 				Name:    name,
 				Flag:    flag,
 				Help:    help,
+				Default: dflt,
 				Decoder: decoder,
 				Value:   fv,
 				Field:   ft,
@@ -124,7 +125,6 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 				node.Flags = append(node.Flags, &Flag{
 					Value:       value,
 					Short:       short,
-					Default:     dflt,
 					Placeholder: placeholder,
 					Env:         env,
 				})
@@ -135,12 +135,8 @@ func buildNode(v reflect.Value, cmd bool) *Node {
 	// Scan through argument positionals to ensure optional is never before a required
 	last := true
 	for _, p := range node.Positional {
-		if p.Flag {
-			continue
-		}
-
 		if !last && p.Required {
-			fail("arguments can not be required after an optional: %v", p.Name)
+			fail("argument %q can not be required after an optional", p.Name)
 		}
 
 		last = p.Required
