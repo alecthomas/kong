@@ -24,3 +24,24 @@ func main() {
   kong.Parse(&CLI)
 }
 ```
+
+## Decoders
+
+Command-line arguments are mapped to Go values via the Decoder interface:
+
+```go
+// A Decoder knows how to decode text into a Go value.
+type Decoder interface {
+	// Decode scan into target.
+	//
+	// "ctx" contains context about the value being decoded that may be useful
+	// to some decoders.
+	Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
+}
+```
+
+All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`) have decoders registered by default. Decoders for custom types can be added using `kong.RegisterDecoder(decoder)`. Decoders are mapped from fields in three ways:
+
+1. By registering a `kong.NamedDecoder` and using the tag `type:"<name>"`.
+2. By registering a `kong.KindDecoder` with a `reflect.Kind`.
+3. By registering a `kong.TypeDecoder` with a `reflect.Type`.
