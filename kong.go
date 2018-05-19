@@ -113,7 +113,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 					scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
-				// Long flag.
+			// Long flag.
 			case strings.HasPrefix(token.Value, "--"):
 				// Parse it and push the tokens.
 				parts := strings.SplitN(token.Value[2:], "=", 2)
@@ -122,7 +122,7 @@ func (k *Kong) applyNode(scan *Scanner, node *Node, flags []*Flag) (command []st
 				}
 				scan.PushTyped(parts[0], FlagToken)
 
-				// Short flag.
+			// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
 				// Note: tokens must be pushed in reverse order.
 				scan.PushTyped(token.Value[2:], ShortFlagTailToken)
