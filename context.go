@@ -7,12 +7,22 @@ import (
 
 type ParseContext struct {
 	Scan    *Scanner
-	Command []string
-	Flags   []*Flag
+	Command []string // Full command path.
+	Flags   []*Flag  // Accumulated available flags.
+	Node    *Node    // Current node being parsed.
+	Trace   []*ParseTrace
+}
+
+type ParseTrace struct {
+	Positional *Value
+	Flag       *Flag
+	Argument   *Argument
+	Command    *Command
 }
 
 func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
+	p.Node = node
 	p.Flags = append(p.Flags, node.Flags...)
 
 	for token := p.Scan.Pop(); token.Type != EOLToken; token = p.Scan.Pop() {
@@ -59,14 +69,14 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 			p.Scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := matchFlags(p.Flags, token, p.Scan, func(f *Flag) bool {
+			if err := p.matchFlags(token, func(f *Flag) bool {
 				return f.Name == token.Value
 			}); err != nil {
 				return err
 			}
 
 		case ShortFlagToken:
-			if err := matchFlags(p.Flags, token, p.Scan, func(f *Flag) bool {
+			if err := p.matchFlags(token, func(f *Flag) bool {
 				return string(f.Name) == token.Value
 			}); err != nil {
 				return err
@@ -85,6 +95,7 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 					return err
 				}
 				p.Command = append(p.Command, "<"+arg.Name+">")
+				p.Trace = append(p.Trace, &ParseTrace{Positional: arg})
 				positional++
 				break
 			}
@@ -96,6 +107,7 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 					if branch.Command.Name == token.Value {
 						p.Scan.Pop()
 						p.Command = append(p.Command, branch.Command.Name)
+						p.Trace = append(p.Trace, &ParseTrace{Command: branch.Command})
 						return p.applyNode(branch.Command)
 					}
 
@@ -103,6 +115,7 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 					arg := branch.Argument.Argument
 					if err := arg.Decode(p.Scan); err == nil {
 						p.Command = append(p.Command, "<"+arg.Name+">")
+						p.Trace = append(p.Trace, &ParseTrace{Argument: branch.Argument})
 						return p.applyNode(&branch.Argument.Node)
 					}
 				}
@@ -186,7 +199,7 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
 
-func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag) bool) (err error) {
+func (p *ParseContext) matchFlags(token Token, matcher func(f *Flag) bool) (err error) {
 	defer func() {
 		msg := recover()
 		if test, ok := msg.(Error); ok {
@@ -195,13 +208,14 @@ func matchFlags(flags []*Flag, token Token, scan *Scanner, matcher func(f *Flag)
 			panic(msg)
 		}
 	}()
-	for _, flag := range flags {
+	for _, flag := range p.Flags {
 		// Found a matching flag.
 		if flag.Name == token.Value {
-			err := flag.Decode(scan)
+			err := flag.Decode(p.Scan)
 			if err != nil {
 				return err
 			}
+			p.Trace = append(p.Trace, &ParseTrace{Flag: flag})
 			return nil
 		}
 	}
