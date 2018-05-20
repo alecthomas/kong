@@ -37,10 +37,10 @@ func parseCSV(s string) ([]string, error) {
 	runes := []rune(s)
 	for idx := 0; idx < len(runes); idx++ {
 		r := runes[idx]
-		next1 := uint8(0)
+		next1 := rune(0)
 		eof := false
-		if idx < len(s)-1 {
-			next1 = s[idx+1]
+		if idx < len(runes)-1 {
+			next1 = runes[idx+1]
 		} else {
 			eof = true
 		}
