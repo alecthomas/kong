@@ -244,12 +244,12 @@ func TestMixedRequiredArgs(t *testing.T) {
 
 func TestDefaultValueForOptionalArg(t *testing.T) {
 	var cli struct {
-		Arg string `kong:"arg,optional,default='default'"`
+		Arg string `kong:"arg,optional,default='👌'"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
-	require.Equal(t, "default", cli.Arg)
+	require.Equal(t, "👌", cli.Arg)
 }
 
 func TestNoValueInTag(t *testing.T) {
