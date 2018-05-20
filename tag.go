@@ -1,7 +1,6 @@
 package kong
 
 import (
-	"encoding/csv"
 	"fmt"
 	"reflect"
 	"strings"
@@ -21,14 +20,54 @@ type Tag struct {
 	Short       rune
 }
 
-func trimQuotes(s string) string {
-	if len(s) < 2 {
-		return s
+func parseCSV(s string) ([]string, error) {
+	num := 0
+	parts := []string{}
+	current := []rune{}
+
+	next := func() {
+		parts = append(parts, string(current))
+		current = []rune{}
+		num ++
 	}
-	if s[0] == '\'' && s[len(s)-1] == '\'' {
-		return s[1 : len(s)-1]
+
+	quotes := false
+
+	for idx, rune := range s {
+		next1 := uint8(0)
+		eof := false
+		if idx < len(s) - 1 {
+			next1 = s[idx+1]
+		} else {
+			eof = true
+		}
+		next2 := ""
+		if idx < len(s) - 2 {
+			next2 = s[idx+1 : idx+2]
+		}
+		if !quotes && rune == ',' {
+			next()
+			continue
+		}
+		if rune == '\'' {
+			if next2 == "\\'" {
+				rune = '\''
+			} else if quotes {
+				quotes = false
+				if next1 == ',' || eof {
+					continue
+				}
+				return parts, fmt.Errorf("%v has an unexpected char at pos %v", s, idx)
+			} else {
+				quotes = true
+				continue
+			}
+		}
+		current = append(current, rune)
 	}
-	return s
+	next()
+
+	return parts, nil
 }
 
 func parseTag(fv reflect.Value, s string) (*Tag, error) {
@@ -37,10 +76,9 @@ func parseTag(fv reflect.Value, s string) (*Tag, error) {
 		return t, nil
 	}
 
-	r := csv.NewReader(strings.NewReader(s))
-	parts, err := r.Read()
+	parts, err := parseCSV(s)
 	if err != nil {
-		return t, fmt.Errorf("could not parse kong tag because %v", err)
+		return t, nil
 	}
 
 	for _, part := range parts {
@@ -53,7 +91,7 @@ func parseTag(fv reflect.Value, s string) (*Tag, error) {
 			if len(split) == 1 {
 				return "", true
 			}
-			return trimQuotes(split[1]), true
+			return split[1], true
 		}
 
 		if is("cmd") {

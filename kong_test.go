@@ -273,3 +273,21 @@ func TestCommaInQuotes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "1,2", cli.Numbers)
 }
+
+func TestBadString(t *testing.T) {
+	var cli struct {
+		Numbers string `kong:"default='yay'n"`
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
+func TestEscapedQuote(t *testing.T) {
+	var cli struct {
+		DoYouKnow string `kong:"default='i don\'t know'"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "i don't know", cli.DoYouKnow)
+}
