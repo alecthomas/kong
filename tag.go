@@ -13,6 +13,7 @@ type Tag struct {
 	Required    bool
 	Optional    bool
 	Help        string
+	Type        string
 	Default     string
 	Format      string
 	Placeholder string
@@ -28,7 +29,7 @@ func parseCSV(s string) ([]string, error) {
 	next := func() {
 		parts = append(parts, string(current))
 		current = []rune{}
-		num ++
+		num++
 	}
 
 	quotes := false
@@ -38,7 +39,7 @@ func parseCSV(s string) ([]string, error) {
 		r := runes[idx]
 		next1 := uint8(0)
 		eof := false
-		if idx < len(s) - 1 {
+		if idx < len(s)-1 {
 			next1 = s[idx+1]
 		} else {
 			eof = true
@@ -111,6 +112,8 @@ func parseTag(fv reflect.Value, s string) (*Tag, error) {
 			t.Default = v
 		} else if v, ok := value("help"); ok {
 			t.Help = v
+		} else if v, ok := value("type"); ok {
+			t.Type = v
 		} else if v, ok := value("placeholder"); ok {
 			t.Placeholder = v
 		} else if v, ok := value("env"); ok {

@@ -70,7 +70,7 @@ var _ KindDecoder = &kindDecoder{}
 //
 // eg.
 //
-// 		Field string `type:"colour"`
+// 		Field string `kong:"type='colour'`
 //   	kong.RegisterDecoder(kong.NewNamedDecoder("colour", ...))
 type NamedDecoder interface {
 	Name() string
@@ -99,12 +99,9 @@ var (
 // DecoderForField finds a decoder for a struct field.
 //
 // Will return nil if a decoder can not be determined.
-func DecoderForField(field reflect.StructField) Decoder {
-	name, ok := field.Tag.Lookup("type")
-	if ok {
-		if decoder, ok := namedDecoders[name]; ok {
-			return decoder
-		}
+func DecoderForField(name string, field reflect.StructField) Decoder {
+	if decoder, ok := namedDecoders[name]; ok {
+		return decoder
 	}
 	return DecoderForType(field.Type)
 }

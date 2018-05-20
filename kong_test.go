@@ -274,6 +274,14 @@ func TestCommaInQuotes(t *testing.T) {
 	require.Equal(t, "1,2", cli.Numbers)
 }
 
+func TestUnknownKey(t *testing.T) {
+	var cli struct {
+		Numbers string `kong:"gak='hi'"`
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
 func TestBadString(t *testing.T) {
 	var cli struct {
 		Numbers string `kong:"default='yay'n"`

@@ -49,12 +49,13 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 		if name == "" {
 			name = strings.ToLower(dashedString(ft.Name))
 		}
-		decoder := DecoderForField(ft)
 
 		tag, err := parseTag(fv, ft.Tag.Get("kong"))
 		if err != nil {
 			return nil, err
 		}
+
+		decoder := DecoderForField(tag.Type, ft)
 
 		if !cmd {
 			cmd = tag.Cmd

@@ -1,20 +1,27 @@
 package main
 
-import "github.com/alecthomas/kong"
+import (
+	"github.com/alecthomas/kong"
+	"encoding/json"
+	"fmt"
+)
 
 var CLI struct {
 	Rm struct {
-		Force     bool `help:"Force removal."`
-		Recursive bool `help:"Recursively remove files."`
+		Force     bool `kong:"help='Force removal.'"`
+		Recursive bool `kong:"help='Recursively remove files.'"`
 
-		Paths []string `help:"Paths to remove." type:"path"`
-	} `help:"Remove files."`
+		Paths []string `kong:"help='Paths to remove.',type='path'"`
+	} `kong:"help='Remove files.'"`
 
 	Ls struct {
-		Paths []string `help:"Paths to list." type:"path"`
-	} `help:"List paths."`
+		Paths []string `kong:"help='Paths to list.',type='path'"`
+	} `kong:"help='List paths.'"`
 }
 
 func main() {
-	kong.Parse(&CLI)
+	cmd := kong.Parse(&CLI)
+	s, _ := json.Marshal(&CLI)
+	fmt.Println(cmd)
+	fmt.Println(string(s))
 }
