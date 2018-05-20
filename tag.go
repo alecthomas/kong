@@ -26,7 +26,7 @@ func parseCSV(s string) ([]string, error) {
 	parts := []string{}
 	current := []rune{}
 
-	next := func() {
+	add := func() {
 		parts = append(parts, string(current))
 		current = []rune{}
 		num++
@@ -37,26 +37,26 @@ func parseCSV(s string) ([]string, error) {
 	runes := []rune(s)
 	for idx := 0; idx < len(runes); idx++ {
 		r := runes[idx]
-		next1 := rune(0)
+		next := rune(0)
 		eof := false
 		if idx < len(runes)-1 {
-			next1 = runes[idx+1]
+			next = runes[idx+1]
 		} else {
 			eof = true
 		}
 		if !quotes && r == ',' {
-			next()
+			add()
 			continue
 		}
 		if r == '\\' {
-			if next1 == '\'' {
+			if next == '\'' {
 				idx++
 				r = '\''
 			}
 		} else if r == '\'' {
 			if quotes {
 				quotes = false
-				if next1 == ',' || eof {
+				if next == ',' || eof {
 					continue
 				}
 				return parts, fmt.Errorf("%v has an unexpected char at pos %v", s, idx)
@@ -71,7 +71,7 @@ func parseCSV(s string) ([]string, error) {
 		return parts, fmt.Errorf("%v is not quoted properly", s)
 	}
 
-	next()
+	add()
 
 	return parts, nil
 }
