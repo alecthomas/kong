@@ -17,11 +17,11 @@ func TestPositionalArguments(t *testing.T) {
 	var cli struct {
 		User struct {
 			Create struct {
-				ID    int    `arg:""`
-				First string `arg:""`
-				Last  string `arg:""`
-			} `cmd:""`
-		} `cmd:""`
+				ID    int    `kong:"arg"`
+				First string `kong:"arg"`
+				Last  string `kong:"arg"`
+			} `kong:"cmd"`
+		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
 	cmd, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
@@ -43,21 +43,21 @@ func TestBranchingArgument(t *testing.T) {
 	var cli struct {
 		User struct {
 			Create struct {
-				ID    string `arg:""`
-				First string `arg:""`
-				Last  string `arg:""`
-			} `cmd:""`
+				ID    string `kong:"arg"`
+				First string `kong:"arg"`
+				Last  string `kong:"arg"`
+			} `kong:"cmd"`
 
 			// Branching argument.
 			ID struct {
-				ID     int `arg:""`
+				ID     int `kong:"arg"`
 				Flag   int
-				Delete struct{} `cmd:""`
+				Delete struct{} `kong:"cmd"`
 				Rename struct {
 					To string
-				} `cmd:""`
-			} `arg:""`
-		} `cmd:""  help:"User management."`
+				} `kong:"cmd"`
+			} `kong:"arg"`
+		} `kong:"cmd,help='User management.'"`
 	}
 	p := mustNew(t, &cli)
 	cmd, err := p.Parse([]string{"user", "10", "delete"})
@@ -73,7 +73,7 @@ func TestBranchingArgument(t *testing.T) {
 func TestResetWithDefaults(t *testing.T) {
 	var cli struct {
 		Flag            string
-		FlagWithDefault string `default:"default" `
+		FlagWithDefault string `kong:"default='default'"`
 	}
 	cli.Flag = "BLAH"
 	cli.FlagWithDefault = "BLAH"
@@ -96,7 +96,7 @@ func TestFlagSlice(t *testing.T) {
 
 func TestArgSlice(t *testing.T) {
 	var cli struct {
-		Slice []int `arg:""`
+		Slice []int `kong:"arg"`
 		Flag  bool
 	}
 	parser := mustNew(t, &cli)
@@ -117,8 +117,8 @@ func TestUnsupportedFieldErrors(t *testing.T) {
 func TestMatchingArgField(t *testing.T) {
 	var cli struct {
 		ID struct {
-			NotID int `arg:""`
-		} `arg:""`
+			NotID int `kong:"arg"`
+		} `kong:"arg"`
 	}
 
 	_, err := New(&cli)
@@ -127,9 +127,9 @@ func TestMatchingArgField(t *testing.T) {
 
 func TestCantMixPositionalAndBranches(t *testing.T) {
 	var cli struct {
-		Arg     string `arg:""`
+		Arg     string `kong:"arg"`
 		Command struct {
-		} `cmd:""`
+		} `kong:"cmd"`
 	}
 	_, err := New(&cli)
 	require.Error(t, err)
@@ -140,8 +140,8 @@ func TestPropagatedFlags(t *testing.T) {
 		Flag1    string
 		Command1 struct {
 			Flag2    bool
-			Command2 struct{} `cmd:""`
-		} `cmd:""`
+			Command2 struct{} `kong:"cmd"`
+		} `kong:"cmd"`
 	}
 
 	parser := mustNew(t, &cli)
@@ -153,7 +153,7 @@ func TestPropagatedFlags(t *testing.T) {
 
 func TestRequiredFlag(t *testing.T) {
 	var cli struct {
-		Flag string `required:""`
+		Flag string `kong:"required"`
 	}
 
 	parser := mustNew(t, &cli)
@@ -163,7 +163,7 @@ func TestRequiredFlag(t *testing.T) {
 
 func TestOptionalArg(t *testing.T) {
 	var cli struct {
-		Arg string `arg:"" optional:""`
+		Arg string `kong:"arg,optional"`
 	}
 
 	parser := mustNew(t, &cli)
@@ -173,7 +173,7 @@ func TestOptionalArg(t *testing.T) {
 
 func TestRequiredArg(t *testing.T) {
 	var cli struct {
-		Arg string `arg:""`
+		Arg string `kong:"arg"`
 	}
 
 	parser := mustNew(t, &cli)
@@ -183,8 +183,8 @@ func TestRequiredArg(t *testing.T) {
 
 func TestInvalidRequiredAfterOptional(t *testing.T) {
 	var cli struct {
-		ID   int    `arg:"" optional:""`
-		Name string `arg:""`
+		ID   int    `kong:"arg,optional"`
+		Name string `kong:"arg"`
 	}
 
 	_, err := New(&cli)
@@ -194,9 +194,9 @@ func TestInvalidRequiredAfterOptional(t *testing.T) {
 func TestOptionalStructArg(t *testing.T) {
 	var cli struct {
 		Name struct {
-			Name    string `arg:"" optional:""`
+			Name    string `kong:"arg,optional"`
 			Enabled bool
-		} `arg:"" optional:""`
+		} `kong:"arg,optional"`
 	}
 
 	parser := mustNew(t, &cli)
@@ -222,8 +222,8 @@ func TestOptionalStructArg(t *testing.T) {
 
 func TestMixedRequiredArgs(t *testing.T) {
 	var cli struct {
-		Name string `arg:""`
-		ID   int    `arg:"" optional:""`
+		Name string `kong:"arg"`
+		ID   int    `kong:"arg,optional"`
 	}
 
 	parser := mustNew(t, &cli)
@@ -244,10 +244,32 @@ func TestMixedRequiredArgs(t *testing.T) {
 
 func TestDefaultValueForOptionalArg(t *testing.T) {
 	var cli struct {
-		Arg string `arg:"" optional:"" default:"default"`
+		Arg string `kong:"arg,optional,default='default'"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "default", cli.Arg)
+}
+
+func TestNoValueInTag(t *testing.T) {
+	var cli struct {
+		Empty1 string `kong:"default"`
+		Empty2 string `kong:"default="`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "", cli.Empty1)
+	require.Equal(t, "", cli.Empty2)
+}
+
+func TestCommaInQuotes(t *testing.T) {
+	var cli struct {
+		Numbers string `kong:"default='1,2'"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "1,2", cli.Numbers)
 }
