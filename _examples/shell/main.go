@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/alecthomas/kong"
 	"encoding/json"
 	"fmt"
+
+	"github.com/alecthomas/kong"
 )
 
 var CLI struct {
