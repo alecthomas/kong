@@ -2,38 +2,103 @@ package kong
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
-type ParseContext struct {
-	Scan    *Scanner
-	Command []string // Full command path.
-	Flags   []*Flag  // Accumulated available flags.
-	Node    *Node    // Current node being parsed.
-	Trace   []*ParseTrace
-}
-
+// ParseTrace records the nodes and parsed values from the current command-line.
 type ParseTrace struct {
+	// One of these will be non-nil.
 	Positional *Value
 	Flag       *Flag
 	Argument   *Argument
 	Command    *Command
+
+	// Parsed value for non-commands.
+	Value reflect.Value
 }
 
-func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
-	positional := 0
-	p.Node = node
-	p.Flags = append(p.Flags, node.Flags...)
+type ParseContext struct {
+	Trace []*ParseTrace // A trace through parsed nodes.
 
-	for token := p.Scan.Pop(); token.Type != EOLToken; token = p.Scan.Pop() {
+	command []string // Full command path.
+	flags   []*Flag  // Accumulated available flags.
+	node    *Node    // Current node being parsed.
+
+	args []string
+	app  *Application
+	scan *Scanner
+}
+
+// Trace parses the command-line, validating and collecting matching grammar nodes.
+func Trace(args []string, app *Application) (*ParseContext, error) {
+	p := &ParseContext{
+		app:  app,
+		args: args,
+	}
+	err := p.reset(&p.app.Node)
+	if err != nil {
+		return nil, err
+	}
+	return p, p.trace(&p.app.Node)
+}
+
+// FlagValue returns the set value of a flag, if it was encountered and exists.
+func (p *ParseContext) FlagValue(flag *Flag) reflect.Value {
+	for _, trace := range p.Trace {
+		if trace.Flag == flag {
+			return trace.Value
+		}
+	}
+	return reflect.Value{}
+}
+
+// Recursively reset values to defaults (as specified in the grammar) or the zero value.
+func (p *ParseContext) reset(node *Node) error {
+	p.scan = Scan(p.args...)
+	for _, flag := range node.Flags {
+		err := flag.Value.Reset()
+		if err != nil {
+			return err
+		}
+	}
+	for _, pos := range node.Positional {
+		err := pos.Reset()
+		if err != nil {
+			return err
+		}
+	}
+	for _, branch := range node.Children {
+		if branch.Argument != nil {
+			arg := branch.Argument.Argument
+			err := arg.Reset()
+			if err != nil {
+				return err
+			}
+			p.reset(&branch.Argument.Node)
+		} else {
+			p.reset(branch.Command)
+		}
+	}
+	return nil
+}
+
+func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
+	positional := 0
+	p.node = node
+	p.flags = append(p.flags, node.Flags...)
+
+	for !p.scan.Peek().IsEOL() {
+		token := p.scan.Peek()
 		switch token.Type {
 		case UntypedToken:
 			switch {
 			// -- indicates end of parsing. All remaining arguments are treated as positional arguments only.
 			case token.Value == "--":
+				p.scan.Pop()
 				args := []string{}
 				for {
-					token = p.Scan.Pop()
+					token = p.scan.Pop()
 					if token.Type == EOLToken {
 						break
 					}
@@ -41,42 +106,46 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 				}
 				// Note: tokens must be pushed in reverse order.
 				for i := range args {
-					p.Scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
+					p.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
 			// Long flag.
 			case strings.HasPrefix(token.Value, "--"):
+				p.scan.Pop()
 				// Parse it and push the tokens.
 				parts := strings.SplitN(token.Value[2:], "=", 2)
 				if len(parts) > 1 {
-					p.Scan.PushTyped(parts[1], FlagValueToken)
+					p.scan.PushTyped(parts[1], FlagValueToken)
 				}
-				p.Scan.PushTyped(parts[0], FlagToken)
+				p.scan.PushTyped(parts[0], FlagToken)
 
 			// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
+				p.scan.Pop()
 				// Note: tokens must be pushed in reverse order.
-				p.Scan.PushTyped(token.Value[2:], ShortFlagTailToken)
-				p.Scan.PushTyped(token.Value[1:2], ShortFlagToken)
+				p.scan.PushTyped(token.Value[2:], ShortFlagTailToken)
+				p.scan.PushTyped(token.Value[1:2], ShortFlagToken)
 
 			default:
-				p.Scan.PushTyped(token.Value, PositionalArgumentToken)
+				p.scan.Pop()
+				p.scan.PushTyped(token.Value, PositionalArgumentToken)
 			}
 
 		case ShortFlagTailToken:
+			p.scan.Pop()
 			// Note: tokens must be pushed in reverse order.
-			p.Scan.PushTyped(token.Value[1:], ShortFlagTailToken)
-			p.Scan.PushTyped(token.Value[0:1], ShortFlagToken)
+			p.scan.PushTyped(token.Value[1:], ShortFlagTailToken)
+			p.scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := p.matchFlags(token, func(f *Flag) bool {
+			if err := p.matchFlags(func(f *Flag) bool {
 				return f.Name == token.Value
 			}); err != nil {
 				return err
 			}
 
 		case ShortFlagToken:
-			if err := p.matchFlags(token, func(f *Flag) bool {
+			if err := p.matchFlags(func(f *Flag) bool {
 				return string(f.Name) == token.Value
 			}); err != nil {
 				return err
@@ -86,16 +155,15 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 			return fmt.Errorf("unexpected flag argument %q", token.Value)
 
 		case PositionalArgumentToken:
-			p.Scan.PushToken(token)
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
-				err := arg.Decode(p.Scan)
+				value, err := arg.Parse(p.scan)
 				if err != nil {
 					return err
 				}
-				p.Command = append(p.Command, "<"+arg.Name+">")
-				p.Trace = append(p.Trace, &ParseTrace{Positional: arg})
+				p.command = append(p.command, "<"+arg.Name+">")
+				p.Trace = append(p.Trace, &ParseTrace{Positional: arg, Value: value})
 				positional++
 				break
 			}
@@ -105,18 +173,18 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 				switch {
 				case branch.Command != nil:
 					if branch.Command.Name == token.Value {
-						p.Scan.Pop()
-						p.Command = append(p.Command, branch.Command.Name)
+						p.scan.Pop()
+						p.command = append(p.command, branch.Command.Name)
 						p.Trace = append(p.Trace, &ParseTrace{Command: branch.Command})
-						return p.applyNode(branch.Command)
+						return p.trace(branch.Command)
 					}
 
 				case branch.Argument != nil:
 					arg := branch.Argument.Argument
-					if err := arg.Decode(p.Scan); err == nil {
-						p.Command = append(p.Command, "<"+arg.Name+">")
-						p.Trace = append(p.Trace, &ParseTrace{Argument: branch.Argument})
-						return p.applyNode(&branch.Argument.Node)
+					if value, err := arg.Parse(p.scan); err == nil {
+						p.command = append(p.command, "<"+arg.Name+">")
+						p.Trace = append(p.Trace, &ParseTrace{Argument: branch.Argument, Value: value})
+						return p.trace(&branch.Argument.Node)
 					}
 				}
 			}
@@ -135,11 +203,31 @@ func (p *ParseContext) applyNode(node *Node) (err error) { // nolint: gocyclo
 		return err
 	}
 
-	if err := checkMissingFlags(node.Children, p.Flags); err != nil {
+	if err := checkMissingFlags(node.Children, p.flags); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// Apply traced context to the target grammar.
+func (p *ParseContext) Apply() (string, error) {
+	path := []string{}
+	for _, trace := range p.Trace {
+		switch {
+		case trace.Argument != nil:
+			path = append(path, "<"+trace.Argument.Name+">")
+			trace.Argument.Argument.Apply(trace.Value)
+		case trace.Command != nil:
+			path = append(path, trace.Command.Name)
+		case trace.Flag != nil:
+			trace.Flag.Value.Apply(trace.Value)
+		case trace.Positional != nil:
+			path = append(path, "<"+trace.Positional.Name+">")
+			trace.Positional.Apply(trace.Value)
+		}
+	}
+	return strings.Join(path, " "), nil
 }
 
 func checkMissingFlags(children []*Branch, flags []*Flag) error {
@@ -199,7 +287,8 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
 
-func (p *ParseContext) matchFlags(token Token, matcher func(f *Flag) bool) (err error) {
+func (p *ParseContext) matchFlags(matcher func(f *Flag) bool) (err error) {
+	token := p.scan.Peek()
 	defer func() {
 		msg := recover()
 		if test, ok := msg.(Error); ok {
@@ -208,14 +297,15 @@ func (p *ParseContext) matchFlags(token Token, matcher func(f *Flag) bool) (err 
 			panic(msg)
 		}
 	}()
-	for _, flag := range p.Flags {
+	for _, flag := range p.flags {
 		// Found a matching flag.
 		if flag.Name == token.Value {
-			err := flag.Decode(p.Scan)
+			p.scan.Pop()
+			value, err := flag.Parse(p.scan)
 			if err != nil {
 				return err
 			}
-			p.Trace = append(p.Trace, &ParseTrace{Flag: flag})
+			p.Trace = append(p.Trace, &ParseTrace{Flag: flag, Value: value})
 			return nil
 		}
 	}

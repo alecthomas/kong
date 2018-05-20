@@ -8,7 +8,9 @@ import (
 
 func mustNew(t *testing.T, cli interface{}) *Kong {
 	t.Helper()
-	parser, err := New(cli)
+	parser, err := New(cli, ExitFunction(func(int) {
+		t.Fatalf("unexpected exit()")
+	}))
 	require.NoError(t, err)
 	return parser
 }
@@ -306,4 +308,22 @@ func TestEscapedQuote(t *testing.T) {
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "i don't know", cli.DoYouKnow)
+}
+
+func TestInvalidDefaultErrors(t *testing.T) {
+	var cli struct {
+		Flag int `default:"foo"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.Error(t, err)
+}
+
+func TestHelp(t *testing.T) {
+	var cli struct {
+		Flag string
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
 }
