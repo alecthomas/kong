@@ -282,9 +282,17 @@ func TestBadString(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestNoQuoteEnd(t *testing.T) {
+	var cli struct {
+		Numbers string `kong:"default='yay"`
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
 func TestEscapedQuote(t *testing.T) {
 	var cli struct {
-		DoYouKnow string `kong:"default='i don\'t know'"`
+		DoYouKnow string `kong:"default='i don\\'t know'"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)

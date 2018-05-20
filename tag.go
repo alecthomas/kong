@@ -33,7 +33,9 @@ func parseCSV(s string) ([]string, error) {
 
 	quotes := false
 
-	for idx, rune := range s {
+	runes := []rune(s)
+	for idx := 0; idx < len(runes); idx++ {
+		r := runes[idx]
 		next1 := uint8(0)
 		eof := false
 		if idx < len(s) - 1 {
@@ -41,18 +43,17 @@ func parseCSV(s string) ([]string, error) {
 		} else {
 			eof = true
 		}
-		next2 := ""
-		if idx < len(s) - 2 {
-			next2 = s[idx+1 : idx+2]
-		}
-		if !quotes && rune == ',' {
+		if !quotes && r == ',' {
 			next()
 			continue
 		}
-		if rune == '\'' {
-			if next2 == "\\'" {
-				rune = '\''
-			} else if quotes {
+		if r == '\\' {
+			if next1 == '\'' {
+				idx++
+				r = '\''
+			}
+		} else if r == '\'' {
+			if quotes {
 				quotes = false
 				if next1 == ',' || eof {
 					continue
@@ -63,8 +64,12 @@ func parseCSV(s string) ([]string, error) {
 				continue
 			}
 		}
-		current = append(current, rune)
+		current = append(current, r)
 	}
+	if quotes {
+		return parts, fmt.Errorf("%v is not quoted properly", s)
+	}
+
 	next()
 
 	return parts, nil
@@ -78,7 +83,7 @@ func parseTag(fv reflect.Value, s string) (*Tag, error) {
 
 	parts, err := parseCSV(s)
 	if err != nil {
-		return t, nil
+		return t, err
 	}
 
 	for _, part := range parts {
