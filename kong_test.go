@@ -312,7 +312,7 @@ func TestEscapedQuote(t *testing.T) {
 
 func TestInvalidDefaultErrors(t *testing.T) {
 	var cli struct {
-		Flag int `default:"foo"`
+		Flag int `kong:"default='foo'"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
@@ -324,6 +324,31 @@ func TestHelp(t *testing.T) {
 		Flag string
 	}
 	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{"--help"})
+	_, err := p.Parse([]string{"--flag=hello", "--help"})
+	require.NoError(t, err)
+	require.NotEqual(t, "hello", cli.Flag)
+}
+
+func TestDuplicateFlag(t *testing.T) {
+	var cli struct {
+		Flag bool
+		Cmd  struct {
+			Flag bool
+		}
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
+func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
+	var cli struct {
+		Cmd1 struct {
+			Flag bool
+		}
+		Cmd2 struct {
+			Flag bool
+		}
+	}
+	_, err := New(&cli)
 	require.NoError(t, err)
 }

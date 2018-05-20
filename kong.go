@@ -69,7 +69,7 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 		return "", err
 	}
 	if value := ctx.FlagValue(k.Model.HelpFlag); value.IsValid() && value.Bool() {
-		// Help flag was specified.
+		return "", nil
 	}
 	return ctx.Apply()
 }
