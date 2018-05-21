@@ -1,7 +1,6 @@
 package kong
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"unicode/utf8"
@@ -21,7 +20,7 @@ type Tag struct {
 	Short       rune
 }
 
-func parseCSV(s string) ([]string, error) {
+func parseCSV(s string) []string {
 	num := 0
 	parts := []string{}
 	current := []rune{}
@@ -59,7 +58,7 @@ func parseCSV(s string) ([]string, error) {
 				if next == ',' || eof {
 					continue
 				}
-				return parts, fmt.Errorf("%v has an unexpected char at pos %v", s, idx)
+				fail("%v has an unexpected char at pos %v", s, idx)
 			} else {
 				quotes = true
 				continue
@@ -68,26 +67,21 @@ func parseCSV(s string) ([]string, error) {
 		current = append(current, r)
 	}
 	if quotes {
-		return parts, fmt.Errorf("%v is not quoted properly", s)
+		fail("%v is not quoted properly", s)
 	}
 
 	add()
 
-	return parts, nil
+	return parts
 }
 
-func parseTag(fv reflect.Value, s string) (*Tag, error) {
+func parseTag(fv reflect.Value, s string) *Tag {
 	t := &Tag{}
 	if s == "" {
-		return t, nil
+		return t
 	}
 
-	parts, err := parseCSV(s)
-	if err != nil {
-		return t, err
-	}
-
-	for _, part := range parts {
+	for _, part := range parseCSV(s) {
 		is := func(m string) bool { return part == m }
 		value := func(m string) (string, bool) {
 			split := strings.SplitN(part, "=", 2)
@@ -124,7 +118,7 @@ func parseTag(fv reflect.Value, s string) (*Tag, error) {
 				t.Short = 0
 			}
 		} else {
-			return t, fmt.Errorf("%v is an unknown kong key", part)
+			fail("%v is an unknown kong key", part)
 		}
 	}
 
@@ -132,5 +126,5 @@ func parseTag(fv reflect.Value, s string) (*Tag, error) {
 		t.Placeholder = strings.ToUpper(dashedString(fv.Type().Name()))
 	}
 
-	return t, nil
+	return t
 }

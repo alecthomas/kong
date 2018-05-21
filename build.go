@@ -61,11 +61,7 @@ func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 			name = strings.ToLower(dashedString(ft.Name))
 		}
 
-		tag, err := parseTag(fv, ft.Tag.Get("kong"))
-		if err != nil {
-			fail("%s", err)
-		}
-
+		tag := parseTag(fv, ft.Tag.Get("kong"))
 		decoder := DecoderForField(tag.Type, ft)
 
 		if !cmd {
