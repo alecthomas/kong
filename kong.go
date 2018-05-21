@@ -33,13 +33,7 @@ type Kong struct {
 
 // New creates a new Kong parser into ast.
 func New(ast interface{}, options ...Option) (*Kong, error) {
-	model, err := build(ast)
-	if err != nil {
-		return nil, err
-	}
-	model.Name = filepath.Base(os.Args[0])
 	k := &Kong{
-		Model:       model,
 		terminate:   os.Exit,
 		stdout:      os.Stdout,
 		stderr:      os.Stderr,
@@ -47,6 +41,14 @@ func New(ast interface{}, options ...Option) (*Kong, error) {
 		helpContext: map[string]interface{}{},
 		helpFuncs:   template.FuncMap{},
 	}
+
+	model, err := build(ast)
+	if err != nil {
+		return k, err
+	}
+	k.Model = model
+	k.Model.Name = filepath.Base(os.Args[0])
+
 	for _, option := range options {
 		option(k)
 	}
@@ -91,7 +93,11 @@ func (k *Kong) reset(node *Node) {
 }
 
 func (k *Kong) Errorf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, k.Model.Name+": "+format, args...)
+	if k.Model != nil {
+		fmt.Fprintf(os.Stderr, k.Model.Name+": "+format, args...)
+	} else {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
 }
 
 func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
@@ -99,9 +105,9 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		return
 	}
 	msg := err.Error()
-	if len(args) == 0 {
+	if len(args) > 0 {
 		msg = fmt.Sprintf(args[0].(string), args...) + ": " + err.Error()
 	}
-	k.Errorf("%s", msg)
+	k.Errorf("%s\n", msg)
 	k.terminate(1)
 }
