@@ -20,18 +20,20 @@ type Tag struct {
 	Short       rune
 }
 
-func parseCSV(s string) []string {
-	num := 0
-	parts := []string{}
-	current := []rune{}
+func parseCSV(s string) map[string]string {
+	d := make(map[string]string)
+
+	key := []rune{}
+	value := []rune{}
+	quotes := false
+	inKey := true
 
 	add := func() {
-		parts = append(parts, string(current))
-		current = []rune{}
-		num++
+		d[string(key)] = string(value)
+		key = []rune{}
+		value = []rune{}
+		inKey = true
 	}
-
-	quotes := false
 
 	runes := []rune(s)
 	for idx := 0; idx < len(runes); idx++ {
@@ -45,6 +47,10 @@ func parseCSV(s string) []string {
 		}
 		if !quotes && r == ',' {
 			add()
+			continue
+		}
+		if r == '=' && inKey {
+			inKey = false
 			continue
 		}
 		if r == '\\' {
@@ -64,7 +70,11 @@ func parseCSV(s string) []string {
 				continue
 			}
 		}
-		current = append(current, r)
+		if inKey {
+			key = append(key, r)
+		} else {
+			value = append(value, r)
+		}
 	}
 	if quotes {
 		fail("%v is not quoted properly", s)
@@ -72,7 +82,7 @@ func parseCSV(s string) []string {
 
 	add()
 
-	return parts
+	return d
 }
 
 func parseTag(fv reflect.Value, s string) *Tag {
@@ -81,19 +91,8 @@ func parseTag(fv reflect.Value, s string) *Tag {
 		return t
 	}
 
-	for _, part := range parseCSV(s) {
-		value := func(m string) (string, bool) {
-			split := strings.SplitN(part, "=", 2)
-			if split[0] != m {
-				return "", false
-			}
-			if len(split) == 1 {
-				return "", true
-			}
-			return split[1], true
-		}
-
-		switch part {
+	for k, v := range parseCSV(s) {
+		switch k {
 		case "cmd":
 			t.Cmd = true
 		case "arg":
@@ -102,25 +101,23 @@ func parseTag(fv reflect.Value, s string) *Tag {
 			t.Required = true
 		case "optional":
 			t.Optional = true
-		default:
-			if v, ok := value("default"); ok {
-				t.Default = v
-			} else if v, ok := value("help"); ok {
-				t.Help = v
-			} else if v, ok := value("type"); ok {
-				t.Type = v
-			} else if v, ok := value("placeholder"); ok {
-				t.Placeholder = v
-			} else if v, ok := value("env"); ok {
-				t.Env = v
-			} else if v, ok := value("rune"); ok {
-				t.Short, _ = utf8.DecodeRuneInString(v)
-				if t.Short == utf8.RuneError {
-					t.Short = 0
-				}
-			} else {
-				fail("%v is an unknown kong key", part)
+		case "default":
+			t.Default = v
+		case "help":
+			t.Help = v
+		case "type":
+			t.Type = v
+		case "placeholder":
+			t.Placeholder = v
+		case "env":
+			t.Env = v
+		case "rune":
+			t.Short, _ = utf8.DecodeRuneInString(v)
+			if t.Short == utf8.RuneError {
+				t.Short = 0
 			}
+		default:
+			fail("%v is an unknown kong key", k)
 		}
 	}
 
