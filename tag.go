@@ -21,7 +21,7 @@ type Tag struct {
 }
 
 func parseCSV(s string) map[string]string {
-	d := make(map[string]string)
+	d := map[string]string{}
 
 	key := []rune{}
 	value := []rune{}

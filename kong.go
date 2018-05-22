@@ -41,16 +41,16 @@ func New(ast interface{}, options ...Option) (*Kong, error) {
 		helpFuncs:   template.FuncMap{},
 	}
 
-	for _, option := range options {
-		option(k)
-	}
-
 	model, err := build(ast)
 	if err != nil {
 		return k, err
 	}
 	k.Model = model
 	k.Model.Name = filepath.Base(os.Args[0])
+
+	for _, option := range options {
+		option(k)
+	}
 
 	return k, nil
 }

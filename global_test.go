@@ -12,6 +12,11 @@ func TestParseHandlingBadBuild(t *testing.T) {
 		Enabled bool `kong:"unknown"`
 	}
 
+	args := os.Args
+	defer func() {
+		os.Args = args
+	}()
+
 	os.Args = []string{os.Args[0], "hi"}
 
 	defer func() {
