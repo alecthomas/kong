@@ -9,6 +9,9 @@ const defaultHelp = `{{- with .Application -}}
 usage: {{.Name}}
 
 {{.Help}}
+{{range .Flags}}
+--{{.Name}}
+{{end}}
 
 {{- end -}}
 `

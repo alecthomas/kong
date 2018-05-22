@@ -22,21 +22,32 @@ func build(ast interface{}) (app *Application, err error) {
 		return nil, fmt.Errorf("expected a pointer to a struct but got %T", ast)
 	}
 
-	node, err := buildNode(iv, true)
-	if err != nil {
-		return node, err
+	app = &Application{
+		// Synthesize a --help flag.
+		HelpFlag: &Flag{
+			Value: Value{
+				Name:    "help",
+				Help:    "Show context-sensitive help.",
+				Flag:    true,
+				Value:   reflect.New(reflect.TypeOf(false)).Elem(),
+				Decoder: kindDecoders[reflect.Bool],
+			}},
 	}
+	node := buildNode(iv, map[string]bool{"help": true}, true)
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
 	}
-	return node, nil
+	// Prepend --help flag.
+	node.Flags = append([]*Flag{app.HelpFlag}, node.Flags...)
+	app.Node = *node
+	return app, nil
 }
 
 func dashedString(s string) string {
 	return strings.Join(camelCase(s), "-")
 }
 
-func buildNode(v reflect.Value, cmd bool) (*Node, error) {
+func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 	node := &Node{}
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
@@ -52,7 +63,7 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 
 		tag, err := parseTag(fv, ft.Tag.Get("kong"))
 		if err != nil {
-			return nil, err
+			fail("%s", err)
 		}
 
 		decoder := DecoderForField(tag.Type, ft)
@@ -66,10 +77,7 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 
 		// Nested structs are either commands or args.
 		if ft.Type.Kind() == reflect.Struct && (cmd || tag.Arg) {
-			child, err := buildNode(fv, false)
-			if err != nil {
-				return nil, err
-			}
+			child := buildNode(fv, seenFlags, false)
 			child.Help = tag.Help
 
 			// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
@@ -115,7 +123,6 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 				Default: tag.Default,
 				Decoder: decoder,
 				Value:   fv,
-				Field:   ft,
 
 				// Flags are optional by default, and args are required by default.
 				Required: (flag && tag.Required) || (tag.Arg && !tag.Optional),
@@ -124,6 +131,10 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 			if tag.Arg {
 				node.Positional = append(node.Positional, &value)
 			} else {
+				if seenFlags[value.Name] {
+					fail("duplicate flag --%s", value.Name)
+				}
+				seenFlags[value.Name] = true
 				node.Flags = append(node.Flags, &Flag{
 					Value:       value,
 					Short:       tag.Short,
@@ -132,6 +143,11 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 				})
 			}
 		}
+	}
+
+	// "Unsee" flags.
+	for _, flag := range node.Flags {
+		delete(seenFlags, flag.Name)
 	}
 
 	// Scan through argument positionals to ensure optional is never before a required.
@@ -144,5 +160,5 @@ func buildNode(v reflect.Value, cmd bool) (*Node, error) {
 		last = p.Required
 	}
 
-	return node, nil
+	return node
 }

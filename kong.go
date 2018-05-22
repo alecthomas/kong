@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 )
 
@@ -65,31 +64,14 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 			panic(msg)
 		}
 	}()
-	k.reset(k.Model)
-	ctx := &ParseContext{
-		Scan: Scan(args...),
+	ctx, err := Trace(args, k.Model)
+	if err != nil {
+		return "", err
 	}
-	err = ctx.applyNode(k.Model)
-	return strings.Join(ctx.Command, " "), err
-}
-
-// Recursively reset values to defaults (as specified in the grammar) or the zero value.
-func (k *Kong) reset(node *Node) {
-	for _, flag := range node.Flags {
-		flag.Value.Reset()
+	if value := ctx.FlagValue(k.Model.HelpFlag); value.IsValid() && value.Bool() {
+		return "", nil
 	}
-	for _, pos := range node.Positional {
-		pos.Reset()
-	}
-	for _, branch := range node.Children {
-		if branch.Argument != nil {
-			arg := branch.Argument.Argument
-			arg.Reset()
-			k.reset(&branch.Argument.Node)
-		} else {
-			k.reset(branch.Command)
-		}
-	}
+	return ctx.Apply()
 }
 
 func (k *Kong) Errorf(format string, args ...interface{}) {

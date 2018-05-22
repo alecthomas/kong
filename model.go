@@ -2,7 +2,10 @@ package kong
 
 import "reflect"
 
-type Application = Node
+type Application struct {
+	Node
+	HelpFlag *Flag
+}
 
 // A Branch is a command or positional argument that results in a branch in the command tree.
 type Branch struct {
@@ -27,27 +30,40 @@ type Value struct {
 	Help     string
 	Default  string
 	Decoder  Decoder
-	Field    reflect.StructField
+	Tag      reflect.StructTag
 	Value    reflect.Value
 	Required bool
 	Set      bool   // Used with Required to test if a value has been given.
 	Format   string // Formatting directive, if applicable.
 }
 
-func (v *Value) Decode(scan *Scanner) error {
-	err := v.Decoder.Decode(&DecoderContext{Value: v}, scan, v.Value)
+// Parse tokens into value, parse, and validate, but do not write to the field.
+func (v *Value) Parse(scan *Scanner) (reflect.Value, error) {
+	value := reflect.New(v.Value.Type()).Elem()
+	err := v.Decoder.Decode(&DecoderContext{Value: v}, scan, value)
 	if err == nil {
 		v.Set = true
 	}
-	return err
+	return value, err
 }
 
-func (v *Value) Reset() {
+// Apply value to field.
+func (v *Value) Apply(value reflect.Value) {
+	v.Value.Set(value)
+	v.Set = true
+}
+
+func (v *Value) Reset() error {
 	v.Value.Set(reflect.Zero(v.Value.Type()))
 	if v.Default != "" {
-		v.Decode(Scan(v.Default))
+		value, err := v.Parse(Scan(v.Default))
+		if err != nil {
+			return err
+		}
+		v.Apply(value)
 		v.Set = false
 	}
+	return nil
 }
 
 type Positional = Value

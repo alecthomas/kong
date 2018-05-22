@@ -8,7 +8,9 @@ import (
 
 func mustNew(t *testing.T, cli interface{}) *Kong {
 	t.Helper()
-	parser, err := New(cli)
+	parser, err := New(cli, ExitFunction(func(int) {
+		t.Fatalf("unexpected exit()")
+	}))
 	require.NoError(t, err)
 	return parser
 }
@@ -306,4 +308,47 @@ func TestEscapedQuote(t *testing.T) {
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "i don't know", cli.DoYouKnow)
+}
+
+func TestInvalidDefaultErrors(t *testing.T) {
+	var cli struct {
+		Flag int `kong:"default='foo'"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.Error(t, err)
+}
+
+func TestHelp(t *testing.T) {
+	var cli struct {
+		Flag string
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag=hello", "--help"})
+	require.NoError(t, err)
+	require.NotEqual(t, "hello", cli.Flag)
+}
+
+func TestDuplicateFlag(t *testing.T) {
+	var cli struct {
+		Flag bool
+		Cmd  struct {
+			Flag bool
+		}
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
+func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
+	var cli struct {
+		Cmd1 struct {
+			Flag bool
+		}
+		Cmd2 struct {
+			Flag bool
+		}
+	}
+	_, err := New(&cli)
+	require.NoError(t, err)
 }

@@ -40,6 +40,10 @@ func (t Token) String() string {
 	}
 }
 
+func (t Token) IsEOL() bool {
+	return t.Type == EOLToken
+}
+
 func (t Token) IsAny(types ...TokenType) bool {
 	for _, typ := range types {
 		if t.Type == typ {
