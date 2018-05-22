@@ -36,5 +36,8 @@ func HelpContext(context map[string]interface{}) Option {
 
 // Writers overrides the default writers. Useful for testing or interactive use.
 func Writers(stdout, stderr io.Writer) Option {
-	return func(k *Kong) { k.stdout = stdout }
+	return func(k *Kong) {
+		k.stdout = stdout
+		k.stderr = stderr
+	}
 }
