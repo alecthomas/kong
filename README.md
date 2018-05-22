@@ -42,6 +42,6 @@ type Decoder interface {
 
 All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`) have decoders registered by default. Decoders for custom types can be added using `kong.RegisterDecoder(decoder)`. Decoders are mapped from fields in three ways:
 
-1. By registering a `kong.NamedDecoder` and using the tag `type:"<name>"`.
+1. By registering a `kong.NamedDecoder` and using the key `type='<name>'`.
 2. By registering a `kong.KindDecoder` with a `reflect.Kind`.
 3. By registering a `kong.TypeDecoder` with a `reflect.Type`.
