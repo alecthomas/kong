@@ -76,11 +76,7 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 }
 
 func (k *Kong) Errorf(format string, args ...interface{}) {
-	if k.Model != nil {
-		fmt.Fprintf(os.Stderr, k.Model.Name+": "+format, args...)
-	} else {
-		fmt.Fprintf(os.Stderr, format, args...)
-	}
+	fmt.Fprintf(os.Stderr, k.Model.Name+": "+format, args...)
 }
 
 func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {

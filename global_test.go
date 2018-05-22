@@ -16,7 +16,7 @@ func TestParseHandlingBadBuild(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			require.Equal(t, "exiting", r)
+			require.Equal(t, Error{msg: "unknown is an unknown kong key"}, r)
 		}
 	}()
 
