@@ -1,11 +1,15 @@
 package kong
 
-import "os"
+import (
+	"os"
+)
 
 // Parse constructs a new parser and parses the default command-line.
 func Parse(cli interface{}, options ...Option) string {
 	parser, err := New(cli, options...)
-	parser.FatalIfErrorf(err)
+	if err != nil {
+		panic(err)
+	}
 	cmd, err := parser.Parse(os.Args[1:])
 	parser.FatalIfErrorf(err)
 	return cmd
