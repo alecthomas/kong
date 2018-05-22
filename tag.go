@@ -82,7 +82,6 @@ func parseTag(fv reflect.Value, s string) *Tag {
 	}
 
 	for _, part := range parseCSV(s) {
-		is := func(m string) bool { return part == m }
 		value := func(m string) (string, bool) {
 			split := strings.SplitN(part, "=", 2)
 			if split[0] != m {
@@ -94,31 +93,34 @@ func parseTag(fv reflect.Value, s string) *Tag {
 			return split[1], true
 		}
 
-		if is("cmd") {
+		switch part {
+		case "cmd":
 			t.Cmd = true
-		} else if is("arg") {
+		case "arg":
 			t.Arg = true
-		} else if is("required") {
+		case "required":
 			t.Required = true
-		} else if is("optional") {
+		case "optional":
 			t.Optional = true
-		} else if v, ok := value("default"); ok {
-			t.Default = v
-		} else if v, ok := value("help"); ok {
-			t.Help = v
-		} else if v, ok := value("type"); ok {
-			t.Type = v
-		} else if v, ok := value("placeholder"); ok {
-			t.Placeholder = v
-		} else if v, ok := value("env"); ok {
-			t.Env = v
-		} else if v, ok := value("rune"); ok {
-			t.Short, _ = utf8.DecodeRuneInString(v)
-			if t.Short == utf8.RuneError {
-				t.Short = 0
+		default:
+			if v, ok := value("default"); ok {
+				t.Default = v
+			} else if v, ok := value("help"); ok {
+				t.Help = v
+			} else if v, ok := value("type"); ok {
+				t.Type = v
+			} else if v, ok := value("placeholder"); ok {
+				t.Placeholder = v
+			} else if v, ok := value("env"); ok {
+				t.Env = v
+			} else if v, ok := value("rune"); ok {
+				t.Short, _ = utf8.DecodeRuneInString(v)
+				if t.Short == utf8.RuneError {
+					t.Short = 0
+				}
+			} else {
+				fail("%v is an unknown kong key", part)
 			}
-		} else {
-			fail("%v is an unknown kong key", part)
 		}
 	}
 
