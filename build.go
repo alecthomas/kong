@@ -118,6 +118,7 @@ func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 				Help:    tag.Help,
 				Default: tag.Default,
 				Decoder: decoder,
+				Tag:     tag,
 				Value:   fv,
 
 				// Flags are optional by default, and args are required by default.

@@ -222,7 +222,7 @@ func floatDecoder(bits int) DecoderFunc {
 
 func sliceDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 	el := target.Type().Elem()
-	sep, ok := ctx.Value.Tag.Lookup("sep")
+	sep, ok := ctx.Value.Tag.Get("sep")
 	if !ok {
 		sep = ","
 	}

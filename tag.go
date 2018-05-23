@@ -123,8 +123,9 @@ func (t *Tag) Has(k string) bool {
 	return ok
 }
 
-func (t *Tag) Get(k string) (string, error) {
-	return t.items[k], nil
+func (t *Tag) Get(k string) (string, bool) {
+	s, ok := t.items[k]
+	return s, ok
 }
 
 func (t *Tag) GetBool(k string) (bool, error) {
