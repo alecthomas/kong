@@ -9,7 +9,7 @@ import (
 
 func TestParseHandlingBadBuild(t *testing.T) {
 	var cli struct {
-		Enabled bool `kong:"unknown"`
+		Enabled bool `kong:"fail='"`
 	}
 
 	args := os.Args
@@ -21,7 +21,7 @@ func TestParseHandlingBadBuild(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			require.Equal(t, Error{msg: "unknown is an unknown kong key"}, r)
+			require.Equal(t, Error{msg: "fail=' is not quoted properly"}, r)
 		}
 	}()
 

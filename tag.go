@@ -1,7 +1,9 @@
 package kong
 
 import (
+	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -18,6 +20,9 @@ type Tag struct {
 	Placeholder string
 	Env         string
 	Short       rune
+
+	// Storage for all tag keys for arbitrary lookups.
+	items map[string]string
 }
 
 func parseCSV(s string) map[string]string {
@@ -86,44 +91,58 @@ func parseCSV(s string) map[string]string {
 }
 
 func parseTag(fv reflect.Value, s string) *Tag {
-	t := &Tag{}
+	t := &Tag{
+		items: map[string]string{},
+	}
 	if s == "" {
 		return t
 	}
 
-	for k, v := range parseCSV(s) {
-		switch k {
-		case "cmd":
-			t.Cmd = true
-		case "arg":
-			t.Arg = true
-		case "required":
-			t.Required = true
-		case "optional":
-			t.Optional = true
-		case "default":
-			t.Default = v
-		case "help":
-			t.Help = v
-		case "type":
-			t.Type = v
-		case "placeholder":
-			t.Placeholder = v
-		case "env":
-			t.Env = v
-		case "rune":
-			t.Short, _ = utf8.DecodeRuneInString(v)
-			if t.Short == utf8.RuneError {
-				t.Short = 0
-			}
-		default:
-			fail("%v is an unknown kong key", k)
-		}
-	}
+	t.items = parseCSV(s)
 
+	t.Cmd = t.Has("cmd")
+	t.Arg = t.Has("arg")
+	t.Required = t.Has("required")
+	t.Optional = t.Has("optional")
+	t.Default, _ = t.Get("default")
+	t.Help, _ = t.Get("help")
+	t.Type, _ = t.Get("type")
+	t.Env, _ = t.Get("env")
+	t.Short, _ = t.GetRune("short")
+
+	t.Placeholder, _ = t.Get("placeholder")
 	if t.Placeholder == "" {
 		t.Placeholder = strings.ToUpper(dashedString(fv.Type().Name()))
 	}
 
 	return t
+}
+
+func (t *Tag) Has(k string) bool {
+	_, ok := t.items[k]
+	return ok
+}
+
+func (t *Tag) Get(k string) (string, error) {
+	return t.items[k], nil
+}
+
+func (t *Tag) GetBool(k string) (bool, error) {
+	return strconv.ParseBool(t.items[k])
+}
+
+func (t *Tag) GetFloat(k string) (float64, error) {
+	return strconv.ParseFloat(t.items[k], 64)
+}
+
+func (t *Tag) GetInt(k string) (int64, error) {
+	return strconv.ParseInt(t.items[k], 10, 64)
+}
+
+func (t *Tag) GetRune(k string) (rune, error) {
+	r, _ := utf8.DecodeRuneInString(t.items[k])
+	if r == utf8.RuneError {
+		return 0, fmt.Errorf("%v has a rune error", t.items[k])
+	}
+	return r, nil
 }
