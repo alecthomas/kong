@@ -62,83 +62,16 @@ func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 		}
 
 		tag := parseTag(fv, ft.Tag.Get("kong"))
-		decoder := DecoderForField(tag.Type, ft)
 
 		if !cmd {
 			cmd = tag.Cmd
 		}
 
-		env := ft.Tag.Get("env")
-		format := ft.Tag.Get("format")
-
 		// Nested structs are either commands or args.
 		if ft.Type.Kind() == reflect.Struct && (cmd || tag.Arg) {
-			child := buildNode(fv, seenFlags, false)
-			child.Help = tag.Help
-
-			// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
-			// a positional argument is provided to the child, and move it to the branching argument field.
-			if tag.Arg {
-				if len(child.Positional) == 0 {
-					fail("positional branch %s.%s must have at least one child positional argument",
-						v.Type().Name(), ft.Name)
-				}
-				value := child.Positional[0]
-				child.Positional = child.Positional[1:]
-				if child.Help == "" {
-					child.Help = value.Help
-				}
-				child.Name = value.Name
-				if child.Name != name {
-					fail("first field in positional branch %s.%s must have the same name as the parent field (%s).",
-						v.Type().Name(), ft.Name, child.Name)
-				}
-				node.Children = append(node.Children, &Branch{Argument: &Argument{
-					Node:     *child,
-					Argument: value,
-				}})
-			} else {
-				child.Name = name
-				node.Children = append(node.Children, &Branch{Command: child})
-			}
-
-			if len(child.Positional) > 0 && len(child.Children) > 0 {
-				fail("can't mix positional arguments and branching arguments on %s.%s", v.Type().Name(), ft.Name)
-			}
+			buildChild(node, v, ft, fv, tag, name, seenFlags)
 		} else {
-			if decoder == nil {
-				fail("no decoder for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
-			}
-
-			flag := !tag.Arg
-
-			value := Value{
-				Name:    name,
-				Flag:    flag,
-				Help:    tag.Help,
-				Default: tag.Default,
-				Decoder: decoder,
-				Tag:     tag,
-				Value:   fv,
-
-				// Flags are optional by default, and args are required by default.
-				Required: (flag && tag.Required) || (tag.Arg && !tag.Optional),
-				Format:   format,
-			}
-			if tag.Arg {
-				node.Positional = append(node.Positional, &value)
-			} else {
-				if seenFlags[value.Name] {
-					fail("duplicate flag --%s", value.Name)
-				}
-				seenFlags[value.Name] = true
-				node.Flags = append(node.Flags, &Flag{
-					Value:       value,
-					Short:       tag.Short,
-					Placeholder: tag.Placeholder,
-					Env:         env,
-				})
-			}
+			buildField(node, v, ft, fv, tag, name, seenFlags)
 		}
 	}
 
@@ -159,3 +92,80 @@ func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 
 	return node
 }
+
+func buildChild(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
+	child := buildNode(fv, seenFlags, false)
+	child.Help = tag.Help
+
+	// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
+	// a positional argument is provided to the child, and move it to the branching argument field.
+	if tag.Arg {
+		if len(child.Positional) == 0 {
+			fail("positional branch %s.%s must have at least one child positional argument",
+				v.Type().Name(), ft.Name)
+		}
+
+		value := child.Positional[0]
+		child.Positional = child.Positional[1:]
+		if child.Help == "" {
+			child.Help = value.Help
+		}
+
+		child.Name = value.Name
+		if child.Name != name {
+			fail("first field in positional branch %s.%s must have the same name as the parent field (%s).",
+				v.Type().Name(), ft.Name, child.Name)
+		}
+
+		node.Children = append(node.Children, &Branch{Argument: &Argument{
+			Node:     *child,
+			Argument: value,
+		}})
+	} else {
+		child.Name = name
+		node.Children = append(node.Children, &Branch{Command: child})
+	}
+
+	if len(child.Positional) > 0 && len(child.Children) > 0 {
+		fail("can't mix positional arguments and branching arguments on %s.%s", v.Type().Name(), ft.Name)
+	}
+}
+
+func buildField(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
+	decoder := DecoderForField(tag.Type, ft)
+	if decoder == nil {
+		fail("no decoder for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
+	}
+
+	flag := !tag.Arg
+
+	value := Value{
+		Name:    name,
+		Flag:    flag,
+		Help:    tag.Help,
+		Default: tag.Default,
+		Decoder: decoder,
+		Tag:     tag,
+		Value:   fv,
+
+		// Flags are optional by default, and args are required by default.
+		Required: (flag && tag.Required) || (tag.Arg && !tag.Optional),
+		Format:   tag.Format,
+	}
+
+	if tag.Arg {
+		node.Positional = append(node.Positional, &value)
+	} else {
+		if seenFlags[value.Name] {
+			fail("duplicate flag --%s", value.Name)
+		}
+		seenFlags[value.Name] = true
+		node.Flags = append(node.Flags, &Flag{
+			Value:       value,
+			Short:       tag.Short,
+			Placeholder: tag.Placeholder,
+			Env:         tag.Env,
+		})
+	}
+}
+
