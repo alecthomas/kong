@@ -321,12 +321,20 @@ func TestHelp(t *testing.T) {
 	require.NotEqual(t, "hello", cli.Flag)
 }
 
+func TestCommandMissingTagIsInvalid(t *testing.T) {
+	var cli struct {
+		One struct{}
+	}
+	_, err := New(&cli)
+	require.Error(t, err)
+}
+
 func TestDuplicateFlag(t *testing.T) {
 	var cli struct {
 		Flag bool
 		Cmd  struct {
 			Flag bool
-		}
+		} `kong:"cmd"`
 	}
 	_, err := New(&cli)
 	require.Error(t, err)
@@ -336,11 +344,24 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 	var cli struct {
 		Cmd1 struct {
 			Flag bool
-		}
+		} `kong:"cmd"`
 		Cmd2 struct {
 			Flag bool
-		}
+		} `kong:"cmd"`
 	}
 	_, err := New(&cli)
 	require.NoError(t, err)
+}
+
+func TestTraceErrorPartiallySucceeds(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct {
+			} `kong:"cmd"`
+		} `kong:"cmd"`
+	}
+	p := mustNew(t, &cli)
+	trace, err := p.Trace([]string{"one", "bad"})
+	require.NoError(t, err)
+	require.Error(t, trace.Error)
 }

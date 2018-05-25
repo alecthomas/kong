@@ -33,7 +33,7 @@ func build(ast interface{}) (app *Application, err error) {
 				Decoder: kindDecoders[reflect.Bool],
 			}},
 	}
-	node := buildNode(iv, map[string]bool{"help": true}, true)
+	node := buildNode(iv, map[string]bool{"help": true})
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
 	}
@@ -47,7 +47,7 @@ func dashedString(s string) string {
 	return strings.Join(camelCase(s), "-")
 }
 
-func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
+func buildNode(v reflect.Value, seenFlags map[string]bool) *Node {
 	node := &Node{}
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
@@ -63,12 +63,8 @@ func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 
 		tag := parseTag(fv, ft.Tag.Get("kong"))
 
-		if !cmd {
-			cmd = tag.Cmd
-		}
-
 		// Nested structs are either commands or args.
-		if ft.Type.Kind() == reflect.Struct && (cmd || tag.Arg) {
+		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) {
 			buildChild(node, v, ft, fv, tag, name, seenFlags)
 		} else {
 			buildField(node, v, ft, fv, tag, name, seenFlags)
@@ -94,7 +90,7 @@ func buildNode(v reflect.Value, seenFlags map[string]bool, cmd bool) *Node {
 }
 
 func buildChild(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
-	child := buildNode(fv, seenFlags, false)
+	child := buildNode(fv, seenFlags)
 	child.Help = tag.Help
 
 	// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
@@ -168,4 +164,3 @@ func buildField(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.
 		})
 	}
 }
-

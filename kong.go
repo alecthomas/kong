@@ -69,10 +69,28 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 	if err != nil {
 		return "", err
 	}
+	if ctx.Error != nil {
+		return "", ctx.Error
+	}
 	if value := ctx.FlagValue(k.Model.HelpFlag); value.IsValid() && value.Bool() {
 		return "", nil
 	}
 	return ctx.Apply()
+}
+
+// Trace through the command tree.
+//
+// The returned context will include a trace of all parsed objects encountered; flags, arguments, commands.
+func (k *Kong) Trace(args []string) (ctx *ParseContext, err error) {
+	defer func() {
+		msg := recover()
+		if test, ok := msg.(Error); ok {
+			err = test
+		} else if msg != nil {
+			panic(msg)
+		}
+	}()
+	return Trace(args, k.Model)
 }
 
 func (k *Kong) Errorf(format string, args ...interface{}) {

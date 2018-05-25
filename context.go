@@ -20,6 +20,7 @@ type ParseTrace struct {
 
 type ParseContext struct {
 	Trace []*ParseTrace // A trace through parsed nodes.
+	Error error         // Error that occurred during trace, if any.
 
 	command []string // Full command path.
 	flags   []*Flag  // Accumulated available flags.
@@ -40,7 +41,8 @@ func Trace(args []string, app *Application) (*ParseContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	return p, p.trace(&p.app.Node)
+	p.Error = p.trace(&p.app.Node)
+	return p, nil
 }
 
 // FlagValue returns the set value of a flag, if it was encountered and exists.

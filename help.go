@@ -9,7 +9,7 @@ const defaultHelp = `{{- with .Application -}}
 usage: {{.Name}}
 
 {{.Help}}
-{{range .Flags}}
+{{range .Context.Flags}}
 --{{.Name}}
 {{end}}
 
