@@ -12,7 +12,7 @@ func TestOptions(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "name", p.Model.Name)
 	require.Equal(t, "description", p.Model.Help)
-	require.Nil(t, p.stdout)
-	require.Nil(t, p.stderr)
-	require.Nil(t, p.terminate)
+	require.Nil(t, p.Stdout)
+	require.Nil(t, p.Stderr)
+	require.Nil(t, p.Exit)
 }

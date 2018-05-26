@@ -14,23 +14,11 @@ func build(ast interface{}) (app *Application, err error) {
 		return nil, fmt.Errorf("expected a pointer to a struct but got %T", ast)
 	}
 
-	app = &Application{
-		// Synthesize a --help flag.
-		HelpFlag: &Flag{
-			Value: Value{
-				Name:    "help",
-				Help:    "Show context-sensitive help.",
-				Flag:    true,
-				Value:   reflect.New(reflect.TypeOf(false)).Elem(),
-				Decoder: kindDecoders[reflect.Bool],
-			}},
-	}
-	node := buildNode(iv, map[string]bool{"help": true})
+	app = &Application{}
+	node := buildNode(iv, map[string]bool{})
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
 	}
-	// Prepend --help flag.
-	node.Flags = append([]*Flag{app.HelpFlag}, node.Flags...)
 	app.Node = *node
 	return app, nil
 }
@@ -40,7 +28,9 @@ func dashedString(s string) string {
 }
 
 func buildNode(v reflect.Value, seenFlags map[string]bool) *Node {
-	node := &Node{}
+	node := &Node{
+		Target: v,
+	}
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
 		if strings.ToLower(ft.Name[0:1]) == ft.Name[0:1] {

@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -311,16 +312,6 @@ func TestInvalidDefaultErrors(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestHelp(t *testing.T) {
-	var cli struct {
-		Flag string
-	}
-	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{"--flag=hello", "--help"})
-	require.NoError(t, err)
-	require.NotEqual(t, "hello", cli.Flag)
-}
-
 func TestCommandMissingTagIsInvalid(t *testing.T) {
 	var cli struct {
 		One struct{}
@@ -351,4 +342,68 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 	}
 	_, err := New(&cli)
 	require.NoError(t, err)
+}
+
+func TestTraceErrorPartiallySucceeds(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct {
+			} `kong:"cmd"`
+		} `kong:"cmd"`
+	}
+	p := mustNew(t, &cli)
+	trace, err := p.Trace([]string{"one", "bad"})
+	require.NoError(t, err)
+	require.Error(t, trace.Error)
+	require.Equal(t, []string{"one"}, trace.Command())
+}
+
+func TestHooks(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two   string `kong:"arg,optional"`
+			Three string
+		} `kong:"cmd"`
+	}
+	type values struct {
+		one   bool
+		two   string
+		three string
+	}
+	hooked := values{}
+	var tests = []struct {
+		name   string
+		input  string
+		values values
+	}{
+		{"Command", "one", values{true, "", ""}},
+		{"Arg", "one two", values{true, "two", ""}},
+		{"Flag", "one --three=three", values{true, "", "three"}},
+		{"ArgAndFlag", "one two --three=three", values{true, "two", "three"}},
+	}
+	p := mustNew(t, &cli).
+		Hook(&cli.One, func(app *Kong, ctx *Context, trace *Trace) error {
+			hooked.one = true
+			return nil
+		}).
+		Hook(&cli.One.Two, func(app *Kong, ctx *Context, trace *Trace) error {
+			hooked.two = trace.Value.String()
+			return nil
+		}).
+		Hook(&cli.One.Three, func(app *Kong, ctx *Context, trace *Trace) error {
+			hooked.three = trace.Value.String()
+			return nil
+		})
+
+	for _, test := range tests {
+		hooked = values{}
+		t.Run(test.name, func(t *testing.T) {
+			_, err := p.Parse(strings.Split(test.input, " "))
+			require.NoError(t, err)
+			require.Equal(t, test.values, hooked)
+		})
+	}
+}
+
+func TestHelp(t *testing.T) {
 }

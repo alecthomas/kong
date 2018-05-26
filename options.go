@@ -9,7 +9,7 @@ type Option func(k *Kong)
 
 // ExitFunction overrides the function used to terminate. This is useful for testing or interactive use.
 func ExitFunction(exit func(int)) Option {
-	return func(k *Kong) { k.terminate = exit }
+	return func(k *Kong) { k.Exit = exit }
 }
 
 // Name overrides the application name.
@@ -37,7 +37,7 @@ func HelpContext(context map[string]interface{}) Option {
 // Writers overrides the default writers. Useful for testing or interactive use.
 func Writers(stdout, stderr io.Writer) Option {
 	return func(k *Kong) {
-		k.stdout = stdout
-		k.stderr = stderr
+		k.Stdout = stdout
+		k.Stderr = stderr
 	}
 }

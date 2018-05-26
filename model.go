@@ -21,6 +21,7 @@ type Node struct {
 	Flags      []*Flag
 	Positional []*Value
 	Children   []*Branch
+	Target     reflect.Value
 }
 
 // A Value is either a flag or a variable positional argument.

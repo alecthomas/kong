@@ -2,12 +2,13 @@ package kong
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 )
 
-// ParseTrace records the nodes and parsed values from the current command-line.
-type ParseTrace struct {
+// Trace records the nodes and parsed values from the current command-line.
+type Trace struct {
 	// One of these will be non-nil.
 	App        *Application
 	Positional *Value
@@ -22,9 +23,12 @@ type ParseTrace struct {
 	Value reflect.Value
 }
 
-type ParseContext struct {
-	Trace []*ParseTrace // A trace through parsed nodes.
-	Error error         // Error that occurred during trace, if any.
+type Context struct {
+	Trace []*Trace // A trace through parsed nodes.
+	Error error    // Error that occurred during trace, if any.
+
+	Stdout io.Writer
+	Stderr io.Writer
 
 	node *Node // Current node being parsed.
 
@@ -34,7 +38,7 @@ type ParseContext struct {
 }
 
 // Flags returns the accumulated available flags.
-func (p *ParseContext) Flags() (flags []*Flag) {
+func (p *Context) Flags() (flags []*Flag) {
 	for _, trace := range p.Trace {
 		flags = append(flags, trace.Flags...)
 	}
@@ -42,7 +46,7 @@ func (p *ParseContext) Flags() (flags []*Flag) {
 }
 
 // Command returns the full command path.
-func (p *ParseContext) Command() (command []string) {
+func (p *Context) Command() (command []string) {
 	for _, trace := range p.Trace {
 		switch {
 		case trace.Positional != nil:
@@ -56,30 +60,8 @@ func (p *ParseContext) Command() (command []string) {
 	return
 }
 
-// Trace parses the command-line, validating and collecting matching grammar nodes.
-func Trace(args []string, app *Application) (*ParseContext, error) {
-	p := &ParseContext{
-		app:  app,
-		args: args,
-	}
-	p.Trace = append(p.Trace, &ParseTrace{
-		App:   app,
-		Flags: append([]*Flag{}, app.Flags...),
-	})
-	err := p.reset(&p.app.Node)
-	if err != nil {
-		return nil, err
-	}
-	p.Error = p.trace(&p.app.Node)
-	if err = checkMissingFlags(p.Flags()); err != nil {
-		return nil, err
-	}
-
-	return p, nil
-}
-
 // FlagValue returns the set value of a flag, if it was encountered and exists.
-func (p *ParseContext) FlagValue(flag *Flag) reflect.Value {
+func (p *Context) FlagValue(flag *Flag) reflect.Value {
 	for _, trace := range p.Trace {
 		if trace.Flag == flag {
 			return trace.Value
@@ -89,7 +71,7 @@ func (p *ParseContext) FlagValue(flag *Flag) reflect.Value {
 }
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
-func (p *ParseContext) reset(node *Node) error {
+func (p *Context) reset(node *Node) error {
 	p.scan = Scan(p.args...)
 	for _, flag := range node.Flags {
 		err := flag.Value.Reset()
@@ -124,7 +106,7 @@ func (p *ParseContext) reset(node *Node) error {
 	return nil
 }
 
-func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
+func (p *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 	p.node = node
 	flags := append(p.Flags(), node.Flags...)
@@ -203,7 +185,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 				if err != nil {
 					return err
 				}
-				p.Trace = append(p.Trace, &ParseTrace{Positional: arg, Value: value, Flags: node.Flags})
+				p.Trace = append(p.Trace, &Trace{Positional: arg, Value: value, Flags: node.Flags})
 				positional++
 				break
 			}
@@ -214,9 +196,10 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 				case branch.Command != nil:
 					if branch.Command.Name == token.Value {
 						p.scan.Pop()
-						p.Trace = append(p.Trace, &ParseTrace{
+						p.Trace = append(p.Trace, &Trace{
 							Command: branch.Command,
 							Flags:   node.Flags,
+							Value:   branch.Command.Target,
 						})
 						return p.trace(branch.Command)
 					}
@@ -224,7 +207,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 				case branch.Argument != nil:
 					arg := branch.Argument.Argument
 					if value, err := arg.Parse(p.scan); err == nil {
-						p.Trace = append(p.Trace, &ParseTrace{
+						p.Trace = append(p.Trace, &Trace{
 							Argument: branch.Argument,
 							Value:    value,
 							Flags:    node.Flags,
@@ -252,7 +235,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 }
 
 // Apply traced context to the target grammar.
-func (p *ParseContext) Apply() (string, error) {
+func (p *Context) Apply() (string, error) {
 	path := []string{}
 	for _, trace := range p.Trace {
 		switch {
@@ -324,7 +307,7 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
 
-func (p *ParseContext) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
+func (p *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
 	defer catch(&err)
 	token := p.scan.Peek()
 	for _, flag := range flags {
@@ -335,7 +318,7 @@ func (p *ParseContext) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (er
 			if err != nil {
 				return err
 			}
-			p.Trace = append(p.Trace, &ParseTrace{Flag: flag, Value: value})
+			p.Trace = append(p.Trace, &Trace{Flag: flag, Value: value})
 			return nil
 		}
 	}
