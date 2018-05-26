@@ -8,6 +8,7 @@ import (
 	"text/template"
 )
 
+// Error reported by Kong.
 type Error struct{ msg string }
 
 func (e Error) Error() string { return e.msg }
@@ -57,14 +58,7 @@ func New(ast interface{}, options ...Option) (*Kong, error) {
 
 // Parse arguments into target.
 func (k *Kong) Parse(args []string) (command string, err error) {
-	defer func() {
-		msg := recover()
-		if test, ok := msg.(Error); ok {
-			err = test
-		} else if msg != nil {
-			panic(msg)
-		}
-	}()
+	defer catch(&err)
 	ctx, err := Trace(args, k.Model)
 	if err != nil {
 		return "", err
@@ -76,21 +70,6 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 		return "", nil
 	}
 	return ctx.Apply()
-}
-
-// Trace through the command tree.
-//
-// The returned context will include a trace of all parsed objects encountered; flags, arguments, commands.
-func (k *Kong) Trace(args []string) (ctx *ParseContext, err error) {
-	defer func() {
-		msg := recover()
-		if test, ok := msg.(Error); ok {
-			err = test
-		} else if msg != nil {
-			panic(msg)
-		}
-	}()
-	return Trace(args, k.Model)
 }
 
 func (k *Kong) Errorf(format string, args ...interface{}) {
@@ -107,4 +86,13 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	}
 	k.Errorf("%s\n", msg)
 	k.terminate(1)
+}
+
+func catch(err *error) {
+	msg := recover()
+	if test, ok := msg.(Error); ok {
+		*err = test
+	} else if msg != nil {
+		panic(msg)
+	}
 }

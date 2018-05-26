@@ -18,8 +18,12 @@ usage: {{.Name}}
 
 var defaultHelpTemplate = template.Must(template.New("help").Parse(defaultHelp))
 
-// WriteHelp to w. If w is nil, the default stdout writer will be used.
-func (k *Kong) WriteHelp(w io.Writer) error {
+// WriteHelp to w.
+//
+// If w is nil, the default stdout writer will be used.
+//
+// If args are provided, help will be written in the context o
+func (k *Kong) WriteHelp(w io.Writer, args ...interface{}) error {
 	if w == nil {
 		w = k.stdout
 	}

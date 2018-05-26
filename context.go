@@ -19,12 +19,12 @@ type ParseTrace struct {
 }
 
 type ParseContext struct {
-	Trace []*ParseTrace // A trace through parsed nodes.
-	Error error         // Error that occurred during trace, if any.
+	Trace   []*ParseTrace // A trace through parsed nodes.
+	Error   error         // Error that occurred during trace, if any.
+	Flags   []*Flag       // Accumulated available flags.
+	Command []string      // Full command path.
 
-	command []string // Full command path.
-	flags   []*Flag  // Accumulated available flags.
-	node    *Node    // Current node being parsed.
+	node *Node // Current node being parsed.
 
 	args []string
 	app  *Application
@@ -77,9 +77,15 @@ func (p *ParseContext) reset(node *Node) error {
 			if err != nil {
 				return err
 			}
-			p.reset(&branch.Argument.Node)
+			err = p.reset(&branch.Argument.Node)
+			if err != nil {
+				return err
+			}
 		} else {
-			p.reset(branch.Command)
+			err := p.reset(branch.Command)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -88,7 +94,7 @@ func (p *ParseContext) reset(node *Node) error {
 func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 	p.node = node
-	p.flags = append(p.flags, node.Flags...)
+	p.Flags = append(p.Flags, node.Flags...)
 
 	for !p.scan.Peek().IsEOL() {
 		token := p.scan.Peek()
@@ -164,7 +170,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 				if err != nil {
 					return err
 				}
-				p.command = append(p.command, "<"+arg.Name+">")
+				p.Command = append(p.Command, "<"+arg.Name+">")
 				p.Trace = append(p.Trace, &ParseTrace{Positional: arg, Value: value})
 				positional++
 				break
@@ -176,7 +182,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 				case branch.Command != nil:
 					if branch.Command.Name == token.Value {
 						p.scan.Pop()
-						p.command = append(p.command, branch.Command.Name)
+						p.Command = append(p.Command, branch.Command.Name)
 						p.Trace = append(p.Trace, &ParseTrace{Command: branch.Command})
 						return p.trace(branch.Command)
 					}
@@ -184,7 +190,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 				case branch.Argument != nil:
 					arg := branch.Argument.Argument
 					if value, err := arg.Parse(p.scan); err == nil {
-						p.command = append(p.command, "<"+arg.Name+">")
+						p.Command = append(p.Command, "<"+arg.Name+">")
 						p.Trace = append(p.Trace, &ParseTrace{Argument: branch.Argument, Value: value})
 						return p.trace(&branch.Argument.Node)
 					}
@@ -205,7 +211,7 @@ func (p *ParseContext) trace(node *Node) (err error) { // nolint: gocyclo
 		return err
 	}
 
-	if err := checkMissingFlags(node.Children, p.flags); err != nil {
+	if err := checkMissingFlags(node.Children, p.Flags); err != nil {
 		return err
 	}
 
@@ -291,15 +297,8 @@ func checkMissingPositionals(positional int, values []*Value) error {
 
 func (p *ParseContext) matchFlags(matcher func(f *Flag) bool) (err error) {
 	token := p.scan.Peek()
-	defer func() {
-		msg := recover()
-		if test, ok := msg.(Error); ok {
-			err = fmt.Errorf("%s %s", token, test)
-		} else if msg != nil {
-			panic(msg)
-		}
-	}()
-	for _, flag := range p.flags {
+	defer catch(&err)
+	for _, flag := range p.Flags {
 		// Found a matching flag.
 		if flag.Name == token.Value {
 			p.scan.Pop()

@@ -352,16 +352,3 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 	_, err := New(&cli)
 	require.NoError(t, err)
 }
-
-func TestTraceErrorPartiallySucceeds(t *testing.T) {
-	var cli struct {
-		One struct {
-			Two struct {
-			} `kong:"cmd"`
-		} `kong:"cmd"`
-	}
-	p := mustNew(t, &cli)
-	trace, err := p.Trace([]string{"one", "bad"})
-	require.NoError(t, err)
-	require.Error(t, trace.Error)
-}

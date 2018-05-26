@@ -7,15 +7,7 @@ import (
 )
 
 func build(ast interface{}) (app *Application, err error) {
-	defer func() {
-		msg := recover()
-		if test, ok := msg.(error); ok {
-			app = nil
-			err = test
-		} else if msg != nil {
-			panic(msg)
-		}
-	}()
+	defer catch(&err)
 	v := reflect.ValueOf(ast)
 	iv := reflect.Indirect(v)
 	if v.Kind() != reflect.Ptr || iv.Kind() != reflect.Struct {
