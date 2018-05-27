@@ -9,7 +9,7 @@ import (
 	"text/template"
 )
 
-type Hook func(app *Kong, ctx *Context, trace *Trace) error
+type HookFunction func(app *Kong, ctx *Context, trace *Trace) error
 
 // Error reported by Kong.
 type Error struct{ msg string }
@@ -37,10 +37,11 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	help        *template.Template
-	helpContext map[string]interface{}
-	helpFuncs   template.FuncMap
-	hooks       map[reflect.Value]Hook
+	help          *template.Template
+	helpContext   map[string]interface{}
+	helpFuncs     template.FuncMap
+	hooks         map[reflect.Value]HookFunction
+	noDefaultHelp bool
 }
 
 // New creates a new Kong parser into ast.
@@ -52,7 +53,7 @@ func New(ast interface{}, options ...Option) (*Kong, error) {
 		help:        defaultHelpTemplate,
 		helpContext: map[string]interface{}{},
 		helpFuncs:   template.FuncMap{},
-		hooks:       map[reflect.Value]Hook{},
+		hooks:       map[reflect.Value]HookFunction{},
 	}
 
 	model, err := build(ast)
@@ -66,7 +67,26 @@ func New(ast interface{}, options ...Option) (*Kong, error) {
 		option(k)
 	}
 
+	if !k.noDefaultHelp {
+		k.integrateHelp()
+	}
+
 	return k, nil
+}
+
+func (k *Kong) integrateHelp() {
+	helpValue := false
+	help := &Flag{
+		Value: Value{
+			Name:    "help",
+			Help:    "Show context-sensitive help.",
+			Flag:    true,
+			Value:   reflect.ValueOf(&helpValue).Elem(),
+			Decoder: kindDecoders[reflect.Bool],
+		},
+	}
+	k.Model.Flags = append([]*Flag{help}, k.Model.Flags...)
+	Hook(&helpValue, Help(defaultHelpTemplate, nil))(k)
 }
 
 // Trace parses the command-line, validating and collecting matching grammar nodes.
@@ -87,12 +107,6 @@ func (k *Kong) Trace(args []string) (*Context, error) {
 		return nil, err
 	}
 	return p, nil
-}
-
-// Hook to execute when a command is encountered.
-func (k *Kong) Hook(ptr interface{}, hook Hook) *Kong {
-	k.hooks[reflect.ValueOf(ptr)] = hook
-	return k
 }
 
 // Parse arguments into target.

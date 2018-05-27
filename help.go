@@ -18,7 +18,7 @@ usage: {{.Name}}
 var defaultHelpTemplate = template.Must(template.New("help").Parse(defaultHelp))
 
 // Help returns a Hook that will display help and exit.
-func Help(tmpl *template.Template, tmplctx map[string]interface{}) Hook {
+func Help(tmpl *template.Template, tmplctx map[string]interface{}) HookFunction {
 	return func(app *Kong, ctx *Context, trace *Trace) error {
 		merged := map[string]interface{}{
 			"Application": app.Model,

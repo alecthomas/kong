@@ -7,11 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mustNew(t *testing.T, cli interface{}) *Kong {
+func mustNew(t *testing.T, cli interface{}, options ...Option) *Kong {
 	t.Helper()
-	parser, err := New(cli, ExitFunction(func(int) {
+	options = append(options, ExitFunction(func(int) {
 		t.Fatalf("unexpected exit()")
 	}))
+	parser, err := New(cli, options...)
 	require.NoError(t, err)
 	return parser
 }
@@ -381,19 +382,13 @@ func TestHooks(t *testing.T) {
 		{"Flag", "one --three=three", values{true, "", "three"}},
 		{"ArgAndFlag", "one two --three=three", values{true, "two", "three"}},
 	}
-	p := mustNew(t, &cli).
-		Hook(&cli.One, func(app *Kong, ctx *Context, trace *Trace) error {
-			hooked.one = true
-			return nil
-		}).
-		Hook(&cli.One.Two, func(app *Kong, ctx *Context, trace *Trace) error {
-			hooked.two = trace.Value.String()
-			return nil
-		}).
-		Hook(&cli.One.Three, func(app *Kong, ctx *Context, trace *Trace) error {
-			hooked.three = trace.Value.String()
-			return nil
-		})
+	setOne := func(app *Kong, ctx *Context, trace *Trace) error { hooked.one = true; return nil }
+	setTwo := func(app *Kong, ctx *Context, trace *Trace) error { hooked.two = trace.Value.String(); return nil }
+	setThree := func(app *Kong, ctx *Context, trace *Trace) error { hooked.three = trace.Value.String(); return nil }
+	p := mustNew(t, &cli,
+		Hook(&cli.One, setOne),
+		Hook(&cli.One.Two, setTwo),
+		Hook(&cli.One.Three, setThree))
 
 	for _, test := range tests {
 		hooked = values{}
