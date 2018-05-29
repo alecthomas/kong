@@ -9,8 +9,10 @@ import (
 )
 
 var CLI struct {
-	Help bool `kong:"help='Display help.'"`
-	Rm   struct {
+	Debug  bool   `kong:"help='Debug mode.'"`
+	Output string `kong:"help='File to output to.',placeholder='FILE'"`
+
+	Rm struct {
 		Force     bool `kong:"help='Force removal.'"`
 		Recursive bool `kong:"help='Recursively remove files.'"`
 
@@ -23,7 +25,7 @@ var CLI struct {
 }
 
 func main() {
-	app := kong.Must(&CLI).Hook(&CLI.Help, kong.Help(nil, nil))
+	app := kong.Must(&CLI, kong.Description("A shell-like example app."))
 	cmd, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
 	s, _ := json.Marshal(&CLI)

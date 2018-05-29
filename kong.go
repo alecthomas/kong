@@ -6,10 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"text/template"
 )
 
-type HookFunction func(app *Kong, ctx *Context, trace *Trace) error
+type HookFunction func(ctx *Context, path *Path) error
 
 // Error reported by Kong.
 type Error struct{ msg string }
@@ -30,53 +29,54 @@ func Must(ast interface{}, options ...Option) *Kong {
 
 // Kong is the main parser type.
 type Kong struct {
-	Model *Application
+	// Grammar model.
+	*Application
+
 	// Termination function (defaults to os.Exit)
 	Exit func(int)
 
 	Stdout io.Writer
 	Stderr io.Writer
 
-	help          *template.Template
-	helpContext   map[string]interface{}
-	helpFuncs     template.FuncMap
 	hooks         map[reflect.Value]HookFunction
 	noDefaultHelp bool
 }
 
-// New creates a new Kong parser into ast.
-func New(ast interface{}, options ...Option) (*Kong, error) {
+// New creates a new Kong parser on grammar.
+//
+// See the README (https://github.com/alecthomas/kong) for usage instructions.
+func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:        os.Exit,
-		Stdout:      os.Stdout,
-		Stderr:      os.Stderr,
-		help:        defaultHelpTemplate,
-		helpContext: map[string]interface{}{},
-		helpFuncs:   template.FuncMap{},
-		hooks:       map[reflect.Value]HookFunction{},
+		Exit:   os.Exit,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		hooks:  map[reflect.Value]HookFunction{},
 	}
-
-	model, err := build(ast)
-	if err != nil {
-		return k, err
-	}
-	k.Model = model
-	k.Model.Name = filepath.Base(os.Args[0])
 
 	for _, option := range options {
 		option(k)
 	}
 
-	if !k.noDefaultHelp {
-		k.integrateHelp()
+	model, err := build(grammar, k.extraFlags())
+	if err != nil {
+		return k, err
 	}
+	k.Application = model
+	k.Name = filepath.Base(os.Args[0])
 
+	for _, option := range options {
+		option(k)
+	}
 	return k, nil
 }
 
-func (k *Kong) integrateHelp() {
+// Provide additional builtin flags, if any.
+func (k *Kong) extraFlags() []*Flag {
+	if k.noDefaultHelp {
+		return nil
+	}
 	helpValue := false
-	help := &Flag{
+	helpFlag := &Flag{
 		Value: Value{
 			Name:    "help",
 			Help:    "Show context-sensitive help.",
@@ -85,28 +85,14 @@ func (k *Kong) integrateHelp() {
 			Decoder: kindDecoders[reflect.Bool],
 		},
 	}
-	k.Model.Flags = append([]*Flag{help}, k.Model.Flags...)
-	Hook(&helpValue, Help(defaultHelpTemplate, nil))(k)
+	hook := Hook(&helpValue, Help(defaultHelpTemplate, nil))
+	hook(k)
+	return []*Flag{helpFlag}
 }
 
-// Trace parses the command-line, validating and collecting matching grammar nodes.
+// Path parses the command-line, validating and collecting matching grammar nodes.
 func (k *Kong) Trace(args []string) (*Context, error) {
-	p := &Context{
-		app:  k.Model,
-		args: args,
-		Trace: []*Trace{
-			{App: k.Model, Flags: append([]*Flag{}, k.Model.Flags...), Value: k.Model.Target},
-		},
-	}
-	err := p.reset(&p.app.Node)
-	if err != nil {
-		return nil, err
-	}
-	p.Error = p.trace(&p.app.Node)
-	if err = checkMissingFlags(p.Flags()); err != nil {
-		return nil, err
-	}
-	return p, nil
+	return Trace(k, args)
 }
 
 // Parse arguments into target.
@@ -125,11 +111,14 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 	if ctx.Error != nil {
 		return "", ctx.Error
 	}
+	if err = ctx.Validate(); err != nil {
+		return "", err
+	}
 	return ctx.Apply()
 }
 
 func (k *Kong) applyHooks(ctx *Context) error {
-	for _, trace := range ctx.Trace {
+	for _, trace := range ctx.Path {
 		var key reflect.Value
 		switch {
 		case trace.App != nil:
@@ -143,13 +132,13 @@ func (k *Kong) applyHooks(ctx *Context) error {
 		case trace.Flag != nil:
 			key = trace.Flag.Value.Value
 		default:
-			panic("unsupported Trace")
+			panic("unsupported Path")
 		}
 		if key.IsValid() {
 			key = key.Addr()
 		}
 		if hook := k.hooks[key]; hook != nil {
-			if err := hook(k, ctx, trace); err != nil {
+			if err := hook(ctx, trace); err != nil {
 				return err
 			}
 		}
@@ -159,12 +148,12 @@ func (k *Kong) applyHooks(ctx *Context) error {
 
 // Printf writes a message to Kong.Stdout with the application name prefixed.
 func (k *Kong) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(k.Stdout, k.Model.Name+": "+format, args...)
+	fmt.Fprintf(k.Stdout, k.Name+": "+format, args...)
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
 func (k *Kong) Errorf(format string, args ...interface{}) {
-	fmt.Fprintf(k.Stderr, k.Model.Name+": "+format, args...)
+	fmt.Fprintf(k.Stderr, k.Name+": "+format, args...)
 }
 
 // FatalIfError terminates with an error message if err != nil.

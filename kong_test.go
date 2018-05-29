@@ -9,9 +9,9 @@ import (
 
 func mustNew(t *testing.T, cli interface{}, options ...Option) *Kong {
 	t.Helper()
-	options = append(options, ExitFunction(func(int) {
+	options = append([]Option{ExitFunction(func(int) {
 		t.Fatalf("unexpected exit()")
-	}))
+	})}, options...)
 	parser, err := New(cli, options...)
 	require.NoError(t, err)
 	return parser
@@ -353,10 +353,10 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
-	trace, err := p.Trace([]string{"one", "bad"})
+	ctx, err := p.Trace([]string{"one", "bad"})
 	require.NoError(t, err)
-	require.Error(t, trace.Error)
-	require.Equal(t, []string{"one"}, trace.Command())
+	require.Error(t, ctx.Error)
+	require.Equal(t, []string{"one"}, ctx.Command())
 }
 
 func TestHooks(t *testing.T) {
@@ -382,9 +382,9 @@ func TestHooks(t *testing.T) {
 		{"Flag", "one --three=three", values{true, "", "three"}},
 		{"ArgAndFlag", "one two --three=three", values{true, "two", "three"}},
 	}
-	setOne := func(app *Kong, ctx *Context, trace *Trace) error { hooked.one = true; return nil }
-	setTwo := func(app *Kong, ctx *Context, trace *Trace) error { hooked.two = trace.Value.String(); return nil }
-	setThree := func(app *Kong, ctx *Context, trace *Trace) error { hooked.three = trace.Value.String(); return nil }
+	setOne := func(ctx *Context, path *Path) error { hooked.one = true; return nil }
+	setTwo := func(ctx *Context, path *Path) error { hooked.two = path.Value.String(); return nil }
+	setThree := func(ctx *Context, path *Path) error { hooked.three = path.Value.String(); return nil }
 	p := mustNew(t, &cli,
 		Hook(&cli.One, setOne),
 		Hook(&cli.One.Two, setTwo),
@@ -398,7 +398,4 @@ func TestHooks(t *testing.T) {
 			require.Equal(t, test.values, hooked)
 		})
 	}
-}
-
-func TestHelp(t *testing.T) {
 }
