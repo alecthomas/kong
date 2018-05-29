@@ -17,9 +17,10 @@ type Tag struct {
 	Type        string
 	Default     string
 	Format      string
-	Placeholder string
+	PlaceHolder string
 	Env         string
 	Short       rune
+	Hidden      bool
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string]string
@@ -109,10 +110,11 @@ func parseTag(fv reflect.Value, s string) *Tag {
 	t.Type, _ = t.Get("type")
 	t.Env, _ = t.Get("env")
 	t.Short, _ = t.GetRune("short")
+	t.Hidden = t.Has("hidden")
 
-	t.Placeholder, _ = t.Get("placeholder")
-	if t.Placeholder == "" {
-		t.Placeholder = strings.ToUpper(dashedString(fv.Type().Name()))
+	t.PlaceHolder, _ = t.Get("placeholder")
+	if t.PlaceHolder == "" {
+		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
 	}
 
 	return t

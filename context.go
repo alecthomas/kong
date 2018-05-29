@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
-// Trace records the nodes and parsed values from the current command-line.
-type Trace struct {
+// Path records the nodes and parsed values from the current command-line.
+type Path struct {
+	Parent *Node
+
 	// One of these will be non-nil.
 	App        *Application
-	Positional *Value
+	Positional *Positional
 	Flag       *Flag
 	Argument   *Argument
 	Command    *Command
@@ -24,35 +27,92 @@ type Trace struct {
 }
 
 type Context struct {
-	Trace []*Trace // A trace through parsed nodes.
-	Error error    // Error that occurred during trace, if any.
+	App   *Kong
+	Path  []*Path // A trace through parsed nodes.
+	Error error   // Error that occurred during trace, if any.
 
 	Stdout io.Writer
 	Stderr io.Writer
 
-	node *Node // Current node being parsed.
-
 	args []string
-	app  *Application
 	scan *Scanner
 }
 
+// Trace path of "args" through the gammar tree.
+//
+// The returned Context will include a Path of all commands, arguments, positionals and flags.
+func Trace(k *Kong, args []string) (*Context, error) {
+	c := &Context{
+		App:  k,
+		args: args,
+		Path: []*Path{
+			{App: k.Application, Flags: k.Flags, Value: k.Target},
+		},
+	}
+	err := c.reset(&c.App.Node)
+	if err != nil {
+		return nil, err
+	}
+	c.Error = c.trace(&c.App.Node)
+	return c, nil
+}
+
+func (c *Context) Validate() error {
+	for _, path := range c.Path {
+		if err := checkMissingFlags(path.Flags); err != nil {
+			return err
+		}
+	}
+	// Check the terminal node.
+	path := c.Path[len(c.Path)-1]
+	switch {
+	case path.App != nil:
+		if err := checkMissingChildren(&path.App.Node); err != nil {
+			return err
+		}
+		if err := checkMissingPositionals(0, path.App.Positional); err != nil {
+			return err
+		}
+
+	case path.Command != nil:
+		if err := checkMissingChildren(path.Command); err != nil {
+			return err
+		}
+		if err := checkMissingPositionals(0, path.Parent.Positional); err != nil {
+			return err
+		}
+
+	case path.Argument != nil:
+		if err := checkMissingChildren(path.Argument); err != nil {
+			return err
+		}
+
+	case path.Positional != nil:
+		if err := checkMissingPositionals(path.Positional.Position+1, path.Parent.Positional); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Flags returns the accumulated available flags.
-func (p *Context) Flags() (flags []*Flag) {
-	for _, trace := range p.Trace {
+func (c *Context) Flags() (flags []*Flag) {
+	for _, trace := range c.Path {
 		flags = append(flags, trace.Flags...)
 	}
 	return
 }
 
 // Command returns the full command path.
-func (p *Context) Command() (command []string) {
-	for _, trace := range p.Trace {
+func (c *Context) Command() (command []string) {
+	for _, trace := range c.Path {
 		switch {
 		case trace.Positional != nil:
 			command = append(command, "<"+trace.Positional.Name+">")
+
 		case trace.Argument != nil:
 			command = append(command, "<"+trace.Argument.Name+">")
+
 		case trace.Command != nil:
 			command = append(command, trace.Command.Name)
 		}
@@ -61,8 +121,8 @@ func (p *Context) Command() (command []string) {
 }
 
 // FlagValue returns the set value of a flag, if it was encountered and exists.
-func (p *Context) FlagValue(flag *Flag) reflect.Value {
-	for _, trace := range p.Trace {
+func (c *Context) FlagValue(flag *Flag) reflect.Value {
+	for _, trace := range c.Path {
 		if trace.Flag == flag {
 			return trace.Value
 		}
@@ -71,8 +131,8 @@ func (p *Context) FlagValue(flag *Flag) reflect.Value {
 }
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
-func (p *Context) reset(node *Node) error {
-	p.scan = Scan(p.args...)
+func (c *Context) reset(node *Node) error {
+	c.scan = Scan(c.args...)
 	for _, flag := range node.Flags {
 		err := flag.Value.Reset()
 		if err != nil {
@@ -87,41 +147,36 @@ func (p *Context) reset(node *Node) error {
 	}
 	for _, branch := range node.Children {
 		if branch.Argument != nil {
-			arg := branch.Argument.Argument
+			arg := branch.Argument
 			err := arg.Reset()
 			if err != nil {
 				return err
 			}
-			err = p.reset(&branch.Argument.Node)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := p.reset(branch.Command)
-			if err != nil {
-				return err
-			}
+		}
+		err := c.reset(branch)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (p *Context) trace(node *Node) (err error) { // nolint: gocyclo
+func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
-	p.node = node
-	flags := append(p.Flags(), node.Flags...)
 
-	for !p.scan.Peek().IsEOL() {
-		token := p.scan.Peek()
+	flags := append(c.Flags(), node.Flags...)
+
+	for !c.scan.Peek().IsEOL() {
+		token := c.scan.Peek()
 		switch token.Type {
 		case UntypedToken:
 			switch {
-			// -- indicates end of parsing. All remaining arguments are treated as positional arguments only.
+			// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
 			case token.Value == "--":
-				p.scan.Pop()
+				c.scan.Pop()
 				args := []string{}
 				for {
-					token = p.scan.Pop()
+					token = c.scan.Pop()
 					if token.Type == EOLToken {
 						break
 					}
@@ -129,46 +184,46 @@ func (p *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 				// Note: tokens must be pushed in reverse order.
 				for i := range args {
-					p.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
+					c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
 			// Long flag.
 			case strings.HasPrefix(token.Value, "--"):
-				p.scan.Pop()
+				c.scan.Pop()
 				// Parse it and push the tokens.
 				parts := strings.SplitN(token.Value[2:], "=", 2)
 				if len(parts) > 1 {
-					p.scan.PushTyped(parts[1], FlagValueToken)
+					c.scan.PushTyped(parts[1], FlagValueToken)
 				}
-				p.scan.PushTyped(parts[0], FlagToken)
+				c.scan.PushTyped(parts[0], FlagToken)
 
 			// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
-				p.scan.Pop()
+				c.scan.Pop()
 				// Note: tokens must be pushed in reverse order.
-				p.scan.PushTyped(token.Value[2:], ShortFlagTailToken)
-				p.scan.PushTyped(token.Value[1:2], ShortFlagToken)
+				c.scan.PushTyped(token.Value[2:], ShortFlagTailToken)
+				c.scan.PushTyped(token.Value[1:2], ShortFlagToken)
 
 			default:
-				p.scan.Pop()
-				p.scan.PushTyped(token.Value, PositionalArgumentToken)
+				c.scan.Pop()
+				c.scan.PushTyped(token.Value, PositionalArgumentToken)
 			}
 
 		case ShortFlagTailToken:
-			p.scan.Pop()
+			c.scan.Pop()
 			// Note: tokens must be pushed in reverse order.
-			p.scan.PushTyped(token.Value[1:], ShortFlagTailToken)
-			p.scan.PushTyped(token.Value[0:1], ShortFlagToken)
+			c.scan.PushTyped(token.Value[1:], ShortFlagTailToken)
+			c.scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := p.matchFlags(flags, func(f *Flag) bool {
+			if err := c.matchFlags(flags, func(f *Flag) bool {
 				return f.Name == token.Value
 			}); err != nil {
 				return err
 			}
 
 		case ShortFlagToken:
-			if err := p.matchFlags(flags, func(f *Flag) bool {
+			if err := c.matchFlags(flags, func(f *Flag) bool {
 				return string(f.Name) == token.Value
 			}); err != nil {
 				return err
@@ -181,38 +236,45 @@ func (p *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
-				value, err := arg.Parse(p.scan)
+				value, err := arg.Parse(c.scan)
 				if err != nil {
 					return err
 				}
-				p.Trace = append(p.Trace, &Trace{Positional: arg, Value: value, Flags: node.Flags})
+				c.Path = append(c.Path, &Path{
+					Parent:     node,
+					Positional: arg,
+					Value:      value,
+					Flags:      node.Flags,
+				})
 				positional++
 				break
 			}
 
 			// After positional arguments have been consumed, handle commands and branching arguments.
 			for _, branch := range node.Children {
-				switch {
-				case branch.Command != nil:
-					if branch.Command.Name == token.Value {
-						p.scan.Pop()
-						p.Trace = append(p.Trace, &Trace{
-							Command: branch.Command,
+				switch branch.Type {
+				case CommandNode:
+					if branch.Name == token.Value {
+						c.scan.Pop()
+						c.Path = append(c.Path, &Path{
+							Parent:  node,
+							Command: branch,
+							Value:   branch.Target,
 							Flags:   node.Flags,
-							Value:   branch.Command.Target,
 						})
-						return p.trace(branch.Command)
+						return c.trace(branch)
 					}
 
-				case branch.Argument != nil:
-					arg := branch.Argument.Argument
-					if value, err := arg.Parse(p.scan); err == nil {
-						p.Trace = append(p.Trace, &Trace{
-							Argument: branch.Argument,
+				case ArgumentNode:
+					arg := branch.Argument
+					if value, err := arg.Parse(c.scan); err == nil {
+						c.Path = append(c.Path, &Path{
+							Parent:   node,
+							Argument: branch,
 							Value:    value,
 							Flags:    node.Flags,
 						})
-						return p.trace(&branch.Argument.Node)
+						return c.trace(branch)
 					}
 				}
 			}
@@ -222,22 +284,13 @@ func (p *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			return fmt.Errorf("unexpected token %s", token)
 		}
 	}
-
-	if err := checkMissingPositionals(positional, node.Positional); err != nil {
-		return err
-	}
-
-	if err := checkMissingChildren(node.Children); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // Apply traced context to the target grammar.
-func (p *Context) Apply() (string, error) {
+func (c *Context) Apply() (string, error) {
 	path := []string{}
-	for _, trace := range p.Trace {
+	for _, trace := range c.Path {
 		switch {
 		case trace.Argument != nil:
 			path = append(path, "<"+trace.Argument.Name+">")
@@ -252,6 +305,24 @@ func (p *Context) Apply() (string, error) {
 		}
 	}
 	return strings.Join(path, " "), nil
+}
+
+func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
+	defer catch(&err)
+	token := c.scan.Peek()
+	for _, flag := range flags {
+		// Found a matching flag.
+		if flag.Name == token.Value {
+			c.scan.Pop()
+			value, err := flag.Parse(c.scan)
+			if err != nil {
+				return err
+			}
+			c.Path = append(c.Path, &Path{Flag: flag, Value: value})
+			return nil
+		}
+	}
+	return fmt.Errorf("unknown flag --%s", token.Value)
 }
 
 func checkMissingFlags(flags []*Flag) error {
@@ -269,23 +340,26 @@ func checkMissingFlags(flags []*Flag) error {
 	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
 }
 
-func checkMissingChildren(children []*Branch) error {
+func checkMissingChildren(node *Node) error {
 	missing := []string{}
-	for _, child := range children {
+	for _, child := range node.Children {
 		if child.Argument != nil {
-			if !child.Argument.Argument.Required {
+			if !child.Argument.Required {
 				continue
 			}
-			missing = append(missing, "<"+child.Argument.Name+">")
+			missing = append(missing, strconv.Quote("<"+child.Argument.Name+">"))
 		} else {
-			missing = append(missing, child.Command.Name)
+			missing = append(missing, strconv.Quote(child.Name))
 		}
 	}
 	if len(missing) == 0 {
 		return nil
 	}
 
-	return fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
+	if len(missing) == 1 {
+		return fmt.Errorf("%q should be followed by %s", node.Path(), missing[0])
+	}
+	return fmt.Errorf("%q should be followed by one of %s", node.Path(), strings.Join(missing, ", "))
 }
 
 // If we're missing any positionals and they're required, return an error.
@@ -305,22 +379,4 @@ func checkMissingPositionals(positional int, values []*Value) error {
 		missing = append(missing, "<"+values[positional].Name+">")
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
-}
-
-func (p *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
-	defer catch(&err)
-	token := p.scan.Peek()
-	for _, flag := range flags {
-		// Found a matching flag.
-		if flag.Name == token.Value {
-			p.scan.Pop()
-			value, err := flag.Parse(p.scan)
-			if err != nil {
-				return err
-			}
-			p.Trace = append(p.Trace, &Trace{Flag: flag, Value: value})
-			return nil
-		}
-	}
-	return fmt.Errorf("unknown flag --%s", token.Value)
 }

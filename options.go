@@ -3,9 +3,12 @@ package kong
 import (
 	"io"
 	"reflect"
-	"text/template"
 )
 
+// Options apply optional changes to the Kong application.
+//
+// Note that Options are applied twice: once just prior to the grammar is constructed and once after. In the
+// former case, Kong.Application will be nil.
 type Option func(k *Kong)
 
 // ExitFunction overrides the function used to terminate. This is useful for testing or interactive use.
@@ -22,24 +25,20 @@ func NoDefaultHelp() Option {
 
 // Name overrides the application name.
 func Name(name string) Option {
-	return func(k *Kong) { k.Model.Name = name }
+	return func(k *Kong) {
+		if k.Application != nil {
+			k.Name = name
+		}
+	}
 }
 
 // Description sets the application description.
 func Description(description string) Option {
-	return func(k *Kong) { k.Model.Help = description }
-}
-
-// HelpTemplate overrides the default help template.
-func HelpTemplate(template *template.Template) Option {
-	return func(k *Kong) { k.help = template }
-}
-
-// HelpContext sets extra context in the help template.
-//
-// The key "Application" will always be available and is the root of the application model.
-func HelpContext(context map[string]interface{}) Option {
-	return func(k *Kong) { k.helpContext = context }
+	return func(k *Kong) {
+		if k.Application != nil {
+			k.Help = description
+		}
+	}
 }
 
 // Writers overrides the default writers. Useful for testing or interactive use.

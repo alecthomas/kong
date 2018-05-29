@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func build(ast interface{}) (app *Application, err error) {
+func build(ast interface{}, extraFlags []*Flag) (app *Application, err error) {
 	defer catch(&err)
 	v := reflect.ValueOf(ast)
 	iv := reflect.Indirect(v)
@@ -15,11 +15,16 @@ func build(ast interface{}) (app *Application, err error) {
 	}
 
 	app = &Application{}
-	node := buildNode(iv, map[string]bool{})
+	seenFlags := map[string]bool{}
+	for _, flag := range extraFlags {
+		seenFlags[flag.Name] = true
+	}
+	node := buildNode(iv, ApplicationNode, seenFlags)
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
 	}
 	app.Node = *node
+	app.Node.Flags = append(extraFlags, app.Node.Flags...)
 	return app, nil
 }
 
@@ -27,8 +32,9 @@ func dashedString(s string) string {
 	return strings.Join(camelCase(s), "-")
 }
 
-func buildNode(v reflect.Value, seenFlags map[string]bool) *Node {
+func buildNode(v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
 	node := &Node{
+		Type:   typ,
 		Target: v,
 	}
 	for i := 0; i < v.NumField(); i++ {
@@ -47,7 +53,11 @@ func buildNode(v reflect.Value, seenFlags map[string]bool) *Node {
 
 		// Nested structs are either commands or args.
 		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) {
-			buildChild(node, v, ft, fv, tag, name, seenFlags)
+			typ := CommandNode
+			if tag.Arg {
+				typ = ArgumentNode
+			}
+			buildChild(node, typ, v, ft, fv, tag, name, seenFlags)
 		} else {
 			buildField(node, v, ft, fv, tag, name, seenFlags)
 		}
@@ -60,19 +70,21 @@ func buildNode(v reflect.Value, seenFlags map[string]bool) *Node {
 
 	// Scan through argument positionals to ensure optional is never before a required.
 	last := true
-	for _, p := range node.Positional {
+	for i, p := range node.Positional {
 		if !last && p.Required {
 			fail("argument %q can not be required after an optional", p.Name)
 		}
 
 		last = p.Required
+		p.Position = i
 	}
 
 	return node
 }
 
-func buildChild(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
-	child := buildNode(fv, seenFlags)
+func buildChild(node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
+	child := buildNode(fv, typ, seenFlags)
+	child.Parent = node
 	child.Help = tag.Help
 
 	// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
@@ -95,14 +107,11 @@ func buildChild(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.
 				v.Type().Name(), ft.Name, child.Name)
 		}
 
-		node.Children = append(node.Children, &Branch{Argument: &Argument{
-			Node:     *child,
-			Argument: value,
-		}})
+		child.Argument = value
 	} else {
 		child.Name = name
-		node.Children = append(node.Children, &Branch{Command: child})
 	}
+	node.Children = append(node.Children, child)
 
 	if len(child.Positional) > 0 && len(child.Children) > 0 {
 		fail("can't mix positional arguments and branching arguments on %s.%s", v.Type().Name(), ft.Name)
@@ -141,7 +150,7 @@ func buildField(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.
 		node.Flags = append(node.Flags, &Flag{
 			Value:       value,
 			Short:       tag.Short,
-			Placeholder: tag.Placeholder,
+			PlaceHolder: tag.PlaceHolder,
 			Env:         tag.Env,
 		})
 	}
