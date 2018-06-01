@@ -93,3 +93,14 @@ func TestBareTagsWithJsonTag(t *testing.T) {
 	require.Equal(t, "\"'👌'\"", cli.Cmd.Flag)
 	require.Equal(t, "", cli.Cmd.Arg)
 }
+
+func TestManySeps(t *testing.T) {
+	var cli struct {
+		Arg  string `arg    optional    default:"hi"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "hi", cli.Arg)
+}
