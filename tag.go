@@ -33,7 +33,7 @@ type tagChars struct {
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
 var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
 
-func parseCSV(s string, chr tagChars) map[string]string {
+func parseTagItems(s string, chr tagChars) map[string]string {
 	d := map[string]string{}
 	key := []rune{}
 	value := []rune{}
@@ -115,7 +115,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 		return t
 	}
 
-	t.items = parseCSV(s, chars)
+	t.items = parseTagItems(s, chars)
 
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
