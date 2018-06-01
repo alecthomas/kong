@@ -26,9 +26,15 @@ type Tag struct {
 	items map[string]string
 }
 
-func parseCSV(s string) map[string]string {
-	d := map[string]string{}
+type tagChars struct {
+	sep, quote, assign rune
+}
 
+var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
+var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
+
+func parseCSV(s string, chr tagChars) map[string]string {
+	d := map[string]string{}
 	key := []rune{}
 	value := []rune{}
 	quotes := false
@@ -51,23 +57,23 @@ func parseCSV(s string) map[string]string {
 		} else {
 			eof = true
 		}
-		if !quotes && r == ',' {
+		if !quotes && r == chr.sep {
 			add()
 			continue
 		}
-		if r == '=' && inKey {
+		if r == chr.assign && inKey {
 			inKey = false
 			continue
 		}
 		if r == '\\' {
-			if next == '\'' {
+			if next == chr.quote {
 				idx++
-				r = '\''
+				r = chr.quote
 			}
-		} else if r == '\'' {
+		} else if r == chr.quote {
 			if quotes {
 				quotes = false
-				if next == ',' || eof {
+				if next == chr.sep || eof {
 					continue
 				}
 				fail("%v has an unexpected char at pos %v", s, idx)
@@ -91,7 +97,17 @@ func parseCSV(s string) map[string]string {
 	return d
 }
 
-func parseTag(fv reflect.Value, s string) *Tag {
+func getTagInfo(ft reflect.StructField) (string, tagChars) {
+	s, ok := ft.Tag.Lookup("kong")
+	if ok {
+		return s, kongChars
+	}
+
+	return string(ft.Tag), bareChars
+}
+
+func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
+	s, chars := getTagInfo(ft)
 	t := &Tag{
 		items: map[string]string{},
 	}
@@ -99,7 +115,7 @@ func parseTag(fv reflect.Value, s string) *Tag {
 		return t
 	}
 
-	t.items = parseCSV(s)
+	t.items = parseCSV(s, chars)
 
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
