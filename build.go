@@ -49,7 +49,7 @@ func buildNode(v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
 			name = strings.ToLower(dashedString(ft.Name))
 		}
 
-		tag := parseTag(fv, ft.Tag.Get("kong"))
+		tag := parseTag(fv, ft)
 
 		// Nested structs are either commands or args.
 		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) {
