@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -15,7 +16,7 @@ type Application struct {
 func (a *Application) Leaves() (out []*Node) {
 	var walk func(n *Node)
 	walk = func(n *Node) {
-		if len(n.Children) == 0 {
+		if len(n.Children) == 0 && n.Type != ApplicationNode {
 			out = append(out, n)
 		}
 		for _, child := range n.Children {
@@ -53,6 +54,62 @@ type Node struct {
 	Argument *Value // Populated when Type is ArgumentNode.
 }
 
+// Depth of the command from the application root.
+func (n *Node) Depth() int {
+	depth := 0
+	p := n.Parent
+	for p != nil && p.Type != ApplicationNode {
+		depth++
+		p = p.Parent
+	}
+	return depth
+}
+
+// Summary help string for the node.
+func (n *Node) Summary() string {
+	summary := n.Name
+	if n.Type == ArgumentNode {
+		summary = "<" + summary + ">"
+	}
+	if flags := n.FlagSummary(); flags != "" {
+		summary += " " + flags
+	}
+	args := []string{}
+	for _, arg := range n.Positional {
+		if arg.Required {
+			argText := "<" + arg.Name + ">"
+			if arg.IsCumulative() {
+				argText += " ..."
+			}
+			args = append(args, argText)
+		}
+	}
+	if len(args) != 0 {
+		summary += " " + strings.Join(args, " ")
+	}
+	return summary
+}
+
+// FlagSummary for the node.
+func (n *Node) FlagSummary() string {
+	required := []string{}
+	count := 0
+	for _, flag := range n.Flags {
+		count++
+		if flag.Required {
+			if flag.IsBool() {
+				required = append(required, fmt.Sprintf("--%s", flag.Name))
+			} else {
+				required = append(required, fmt.Sprintf("--%s=%s", flag.Name, flag.FormatPlaceHolder()))
+			}
+		}
+	}
+	if count != len(required) {
+		required = append(required, "[<flags>]")
+	}
+	return strings.Join(required, " ")
+}
+
 // Path through ancestors to this Node.
 func (n *Node) Path() (out string) {
 	if n.Parent != nil {
@@ -80,6 +137,10 @@ type Value struct {
 	Set      bool   // Used with Required to test if a value has been given.
 	Format   string // Formatting directive, if applicable.
 	Position int    // Position (for positional arguments).
+}
+
+func (v *Value) IsCumulative() bool {
+	return v.Value.Kind() == reflect.Slice
 }
 
 func (v *Value) IsBool() bool {
@@ -125,20 +186,30 @@ type Flag struct {
 	Hidden      bool
 }
 
+func (f *Flag) String() string {
+	out := "--" + f.Name
+	if f.Short != 0 {
+		out = fmt.Sprintf("-%c, %s", f.Short, out)
+	}
+	if !f.IsBool() {
+		out += "=" + f.FormatPlaceHolder()
+	}
+	return out
+}
+
 func (f *Flag) FormatPlaceHolder() string {
+	tail := ""
+	if f.Value.IsCumulative() {
+		tail += ", ..."
+	}
 	if f.PlaceHolder != "" {
-		return f.PlaceHolder
+		return f.PlaceHolder + tail
 	}
 	if f.Default != "" {
-		ellipsis := ""
-		if len(f.Default) > 1 {
-			ellipsis = "..."
-		}
-
 		if f.Value.Value.Kind() == reflect.String {
-			return strconv.Quote(f.Default) + ellipsis
+			return strconv.Quote(f.Default) + tail
 		}
-		return f.Default + ellipsis
+		return f.Default + tail
 	}
-	return strings.ToUpper(f.Name)
+	return strings.ToUpper(f.Name) + tail
 }
