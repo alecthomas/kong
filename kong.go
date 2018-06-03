@@ -53,10 +53,6 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		hooks:  map[reflect.Value]HookFunction{},
 	}
 
-	for _, option := range options {
-		option(k)
-	}
-
 	model, err := build(grammar, k.extraFlags())
 	if err != nil {
 		return k, err
