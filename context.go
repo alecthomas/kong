@@ -326,74 +326,33 @@ func (c *Context) Apply() (string, error) {
 		}
 	}
 
-	for _, resolver := range c.App.resolvers {
-		for _, flag := range possibleFlags {
-			fmt.Println(flag)
-			if flag.Set {
-				fmt.Println("skip")
-				continue
-			}
-			s := resolver.Flag(flag)
-			flag.Value.Set
-			v := reflect.ValueOf(s)
-			flag.Parse()
-			c.scan
-		}
-	}
-
-	//for _, trace := range c.Path {
-	//	for _, resolved := range c.ResolvedValues {
-	//		if !resolved.IsSet() {
-	//			resolved.Flag.Apply(resolved.Value)
-	//		}
-	//	}
-	//}
+	c.applyResolvers(possibleFlags)
 
 	return strings.Join(path, " "), nil
 }
 
-func (c *Context) applyResolvers(flags []*Flag) {
-	for _, flag := range flags {
-		fmt.Println("flag.Name", flag.Name)
-		// envresolver
+func (c *Context) applyResolvers(possibleFlags []*Flag) error {
+	for _, resolver := range c.App.resolvers {
+		for _, flag := range possibleFlags {
+			if flag.Set {
+				continue
+			}
 
-		// jsonresolver
+			s, err := resolver(flag)
+			if err != nil {
+				return err
+			}
+
+			// Create a scanner for decoding the resolved value.
+			ctx := DecoderContext{Value: flag.Value}
+			scan := Scanner{args: []Token{{Type: FlagValueToken, Value: s}}}
+
+			flag.Mapper.Decode(&ctx, &scan, flag.Value.Value)
+		}
 	}
+
+	return nil
 }
-
-/*
-type ResolvedValue struct {
-  Value reflect.Value
-  Flag *Flag
-}
-
-
-fs rename user gak gerald --uid=200
-
-export FS_UID=100
-
-// Path records the nodes and parsed values from the current command-line.
-type Path struct {
-	Parent *Node
-
-	// One of these will be non-nil.
-	App        *Application
-	Positional *Positional
-	Flag       *Flag
-	Argument   *Argument
-	Command    *Command
-  ResolverInfo   *FlagResolver
-
-	// Flags added by this node.
-	Flags []*Flag
-
-  ResolvedValues []*ResolvedValue
-
-	// Parsed value for non-commands.
-	Value reflect.Value
-}
-
-*/
 
 func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
 	defer catch(&err)
