@@ -201,7 +201,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
-			// Long flag.
+				// Long flag.
 			case strings.HasPrefix(token.Value, "--"):
 				c.scan.Pop()
 				// Parse it and push the tokens.
@@ -211,7 +211,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 				c.scan.PushTyped(parts[0], FlagToken)
 
-			// Short flag.
+				// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
 				c.scan.Pop()
 				// Note: tokens must be pushed in reverse order.
@@ -305,13 +305,19 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 // Apply traced context to the target grammar.
 func (c *Context) Apply() (string, error) {
 	path := []string{}
+	possibleFlags := []*Flag{}
+
 	for _, trace := range c.Path {
 		switch {
+		case trace.App != nil:
+			possibleFlags = append(possibleFlags, trace.App.Flags...)
 		case trace.Argument != nil:
 			path = append(path, "<"+trace.Argument.Name+">")
 			trace.Argument.Argument.Apply(trace.Value)
+			possibleFlags = append(possibleFlags, trace.Argument.Flags...)
 		case trace.Command != nil:
 			path = append(path, trace.Command.Name)
+			possibleFlags = append(possibleFlags, trace.Command.Flags...)
 		case trace.Flag != nil:
 			trace.Flag.Value.Apply(trace.Value)
 		case trace.Positional != nil:
@@ -319,8 +325,75 @@ func (c *Context) Apply() (string, error) {
 			trace.Positional.Apply(trace.Value)
 		}
 	}
+
+	for _, resolver := range c.App.resolvers {
+		for _, flag := range possibleFlags {
+			fmt.Println(flag)
+			if flag.Set {
+				fmt.Println("skip")
+				continue
+			}
+			s := resolver.Flag(flag)
+			flag.Value.Set
+			v := reflect.ValueOf(s)
+			flag.Parse()
+			c.scan
+		}
+	}
+
+	//for _, trace := range c.Path {
+	//	for _, resolved := range c.ResolvedValues {
+	//		if !resolved.IsSet() {
+	//			resolved.Flag.Apply(resolved.Value)
+	//		}
+	//	}
+	//}
+
 	return strings.Join(path, " "), nil
 }
+
+func (c *Context) applyResolvers(flags []*Flag) {
+	for _, flag := range flags {
+		fmt.Println("flag.Name", flag.Name)
+		// envresolver
+
+		// jsonresolver
+	}
+}
+
+/*
+type ResolvedValue struct {
+  Value reflect.Value
+  Flag *Flag
+}
+
+
+fs rename user gak gerald --uid=200
+
+export FS_UID=100
+
+// Path records the nodes and parsed values from the current command-line.
+type Path struct {
+	Parent *Node
+
+	// One of these will be non-nil.
+	App        *Application
+	Positional *Positional
+	Flag       *Flag
+	Argument   *Argument
+	Command    *Command
+  ResolverInfo   *FlagResolver
+
+	// Flags added by this node.
+	Flags []*Flag
+
+  ResolvedValues []*ResolvedValue
+
+	// Parsed value for non-commands.
+	Value reflect.Value
+}
+
+*/
 
 func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
 	defer catch(&err)

@@ -92,3 +92,9 @@ func Help(help func(*Context) error) Option {
 		k.help = help
 	}
 }
+
+func Resolver(r *ResolverInfo) Option {
+	return func(k *Kong) {
+		k.resolvers = append(k.resolvers, r)
+	}
+}

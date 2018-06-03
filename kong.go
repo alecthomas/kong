@@ -38,6 +38,7 @@ type Kong struct {
 
 	before        map[reflect.Value]HookFunc
 	registry      *Registry
+	resolvers     []*ResolverInfo
 	noDefaultHelp bool
 	help          func(*Context) error
 
@@ -56,6 +57,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		before:   map[reflect.Value]HookFunc{},
 		registry: NewRegistry().RegisterDefaults(),
 		help:     PrintHelp,
+		resolvers: []*ResolverInfo{},
 	}
 
 	for _, option := range options {
