@@ -130,7 +130,7 @@ type Value struct {
 	Name     string
 	Help     string
 	Default  string
-	Decoder  Decoder
+	Mapper   Mapper
 	Tag      *Tag
 	Value    reflect.Value
 	Required bool
@@ -144,13 +144,16 @@ func (v *Value) IsCumulative() bool {
 }
 
 func (v *Value) IsBool() bool {
+	if m, ok := v.Mapper.(BoolMapper); ok && m.IsBool() {
+		return true
+	}
 	return v.Value.Kind() == reflect.Bool
 }
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner) (reflect.Value, error) {
 	value := reflect.New(v.Value.Type()).Elem()
-	err := v.Decoder.Decode(&DecoderContext{Value: v}, scan, value)
+	err := v.Mapper.Decode(&DecoderContext{Value: v}, scan, value)
 	if err == nil {
 		v.Set = true
 	}
