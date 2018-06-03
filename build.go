@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func build(ast interface{}, extraFlags []*Flag) (app *Application, err error) {
+func build(k *Kong, ast interface{}) (app *Application, err error) {
 	defer catch(&err)
 	v := reflect.ValueOf(ast)
 	iv := reflect.Indirect(v)
@@ -15,11 +15,12 @@ func build(ast interface{}, extraFlags []*Flag) (app *Application, err error) {
 	}
 
 	app = &Application{}
+	extraFlags := k.extraFlags()
 	seenFlags := map[string]bool{}
 	for _, flag := range extraFlags {
 		seenFlags[flag.Name] = true
 	}
-	node := buildNode(iv, ApplicationNode, seenFlags)
+	node := buildNode(k, iv, ApplicationNode, seenFlags)
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
 	}
@@ -32,7 +33,7 @@ func dashedString(s string) string {
 	return strings.Join(camelCase(s), "-")
 }
 
-func buildNode(v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
+func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
 	node := &Node{
 		Type:   typ,
 		Target: v,
@@ -57,9 +58,9 @@ func buildNode(v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
 			if tag.Arg {
 				typ = ArgumentNode
 			}
-			buildChild(node, typ, v, ft, fv, tag, name, seenFlags)
+			buildChild(k, node, typ, v, ft, fv, tag, name, seenFlags)
 		} else {
-			buildField(node, v, ft, fv, tag, name, seenFlags)
+			buildField(k, node, v, ft, fv, tag, name, seenFlags)
 		}
 	}
 
@@ -82,8 +83,8 @@ func buildNode(v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
 	return node
 }
 
-func buildChild(node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
-	child := buildNode(fv, typ, seenFlags)
+func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
+	child := buildNode(k, fv, typ, seenFlags)
 	child.Parent = node
 	child.Help = tag.Help
 
@@ -118,10 +119,10 @@ func buildChild(node *Node, typ NodeType, v reflect.Value, ft reflect.StructFiel
 	}
 }
 
-func buildField(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
-	decoder := DecoderForField(tag.Type, ft)
-	if decoder == nil {
-		fail("no decoder for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
+func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
+	mapper := k.registry.ForNamedType(tag.Type, fv)
+	if mapper == nil {
+		fail("no mapper for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
 	}
 
 	flag := !tag.Arg
@@ -131,7 +132,7 @@ func buildField(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.
 		Flag:    flag,
 		Help:    tag.Help,
 		Default: tag.Default,
-		Decoder: decoder,
+		Mapper:  mapper,
 		Tag:     tag,
 		Value:   fv,
 

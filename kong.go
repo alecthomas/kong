@@ -8,7 +8,8 @@ import (
 	"reflect"
 )
 
-type HookFunction func(ctx *Context, path *Path) error
+// Before is a callback tied to a field of the grammar, called before a value is applied.
+type Before func(ctx *Context, path *Path) error
 
 // Error reported by Kong.
 type Error struct{ msg string }
@@ -38,7 +39,8 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	hooks         map[reflect.Value]HookFunction
+	before        map[reflect.Value]Before
+	registry      *Registry
 	noDefaultHelp bool
 }
 
@@ -47,13 +49,18 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:   os.Exit,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		hooks:  map[reflect.Value]HookFunction{},
+		Exit:     os.Exit,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		before:   map[reflect.Value]Before{},
+		registry: NewRegistry().RegisterDefaults(),
 	}
 
-	model, err := build(grammar, k.extraFlags())
+	for _, option := range options {
+		option(k)
+	}
+
+	model, err := build(k, grammar)
 	if err != nil {
 		return k, err
 	}
@@ -72,13 +79,14 @@ func (k *Kong) extraFlags() []*Flag {
 		return nil
 	}
 	helpValue := false
+	value := reflect.ValueOf(&helpValue).Elem()
 	helpFlag := &Flag{
 		Value: Value{
-			Name:    "help",
-			Help:    "Show context-sensitive help.",
-			Flag:    true,
-			Value:   reflect.ValueOf(&helpValue).Elem(),
-			Decoder: kindDecoders[reflect.Bool],
+			Name:   "help",
+			Help:   "Show context-sensitive help.",
+			Flag:   true,
+			Value:  value,
+			Mapper: k.registry.ForValue(value),
 		},
 	}
 	hook := Hook(&helpValue, Help(defaultHelpTemplate, nil))
@@ -133,7 +141,7 @@ func (k *Kong) applyHooks(ctx *Context) error {
 		if key.IsValid() {
 			key = key.Addr()
 		}
-		if hook := k.hooks[key]; hook != nil {
+		if hook := k.before[key]; hook != nil {
 			if err := hook(ctx, trace); err != nil {
 				return err
 			}

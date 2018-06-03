@@ -82,11 +82,11 @@ func init() {
 	})
 }
 
-// Help returns a Hook that will display help and exit.
+// Help returns a Before hook that will display help and exit.
 //
 // tmpl receives a context with several top-level values, in addition to those passed through tmplctx:
 // .Context which is of type *Context and .Path which is of type *Path.
-func Help(tmpl *raymond.Template, tmplctx map[string]interface{}) HookFunction {
+func Help(tmpl *raymond.Template, tmplctx map[string]interface{}) Before {
 	return func(ctx *Context, path *Path) error {
 		merged := map[string]interface{}{
 			"App":     ctx.App,
