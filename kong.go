@@ -8,9 +8,6 @@ import (
 	"reflect"
 )
 
-// Before is a callback tied to a field of the grammar, called before a value is applied.
-type Before func(ctx *Context, path *Path) error
-
 // Error reported by Kong.
 type Error struct{ msg string }
 
@@ -39,9 +36,10 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	before        map[reflect.Value]Before
+	before        map[reflect.Value]HookFunction
 	registry      *Registry
 	noDefaultHelp bool
+	help          func(*Context) error
 }
 
 // New creates a new Kong parser on grammar.
@@ -52,8 +50,9 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		Exit:     os.Exit,
 		Stdout:   os.Stdout,
 		Stderr:   os.Stderr,
-		before:   map[reflect.Value]Before{},
+		before:   map[reflect.Value]HookFunction{},
 		registry: NewRegistry().RegisterDefaults(),
+		help:     PrintHelp,
 	}
 
 	for _, option := range options {
@@ -89,7 +88,14 @@ func (k *Kong) extraFlags() []*Flag {
 			Mapper: k.registry.ForValue(value),
 		},
 	}
-	hook := Hook(&helpValue, Help(defaultHelpTemplate, nil))
+	hook := Hook(&helpValue, func(ctx *Context, path *Path) error {
+		err := PrintHelp(ctx)
+		if err != nil {
+			return err
+		}
+		k.Exit(1)
+		return nil
+	})
 	hook(k)
 	return []*Flag{helpFlag}
 }

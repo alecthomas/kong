@@ -69,15 +69,29 @@ func Writers(stdout, stderr io.Writer) Option {
 	}
 }
 
+// HookFunction is a callback tied to a field of the grammar, called before a value is applied.
+type HookFunction func(ctx *Context, path *Path) error
+
 // Hook to aply before a command, flag or positional argument is encountered.
 //
 // "ptr" is a pointer to a field of the grammar.
-func Hook(ptr interface{}, hook Before) Option {
+func Hook(ptr interface{}, hook HookFunction) Option {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
 		panic("expected a pointer")
 	}
 	return func(k *Kong) {
 		k.before[key] = hook
+	}
+}
+
+type HelpFunction func(*Context) error
+
+// Help function to use.
+//
+// Defaults to PrintHelp.
+func Help(help func(*Context) error) Option {
+	return func(k *Kong) {
+		k.help = help
 	}
 }
