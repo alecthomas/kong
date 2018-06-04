@@ -12,23 +12,6 @@ type Application struct {
 	HelpFlag *Flag
 }
 
-// Leaves returns the leaf commands/arguments in the command-line grammar.
-func (a *Application) Leaves() (out []*Node) {
-	var walk func(n *Node)
-	walk = func(n *Node) {
-		if len(n.Children) == 0 && n.Type != ApplicationNode {
-			out = append(out, n)
-		}
-		for _, child := range n.Children {
-			if child.Type == CommandNode || child.Type == ArgumentNode {
-				walk(child)
-			}
-		}
-	}
-	walk(&a.Node)
-	return
-}
-
 type Argument = Node
 
 type Command = Node
@@ -54,6 +37,25 @@ type Node struct {
 	Argument *Value // Populated when Type is ArgumentNode.
 }
 
+// Leaves returns the leaf commands/arguments under Node.
+func (n *Node) Leaves() (out []*Node) {
+	var walk func(n *Node)
+	walk = func(n *Node) {
+		if len(n.Children) == 0 && n.Type != ApplicationNode {
+			out = append(out, n)
+		}
+		for _, child := range n.Children {
+			if child.Type == CommandNode || child.Type == ArgumentNode {
+				walk(child)
+			}
+		}
+	}
+	for _, child := range n.Children {
+		walk(child)
+	}
+	return
+}
+
 // Depth of the command from the application root.
 func (n *Node) Depth() int {
 	depth := 0
@@ -67,7 +69,7 @@ func (n *Node) Depth() int {
 
 // Summary help string for the node.
 func (n *Node) Summary() string {
-	summary := n.Name
+	summary := n.Path()
 	if n.Type == ArgumentNode {
 		summary = "<" + summary + ">"
 	}

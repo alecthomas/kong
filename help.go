@@ -7,130 +7,154 @@ import (
 	"io"
 	"reflect"
 	"strings"
-
-	"github.com/aymerick/raymond"
 )
 
 const (
-	defaultIndent   = 2
-	defaultTemplate = `
-{{#with App}}
-usage: {{Name}}
-
-{{#wrap}}
-{{Help}}
-{{/wrap}}
-
-Flags:
-{{#indent}}
-{{formatFlags Flags}}
-{{/indent}}
-
-{{#if Children}}
-{{#indent}}
-{{#each Children}}
-{{Name}}
-{{/each}}
-{{/indent}}
-{{/if}}
-{{/with}}
-`
+	defaultIndent = 2
 )
 
-var defaultHelpTemplate = raymond.MustParse(strings.TrimSpace(defaultTemplate))
-
-func init() {
-	defaultHelpTemplate.RegisterHelpers(map[string]interface{}{
-		"indent": func(options *raymond.Options) string {
-			indent, ok := options.HashProp("depth").(int)
-			if !ok {
-				indent = 2
-			}
-			width := options.Data("width").(int)
-			frame := options.NewDataFrame()
-			frame.Set("width", width-indent)
-			indentStr := strings.Repeat(" ", indent)
-			lines := strings.Split(options.FnData(frame), "\n")
-			for i, line := range lines {
-				lines[i] = indentStr + line
-			}
-			return strings.Join(lines, "\n")
-		},
-		"formatFlags": func(flags []*Flag, options *raymond.Options) string {
-			rows := [][2]string{}
-			haveShort := false
-			for _, flag := range flags {
-				if flag.Short != 0 {
-					haveShort = true
-					break
-				}
-			}
-			for _, flag := range flags {
-				if !flag.Hidden {
-					rows = append(rows, [2]string{formatFlag(haveShort, flag), flag.Help})
-				}
-			}
-			w := bytes.NewBuffer(nil)
-			formatTwoColumns(w, 0, 2, options.Data("width").(int), rows)
-			return w.String()
-		},
-		"wrap": func(options *raymond.Options) string {
-			w := bytes.NewBuffer(nil)
-			doc.ToText(w, options.Fn(), "", "  ", options.Data("width").(int))
-			return w.String()
-		},
-	})
+func PrintHelp(ctx *Context) error {
+	w := newHelpWriter(guessWidth(ctx.App.Stdout))
+	selected := ctx.Selected()
+	if selected == nil {
+		printApp(w, ctx.App.Application)
+	} else {
+		printCommand(w, ctx.App.Application, selected)
+	}
+	return w.Write(ctx.App.Stdout)
 }
 
-// Help returns a Before hook that will display help and exit.
-//
-// tmpl receives a context with several top-level values, in addition to those passed through tmplctx:
-// .Context which is of type *Context and .Path which is of type *Path.
-func Help(tmpl *raymond.Template, tmplctx map[string]interface{}) Before {
-	return func(ctx *Context, path *Path) error {
-		merged := map[string]interface{}{
-			"App":     ctx.App,
-			"Context": ctx,
-			"Path":    path,
+func printApp(w *helpWriter, app *Application) {
+	w.Printf("usage: %s", app.Summary())
+	printNodeDetail(w, &app.Node)
+}
+
+func printCommand(w *helpWriter, app *Application, cmd *Command) {
+	w.Printf("usage: %s %s", app.Name, cmd.Summary())
+	printNodeDetail(w, cmd)
+}
+
+func printNodeDetail(w *helpWriter, node *Node) {
+	if node.Help != "" {
+		w.Print("")
+		w.Wrap(node.Help)
+	}
+	if len(node.Flags) > 0 {
+		w.Printf("")
+		w.Printf("Flags:")
+		writeFlags(w.Indent(), node.Flags)
+	}
+	cmds := node.Leaves()
+	if len(cmds) > 0 {
+		w.Print("")
+		w.Print("Commands:")
+		iw := w.Indent()
+		for i, cmd := range cmds {
+			printCommandSummary(iw, cmd)
+			if i != len(cmds)-1 {
+				iw.Print("")
+			}
 		}
-		for k, v := range tmplctx {
-			merged[k] = v
-		}
-		frame := raymond.NewDataFrame()
-		frame.Set("width", guessWidth(ctx.App.Stdout))
-		output, err := tmpl.ExecWith(merged, frame)
+	}
+}
+
+func printCommandSummary(w *helpWriter, cmd *Command) {
+	w.Print(cmd.Summary())
+	if cmd.Help != "" {
+		w.Indent().Wrap(cmd.Help)
+	}
+}
+
+type helpWriter struct {
+	indent string
+	width  int
+	lines  *[]string
+}
+
+func newHelpWriter(width int) *helpWriter {
+	lines := []string{}
+	return &helpWriter{
+		indent: "",
+		width:  width,
+		lines:  &lines,
+	}
+}
+
+func (h *helpWriter) Printf(format string, args ...interface{}) {
+	h.Print(fmt.Sprintf(format, args...))
+}
+
+func (h *helpWriter) Print(text string) {
+	*h.lines = append(*h.lines, strings.TrimRight(h.indent+text, " "))
+}
+
+func (h *helpWriter) Indent() *helpWriter {
+	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2}
+}
+
+func (h *helpWriter) String() string {
+	return strings.Join(*h.lines, "\n")
+}
+
+func (h *helpWriter) Write(w io.Writer) error {
+	for _, line := range *h.lines {
+		_, err := io.WriteString(w, line+"\n")
 		if err != nil {
 			return err
 		}
-		io.WriteString(ctx.App.Stdout, output)
-		ctx.App.Exit(0)
-		return nil
+	}
+	return nil
+}
+
+func (h *helpWriter) Wrap(text string) {
+	w := bytes.NewBuffer(nil)
+	doc.ToText(w, strings.TrimSpace(text), "", "", h.width)
+	for _, line := range strings.Split(strings.TrimSpace(w.String()), "\n") {
+		h.Print(line)
 	}
 }
 
-func formatTwoColumns(w io.Writer, indent, padding, width int, rows [][2]string) {
+func writeFlags(w *helpWriter, flags []*Flag) {
+	rows := [][2]string{}
+	haveShort := false
+	for _, flag := range flags {
+		if flag.Short != 0 {
+			haveShort = true
+			break
+		}
+	}
+	for _, flag := range flags {
+		if !flag.Hidden {
+			rows = append(rows, [2]string{formatFlag(haveShort, flag), flag.Help})
+		}
+	}
+	writeTwoColumns(w, 2, rows)
+}
+
+func writeTwoColumns(w *helpWriter, padding int, rows [][2]string) {
 	// Find size of first column.
-	s := 0
+	leftSize := 0
 	for _, row := range rows {
-		if c := len(row[0]); c > s && c < 30 {
-			s = c
+		if c := len(row[0]); c > leftSize && c < 30 {
+			leftSize = c
 		}
 	}
 
-	indentStr := strings.Repeat(" ", indent)
-	offsetStr := strings.Repeat(" ", s+padding)
+	offsetStr := strings.Repeat(" ", leftSize+padding)
 
 	for _, row := range rows {
 		buf := bytes.NewBuffer(nil)
-		doc.ToText(buf, row[1], "", strings.Repeat(" ", defaultIndent), width-s-padding-indent)
+		doc.ToText(buf, row[1], "", strings.Repeat(" ", defaultIndent), w.width-leftSize-padding)
 		lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
-		fmt.Fprintf(w, "%s%-*s%*s", indentStr, s, row[0], padding, "")
-		if len(row[0]) >= 30 {
-			fmt.Fprintf(w, "\n%s%s", indentStr, offsetStr)
+
+		line := fmt.Sprintf("%-*s", leftSize, row[0])
+		if len(row[0]) < 30 {
+			line += fmt.Sprintf("%*s%s", padding, "", lines[0])
+			lines = lines[1:]
 		}
-		fmt.Fprintf(w, "%s\n", lines[0])
-		for _, line := range lines[1:] {
-			fmt.Fprintf(w, "%s%s%s\n", indentStr, offsetStr, line)
+		w.Print(line)
+		for _, line := range lines {
+			w.Printf("%s%s", offsetStr, line)
 		}
 	}
 }

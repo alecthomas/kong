@@ -9,9 +9,12 @@ import (
 
 func mustNew(t *testing.T, cli interface{}, options ...Option) *Kong {
 	t.Helper()
-	options = append([]Option{ExitFunction(func(int) {
-		t.Fatalf("unexpected exit()")
-	})}, options...)
+	options = append([]Option{
+		ExitFunction(func(int) {
+			t.Helper()
+			t.Fatalf("unexpected exit()")
+		}),
+	}, options...)
 	parser, err := New(cli, options...)
 	require.NoError(t, err)
 	return parser

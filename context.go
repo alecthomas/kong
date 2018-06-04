@@ -2,7 +2,6 @@ package kong
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -31,11 +30,22 @@ type Context struct {
 	Path  []*Path // A trace through parsed nodes.
 	Error error   // Error that occurred during trace, if any.
 
-	Stdout io.Writer
-	Stderr io.Writer
-
 	args []string
 	scan *Scanner
+}
+
+// Selected command or argument.
+func (c *Context) Selected() *Node {
+	var selected *Node
+	for _, path := range c.Path {
+		switch {
+		case path.Command != nil:
+			selected = path.Command
+		case path.Argument != nil:
+			selected = path.Argument
+		}
+	}
+	return selected
 }
 
 // Trace path of "args" through the gammar tree.
