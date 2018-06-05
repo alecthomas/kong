@@ -28,7 +28,7 @@ func Must(ast interface{}, options ...Option) *Kong {
 // Kong is the main parser type.
 type Kong struct {
 	// Grammar model.
-	*Application
+	Model *Application
 
 	// Termination function (defaults to os.Exit)
 	Exit func(int)
@@ -36,7 +36,7 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	before        map[reflect.Value]HookFunction
+	before        map[reflect.Value]HookFunc
 	registry      *Registry
 	noDefaultHelp bool
 	help          func(*Context) error
@@ -50,7 +50,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		Exit:     os.Exit,
 		Stdout:   os.Stdout,
 		Stderr:   os.Stderr,
-		before:   map[reflect.Value]HookFunction{},
+		before:   map[reflect.Value]HookFunc{},
 		registry: NewRegistry().RegisterDefaults(),
 		help:     PrintHelp,
 	}
@@ -63,8 +63,8 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	if err != nil {
 		return k, err
 	}
-	k.Application = model
-	k.Name = filepath.Base(os.Args[0])
+	model.Name = filepath.Base(os.Args[0])
+	k.Model = model
 
 	for _, option := range options {
 		option(k)
@@ -80,14 +80,14 @@ func (k *Kong) extraFlags() []*Flag {
 	helpValue := false
 	value := reflect.ValueOf(&helpValue).Elem()
 	helpFlag := &Flag{
-		Value: Value{
+		Value: &Value{
 			Name:   "help",
 			Help:   "Show context-sensitive help.",
-			Flag:   true,
 			Value:  value,
 			Mapper: k.registry.ForValue(value),
 		},
 	}
+	helpFlag.Flag = helpFlag
 	hook := Hook(&helpValue, func(ctx *Context, path *Path) error {
 		err := PrintHelp(ctx)
 		if err != nil {
@@ -158,12 +158,12 @@ func (k *Kong) applyHooks(ctx *Context) error {
 
 // Printf writes a message to Kong.Stdout with the application name prefixed.
 func (k *Kong) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(k.Stdout, k.Name+": "+format, args...)
+	fmt.Fprintf(k.Stdout, k.Model.Name+": "+format, args...)
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
 func (k *Kong) Errorf(format string, args ...interface{}) {
-	fmt.Fprintf(k.Stderr, k.Name+": "+format, args...)
+	fmt.Fprintf(k.Stderr, k.Model.Name+": "+format, args...)
 }
 
 // FatalIfError terminates with an error message if err != nil.

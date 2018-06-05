@@ -2,6 +2,7 @@ package kong
 
 import (
 	"fmt"
+	"math/bits"
 	"reflect"
 	"strconv"
 	"strings"
@@ -113,16 +114,16 @@ func (d *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
 }
 
 func (d *Registry) RegisterDefaults() *Registry {
-	return d.RegisterKind(reflect.Int, MapperFunc(intDecoder)).
-		RegisterKind(reflect.Int8, MapperFunc(intDecoder)).
-		RegisterKind(reflect.Int16, MapperFunc(intDecoder)).
-		RegisterKind(reflect.Int32, MapperFunc(intDecoder)).
-		RegisterKind(reflect.Int64, MapperFunc(intDecoder)).
-		RegisterKind(reflect.Uint, MapperFunc(uintDecoder)).
-		RegisterKind(reflect.Uint8, MapperFunc(uintDecoder)).
-		RegisterKind(reflect.Uint16, MapperFunc(uintDecoder)).
-		RegisterKind(reflect.Uint32, MapperFunc(uintDecoder)).
-		RegisterKind(reflect.Uint64, MapperFunc(uintDecoder)).
+	return d.RegisterKind(reflect.Int, intDecoder(bits.UintSize)).
+		RegisterKind(reflect.Int8, intDecoder(8)).
+		RegisterKind(reflect.Int16, intDecoder(16)).
+		RegisterKind(reflect.Int32, intDecoder(32)).
+		RegisterKind(reflect.Int64, intDecoder(64)).
+		RegisterKind(reflect.Uint, uintDecoder(64)).
+		RegisterKind(reflect.Uint8, uintDecoder(bits.UintSize)).
+		RegisterKind(reflect.Uint16, uintDecoder(16)).
+		RegisterKind(reflect.Uint32, uintDecoder(32)).
+		RegisterKind(reflect.Uint64, uintDecoder(64)).
 		RegisterKind(reflect.Float32, floatDecoder(32)).
 		RegisterKind(reflect.Float64, floatDecoder(64)).
 		RegisterKind(reflect.String, MapperFunc(func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
@@ -130,8 +131,8 @@ func (d *Registry) RegisterDefaults() *Registry {
 			return nil
 		})).
 		RegisterKind(reflect.Bool, boolMapper{}).
-		RegisterType(reflect.TypeOf(time.Time{}), MapperFunc(timeDecoder)).
-		RegisterType(reflect.TypeOf(time.Duration(0)), MapperFunc(durationDecoder)).
+		RegisterType(reflect.TypeOf(time.Time{}), timeDecoder()).
+		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
 		RegisterKind(reflect.Slice, sliceDecoder(d))
 }
 
@@ -143,46 +144,54 @@ func (boolMapper) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Valu
 }
 func (boolMapper) IsBool() bool { return true }
 
-func durationDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	d, err := time.ParseDuration(scan.PopValue("duration"))
-	if err != nil {
-		return err
+func durationDecoder() MapperFunc {
+	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+		d, err := time.ParseDuration(scan.PopValue("duration"))
+		if err != nil {
+			return err
+		}
+		target.Set(reflect.ValueOf(d))
+		return nil
 	}
-	target.Set(reflect.ValueOf(d))
-	return nil
 }
 
-func timeDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	fmt := time.RFC3339
-	if ctx.Value.Format != "" {
-		fmt = ctx.Value.Format
+func timeDecoder() MapperFunc {
+	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+		fmt := time.RFC3339
+		if ctx.Value.Format != "" {
+			fmt = ctx.Value.Format
+		}
+		t, err := time.Parse(fmt, scan.PopValue("time"))
+		if err != nil {
+			return err
+		}
+		target.Set(reflect.ValueOf(t))
+		return nil
 	}
-	t, err := time.Parse(fmt, scan.PopValue("time"))
-	if err != nil {
-		return err
-	}
-	target.Set(reflect.ValueOf(t))
-	return nil
 }
 
-func intDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	value := scan.PopValue("int")
-	n, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid int %q", value)
+func intDecoder(bits int) MapperFunc {
+	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+		value := scan.PopValue("int")
+		n, err := strconv.ParseInt(value, 10, bits)
+		if err != nil {
+			return fmt.Errorf("invalid int %q", value)
+		}
+		target.SetInt(n)
+		return nil
 	}
-	target.SetInt(n)
-	return nil
 }
 
-func uintDecoder(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	value := scan.PopValue("uint")
-	n, err := strconv.ParseUint(value, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid uint %q", value)
+func uintDecoder(bits int) MapperFunc {
+	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+		value := scan.PopValue("uint")
+		n, err := strconv.ParseUint(value, 10, bits)
+		if err != nil {
+			return fmt.Errorf("invalid uint %q", value)
+		}
+		target.SetUint(n)
+		return nil
 	}
-	target.SetUint(n)
-	return nil
 }
 
 func floatDecoder(bits int) MapperFunc {
@@ -200,12 +209,9 @@ func floatDecoder(bits int) MapperFunc {
 func sliceDecoder(d *Registry) MapperFunc {
 	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
 		el := target.Type().Elem()
-		sep, ok := ctx.Value.Tag.Get("sep")
-		if !ok {
-			sep = ","
-		}
+		sep := ctx.Value.Tag.Sep
 		var childScanner *Scanner
-		if ctx.Value.Flag {
+		if ctx.Value.Flag != nil {
 			// If decoding a flag, we need an argument.
 			childScanner = Scan(strings.Split(scan.PopValue("list"), sep)...)
 		} else {

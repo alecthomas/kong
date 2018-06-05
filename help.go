@@ -13,13 +13,14 @@ const (
 	defaultIndent = 2
 )
 
+// PrintHelp is the default help printer.
 func PrintHelp(ctx *Context) error {
 	w := newHelpWriter(guessWidth(ctx.App.Stdout))
 	selected := ctx.Selected()
 	if selected == nil {
-		printApp(w, ctx.App.Application)
+		printApp(w, ctx.App.Model)
 	} else {
-		printCommand(w, ctx.App.Application, selected)
+		printCommand(w, ctx.App.Model, selected)
 	}
 	return w.Write(ctx.App.Stdout)
 }
@@ -39,10 +40,15 @@ func printNodeDetail(w *helpWriter, node *Node) {
 		w.Print("")
 		w.Wrap(node.Help)
 	}
-	if len(node.Flags) > 0 {
-		w.Printf("")
-		w.Printf("Flags:")
-		writeFlags(w.Indent(), node.Flags)
+	if len(node.Positional) > 0 {
+		w.Print("")
+		w.Print("Arguments:")
+		writePositionals(w.Indent(), node.Positional)
+	}
+	if flags := node.AllFlags(); len(flags) > 0 {
+		w.Print("")
+		w.Print("Flags:")
+		writeFlags(w.Indent(), flags)
 	}
 	cmds := node.Leaves()
 	if len(cmds) > 0 {
@@ -114,18 +120,33 @@ func (h *helpWriter) Wrap(text string) {
 	}
 }
 
-func writeFlags(w *helpWriter, flags []*Flag) {
+func writePositionals(w *helpWriter, args []*Positional) {
+	rows := [][2]string{}
+	for _, arg := range args {
+		rows = append(rows, [2]string{arg.Summary(), arg.Help})
+	}
+	writeTwoColumns(w, 2, rows)
+}
+
+func writeFlags(w *helpWriter, groups [][]*Flag) {
 	rows := [][2]string{}
 	haveShort := false
-	for _, flag := range flags {
-		if flag.Short != 0 {
-			haveShort = true
-			break
+	for _, group := range groups {
+		for _, flag := range group {
+			if flag.Short != 0 {
+				haveShort = true
+				break
+			}
 		}
 	}
-	for _, flag := range flags {
-		if !flag.Hidden {
-			rows = append(rows, [2]string{formatFlag(haveShort, flag), flag.Help})
+	for i, group := range groups {
+		if i > 0 {
+			rows = append(rows, [2]string{"", ""})
+		}
+		for _, flag := range group {
+			if !flag.Hidden {
+				rows = append(rows, [2]string{formatFlag(haveShort, flag), flag.Help})
+			}
 		}
 	}
 	writeTwoColumns(w, 2, rows)

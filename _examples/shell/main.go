@@ -8,20 +8,21 @@ import (
 	"github.com/alecthomas/kong"
 )
 
+// nolint: govet
 var CLI struct {
-	Debug  bool   `kong:"help='Debug mode.'"`
-	Output string `kong:"help='File to output to.',placeholder='FILE'"`
+	Debug bool `help:"Debug mode."`
 
 	Rm struct {
-		Force     bool `kong:"help='Force removal.'"`
-		Recursive bool `kong:"help='Recursively remove files.'"`
+		User      string `help:"Run as user." short:"u"`
+		Force     bool   `help:"Force removal." short:"f"`
+		Recursive bool   `help:"Recursively remove files." short:"r"`
 
-		Paths []string `kong:"arg,help='Paths to remove.',type='path'"`
-	} `kong:"cmd,help='Remove files.'"`
+		Paths []string `arg help:"Paths to remove." type:"path"`
+	} `cmd help:"Remove files."`
 
 	Ls struct {
-		Paths []string `kong:"help='Paths to list.',type='path'"`
-	} `kong:"cmd,help='List paths.'"`
+		Paths []string `arg optional help:"Paths to list." type:"path"`
+	} `cmd help:"List paths."`
 }
 
 func main() {

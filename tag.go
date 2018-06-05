@@ -21,6 +21,7 @@ type Tag struct {
 	Env         string
 	Short       rune
 	Hidden      bool
+	Sep         string
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string]string
@@ -109,24 +110,32 @@ func getTagInfo(ft reflect.StructField) (string, tagChars) {
 func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	s, chars := getTagInfo(ft)
 	t := &Tag{
-		items: map[string]string{},
+		items: parseTagItems(s, chars),
 	}
-	if s == "" {
-		return t
-	}
-
-	t.items = parseTagItems(s, chars)
-
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
-	t.Required = t.Has("required")
-	t.Optional = t.Has("optional")
+	required := t.Has("required")
+	optional := t.Has("optional")
+	if required && optional {
+		fail("can't specify both required and optional")
+	}
+	t.Required = required
+	t.Optional = optional
 	t.Default, _ = t.Get("default")
 	t.Help, _ = t.Get("help")
 	t.Type, _ = t.Get("type")
 	t.Env, _ = t.Get("env")
 	t.Short, _ = t.GetRune("short")
 	t.Hidden = t.Has("hidden")
+	t.Format, _ = t.Get("format")
+	t.Sep, _ = t.Get("sep")
+	if t.Sep == "" {
+		if t.Cmd || t.Arg {
+			t.Sep = " "
+		} else {
+			t.Sep = ","
+		}
+	}
 
 	t.PlaceHolder, _ = t.Get("placeholder")
 	if t.PlaceHolder == "" {

@@ -56,14 +56,14 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		App:  k,
 		args: args,
 		Path: []*Path{
-			{App: k.Application, Flags: k.Flags, Value: k.Target},
+			{App: k.Model, Flags: k.Model.Flags, Value: k.Model.Target},
 		},
 	}
-	err := c.reset(&c.App.Node)
+	err := c.reset(&c.App.Model.Node)
 	if err != nil {
 		return nil, err
 	}
-	c.Error = c.trace(&c.App.Node)
+	c.Error = c.trace(&c.App.Model.Node)
 	return c, nil
 }
 
@@ -93,6 +93,10 @@ func (c *Context) Validate() error {
 		}
 
 	case path.Argument != nil:
+		value := path.Argument.Argument
+		if value.Required && !value.Set {
+			return fmt.Errorf("%s is required", path.Argument.Summary())
+		}
 		if err := checkMissingChildren(path.Argument); err != nil {
 			return err
 		}
@@ -341,7 +345,7 @@ func checkMissingFlags(flags []*Flag) error {
 		if !flag.Required || flag.Set {
 			continue
 		}
-		missing = append(missing, flag.Name)
+		missing = append(missing, flag.Summary())
 	}
 	if len(missing) == 0 {
 		return nil
@@ -352,12 +356,17 @@ func checkMissingFlags(flags []*Flag) error {
 
 func checkMissingChildren(node *Node) error {
 	missing := []string{}
+	for _, arg := range node.Positional {
+		if arg.Required && !arg.Set {
+			missing = append(missing, strconv.Quote(arg.Summary()))
+		}
+	}
 	for _, child := range node.Children {
 		if child.Argument != nil {
 			if !child.Argument.Required {
 				continue
 			}
-			missing = append(missing, strconv.Quote("<"+child.Argument.Name+">"))
+			missing = append(missing, strconv.Quote(child.Summary()))
 		} else {
 			missing = append(missing, strconv.Quote(child.Name))
 		}

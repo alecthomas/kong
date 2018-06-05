@@ -37,6 +37,16 @@ type Node struct {
 	Argument *Value // Populated when Type is ArgumentNode.
 }
 
+func (n *Node) AllFlags() (out [][]*Flag) {
+	if n.Parent != nil {
+		out = append(out, n.Parent.AllFlags()...)
+	}
+	if len(n.Flags) > 0 {
+		out = append(out, n.Flags)
+	}
+	return
+}
+
 // Leaves returns the leaf commands/arguments under Node.
 func (n *Node) Leaves() (out []*Node) {
 	var walk func(n *Node)
@@ -70,21 +80,12 @@ func (n *Node) Depth() int {
 // Summary help string for the node.
 func (n *Node) Summary() string {
 	summary := n.Path()
-	if n.Type == ArgumentNode {
-		summary = "<" + summary + ">"
-	}
 	if flags := n.FlagSummary(); flags != "" {
 		summary += " " + flags
 	}
 	args := []string{}
 	for _, arg := range n.Positional {
-		if arg.Required {
-			argText := "<" + arg.Name + ">"
-			if arg.IsCumulative() {
-				argText += " ..."
-			}
-			args = append(args, argText)
-		}
+		args = append(args, arg.Summary())
 	}
 	if len(args) != 0 {
 		summary += " " + strings.Join(args, " ")
@@ -96,13 +97,11 @@ func (n *Node) Summary() string {
 func (n *Node) FlagSummary() string {
 	required := []string{}
 	count := 0
-	for _, flag := range n.Flags {
-		count++
-		if flag.Required {
-			if flag.IsBool() {
-				required = append(required, fmt.Sprintf("--%s", flag.Name))
-			} else {
-				required = append(required, fmt.Sprintf("--%s=%s", flag.Name, flag.FormatPlaceHolder()))
+	for _, group := range n.AllFlags() {
+		for _, flag := range group {
+			count++
+			if flag.Required {
+				required = append(required, flag.Summary())
 			}
 		}
 	}
@@ -128,7 +127,7 @@ func (n *Node) Path() (out string) {
 
 // A Value is either a flag or a variable positional argument.
 type Value struct {
-	Flag     bool // True if flag, false if positional argument.
+	Flag     *Flag
 	Name     string
 	Help     string
 	Default  string
@@ -136,9 +135,26 @@ type Value struct {
 	Tag      *Tag
 	Value    reflect.Value
 	Required bool
-	Set      bool   // Used with Required to test if a value has been given.
+	Set      bool   // Set to true when this value is set through some mechanism.
 	Format   string // Formatting directive, if applicable.
 	Position int    // Position (for positional arguments).
+}
+
+func (v *Value) Summary() string {
+	if v.Flag != nil {
+		if v.IsBool() {
+			return fmt.Sprintf("--%s", v.Name)
+		}
+		return fmt.Sprintf("--%s=%s", v.Name, v.Flag.FormatPlaceHolder())
+	}
+	argText := "<" + v.Name + ">"
+	if v.IsCumulative() {
+		argText += " ..."
+	}
+	if !v.Required {
+		argText = "[" + argText + "]"
+	}
+	return argText
 }
 
 func (v *Value) IsCumulative() bool {
@@ -184,7 +200,7 @@ func (v *Value) Reset() error {
 type Positional = Value
 
 type Flag struct {
-	Value
+	*Value
 	PlaceHolder string
 	Env         string
 	Short       rune

@@ -92,8 +92,8 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	// a positional argument is provided to the child, and move it to the branching argument field.
 	if tag.Arg {
 		if len(child.Positional) == 0 {
-			fail("positional branch %s.%s must have at least one child positional argument",
-				v.Type().Name(), ft.Name)
+			fail("positional branch %s.%s must have at least one child positional argument named %q",
+				v.Type().Name(), ft.Name, name)
 		}
 
 		value := child.Positional[0]
@@ -122,14 +122,11 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
 	mapper := k.registry.ForNamedType(tag.Type, fv)
 	if mapper == nil {
-		fail("no mapper for %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
+		fail("unsupported field type %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
 	}
 
-	flag := !tag.Arg
-
-	value := Value{
+	value := &Value{
 		Name:    name,
-		Flag:    flag,
 		Help:    tag.Help,
 		Default: tag.Default,
 		Mapper:  mapper,
@@ -137,22 +134,24 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 		Value:   fv,
 
 		// Flags are optional by default, and args are required by default.
-		Required: (flag && tag.Required) || (tag.Arg && !tag.Optional),
+		Required: (!tag.Arg && tag.Required) || (tag.Arg && !tag.Optional),
 		Format:   tag.Format,
 	}
 
 	if tag.Arg {
-		node.Positional = append(node.Positional, &value)
+		node.Positional = append(node.Positional, value)
 	} else {
 		if seenFlags[value.Name] {
 			fail("duplicate flag --%s", value.Name)
 		}
 		seenFlags[value.Name] = true
-		node.Flags = append(node.Flags, &Flag{
+		flag := &Flag{
 			Value:       value,
 			Short:       tag.Short,
 			PlaceHolder: tag.PlaceHolder,
 			Env:         tag.Env,
-		})
+		}
+		value.Flag = flag
+		node.Flags = append(node.Flags, flag)
 	}
 }

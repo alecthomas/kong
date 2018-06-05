@@ -96,7 +96,7 @@ func TestBareTagsWithJsonTag(t *testing.T) {
 
 func TestManySeps(t *testing.T) {
 	var cli struct {
-		Arg  string `arg    optional    default:"hi"`
+		Arg string `arg    optional    default:"hi"`
 	}
 
 	p := mustNew(t, &cli)

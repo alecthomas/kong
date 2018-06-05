@@ -3,6 +3,7 @@ package kong
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -40,3 +41,26 @@ func (testMooMapper) Decode(ctx *DecoderContext, scan *Scanner, target reflect.V
 	return nil
 }
 func (testMooMapper) IsBool() bool { return true }
+
+func TestTimeMapper(t *testing.T) {
+	var cli struct {
+		Flag time.Time `format:"2006"`
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--flag=2008"})
+	require.NoError(t, err)
+	expected, err := time.Parse("2006", "2008")
+	require.NoError(t, err)
+	require.Equal(t, 2008, expected.Year())
+	require.Equal(t, expected, cli.Flag)
+}
+
+func TestDurationMapper(t *testing.T) {
+	var cli struct {
+		Flag time.Duration
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--flag=5s"})
+	require.NoError(t, err)
+	require.Equal(t, time.Second*5, cli.Flag)
+}

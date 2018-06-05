@@ -26,8 +26,8 @@ func NoDefaultHelp() Option {
 // Name overrides the application name.
 func Name(name string) Option {
 	return func(k *Kong) {
-		if k.Application != nil {
-			k.Name = name
+		if k.Model != nil {
+			k.Model.Name = name
 		}
 	}
 }
@@ -55,8 +55,8 @@ func NamedMapper(name string, mapper Mapper) Option {
 // Description sets the application description.
 func Description(description string) Option {
 	return func(k *Kong) {
-		if k.Application != nil {
-			k.Help = description
+		if k.Model != nil {
+			k.Model.Help = description
 		}
 	}
 }
@@ -69,13 +69,13 @@ func Writers(stdout, stderr io.Writer) Option {
 	}
 }
 
-// HookFunction is a callback tied to a field of the grammar, called before a value is applied.
-type HookFunction func(ctx *Context, path *Path) error
+// HookFunc is a callback tied to a field of the grammar, called before a value is applied.
+type HookFunc func(ctx *Context, path *Path) error
 
 // Hook to aply before a command, flag or positional argument is encountered.
 //
 // "ptr" is a pointer to a field of the grammar.
-func Hook(ptr interface{}, hook HookFunction) Option {
+func Hook(ptr interface{}, hook HookFunc) Option {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
 		panic("expected a pointer")
