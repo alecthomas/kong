@@ -223,14 +223,14 @@ func (f *Flag) FormatPlaceHolder() string {
 	if f.Value.IsCumulative() {
 		tail += ", ..."
 	}
-	if f.PlaceHolder != "" {
-		return f.PlaceHolder + tail
-	}
 	if f.Default != "" {
 		if f.Value.Value.Kind() == reflect.String {
 			return strconv.Quote(f.Default) + tail
 		}
 		return f.Default + tail
+	}
+	if f.PlaceHolder != "" {
+		return f.PlaceHolder + tail
 	}
 	return strings.ToUpper(f.Name) + tail
 }
