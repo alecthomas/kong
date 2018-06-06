@@ -215,7 +215,9 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			case strings.HasPrefix(token.Value, "-"):
 				c.scan.Pop()
 				// Note: tokens must be pushed in reverse order.
-				c.scan.PushTyped(token.Value[2:], ShortFlagTailToken)
+				if tail := token.Value[2:]; tail != "" {
+					c.scan.PushTyped(tail, ShortFlagTailToken)
+				}
 				c.scan.PushTyped(token.Value[1:2], ShortFlagToken)
 
 			default:
@@ -226,20 +228,18 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 		case ShortFlagTailToken:
 			c.scan.Pop()
 			// Note: tokens must be pushed in reverse order.
-			c.scan.PushTyped(token.Value[1:], ShortFlagTailToken)
+			if tail := token.Value[1:]; tail != "" {
+				c.scan.PushTyped(tail, ShortFlagTailToken)
+			}
 			c.scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := c.matchFlags(flags, func(f *Flag) bool {
-				return f.Name == token.Value
-			}); err != nil {
+			if err := c.matchFlags(flags, func(f *Flag) bool { return f.Name == token.Value }); err != nil {
 				return err
 			}
 
 		case ShortFlagToken:
-			if err := c.matchFlags(flags, func(f *Flag) bool {
-				return string(f.Name) == token.Value
-			}); err != nil {
+			if err := c.matchFlags(flags, func(f *Flag) bool { return string(f.Short) == token.Value }); err != nil {
 				return err
 			}
 
@@ -326,7 +326,7 @@ func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err err
 	token := c.scan.Peek()
 	for _, flag := range flags {
 		// Found a matching flag.
-		if flag.Name == token.Value {
+		if matcher(flag) {
 			c.scan.Pop()
 			value, err := flag.Parse(c.scan)
 			if err != nil {

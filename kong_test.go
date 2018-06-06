@@ -344,3 +344,15 @@ func TestHooks(t *testing.T) {
 		})
 	}
 }
+
+func TestShort(t *testing.T) {
+	var cli struct {
+		Bool   bool   `short:"b"`
+		String string `short:"s"`
+	}
+	app := mustNew(t, &cli)
+	_, err := app.Parse([]string{"-b", "-shello"})
+	require.NoError(t, err)
+	require.True(t, cli.Bool)
+	require.Equal(t, "hello", cli.String)
+}
