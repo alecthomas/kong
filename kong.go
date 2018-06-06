@@ -163,7 +163,7 @@ func (k *Kong) Printf(format string, args ...interface{}) {
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
 func (k *Kong) Errorf(format string, args ...interface{}) {
-	fmt.Fprintf(k.Stderr, k.Model.Name+": "+format, args...)
+	fmt.Fprintf(k.Stderr, k.Model.Name+": error: "+format, args...)
 }
 
 // FatalIfError terminates with an error message if err != nil.
