@@ -384,7 +384,7 @@ func checkMissingChildren(node *Node) error {
 // If we're missing any positionals and they're required, return an error.
 func checkMissingPositionals(positional int, values []*Value) error {
 	// All the positionals are in.
-	if positional == len(values) {
+	if positional >= len(values) {
 		return nil
 	}
 
