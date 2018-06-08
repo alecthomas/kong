@@ -105,9 +105,6 @@ func (n *Node) FlagSummary() string {
 			}
 		}
 	}
-	if count != len(required) {
-		required = append(required, "[<flags>]")
-	}
 	return strings.Join(required, " ")
 }
 

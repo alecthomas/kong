@@ -50,7 +50,7 @@ func TestHelp(t *testing.T) {
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `usage: test-app --required [<flags>]
+		require.Equal(t, `usage: test-app --required
 
 A test app.
 
@@ -62,13 +62,13 @@ Flags:
   --required       A required flag.
 
 Commands:
-  one --required [<flags>]
+  one --required
     A subcommand.
 
-  two <three> --required --required-two --required-three [<flags>]
+  two <three> --required --required-two --required-three
     Sub-sub-arg.
 
-  two four --required --required-two [<flags>]
+  two four --required --required-two
     Sub-sub-command.
 `, w.String())
 	})
@@ -82,7 +82,7 @@ Commands:
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `usage: test-app two <three> --required --required-two --required-three [<flags>]
+		require.Equal(t, `usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
 
