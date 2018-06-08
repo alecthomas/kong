@@ -88,6 +88,7 @@ func (k *Kong) extraFlags() []*Flag {
 			Name:   "help",
 			Help:   "Show context-sensitive help.",
 			Value:  value,
+			Tag:    &Tag{},
 			Mapper: k.registry.ForValue(value),
 		},
 	}
