@@ -5,27 +5,32 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"reflect"
 )
 
 type envMap map[string]string
 
-func newEnvParser(t *testing.T, cli interface{}, env envMap) (*Kong, func()) {
+func tempEnv(env envMap) func() {
 	for k, v := range env {
 		os.Setenv(k, v)
 	}
+
+	return func() {
+		for k := range env {
+			os.Unsetenv(k)
+		}
+	}
+}
+
+func newEnvParser(t *testing.T, cli interface{}, env envMap) (*Kong, func()) {
+	restoreEnv := tempEnv(env)
 
 	r, err := EnvResolver("KONG_")
 	require.NoError(t, err)
 
 	parser := mustNew(t, cli, Resolver(r))
 
-	unsetEnvs := func() {
-		for k := range env {
-			os.Unsetenv(k)
-		}
-	}
-
-	return parser, unsetEnvs
+	return parser, restoreEnv
 }
 
 func TestEnvResolverFlagBasic(t *testing.T) {
@@ -49,8 +54,8 @@ func TestEnvResolverFlagOverride(t *testing.T) {
 	var cli struct {
 		Flag string
 	}
-	parser, unsetEnvs := newEnvParser(t, &cli, envMap{"KONG_FLAG": "bye"})
-	defer unsetEnvs()
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_FLAG": "bye"})
+	defer restoreEnv()
 
 	_, err := parser.Parse([]string{"--flag=hello"})
 	require.NoError(t, err)
@@ -70,8 +75,8 @@ func TestEnvResolverOnlyPopulateUsedBranches(t *testing.T) {
 			Int int
 		} `cmd`
 	}
-	parser, unsetEnvs := newEnvParser(t, &cli, envMap{"KONG_INT": "512"})
-	defer unsetEnvs()
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_INT": "512"})
+	defer restoreEnv()
 
 	_, err := parser.Parse([]string{"visited"})
 	require.NoError(t, err)
@@ -85,8 +90,8 @@ func TestEnvResolverTag(t *testing.T) {
 	var cli struct {
 		Slice []int `env:"KONG_NUMBERS"`
 	}
-	parser, unsetEnvs := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "5,2,9"})
-	defer unsetEnvs()
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "5,2,9"})
+	defer restoreEnv()
 
 	_, err := parser.Parse([]string{})
 	require.NoError(t, err)
@@ -114,10 +119,33 @@ func TestJsonResolverBasic(t *testing.T) {
 	require.Equal(t, []int{5, 8}, cli.Slice)
 }
 
-//func TestResolversWithHooks(t *testing.T) {
-//	require.True(t, false)
-//}
-//
-//func TestResolversWithMappers(t *testing.T) {
-//	require.True(t, false)
-//}
+func TestResolversWithHooks(t *testing.T) {
+	require.True(t, false)
+}
+
+type testUppercaseMapper struct{}
+
+func (testUppercaseMapper) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	value := scan.PopValue("lowercase")
+	target.SetString(strings.ToUpper(value))
+	return nil
+}
+
+func TestResolversWithMappers(t *testing.T) {
+	var cli struct {
+		Flag string `env:"KONG_MOO" type:"upper"`
+	}
+
+	restoreEnv := tempEnv(envMap{"KONG_MOO": "meow"})
+	defer restoreEnv()
+
+	r, _ := EnvResolver("KONG_")
+
+	parser := mustNew(t, &cli,
+		NamedMapper("upper", testUppercaseMapper{}),
+		Resolver(r),
+	)
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "MEOW", cli.Flag)
+}
