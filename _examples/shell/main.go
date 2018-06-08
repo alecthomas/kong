@@ -13,7 +13,7 @@ var CLI struct {
 	Debug bool `help:"Debug mode."`
 
 	Rm struct {
-		User      string `help:"Run as user." short:"u"`
+		User      string `help:"Run as user." short:"u" default:"default"`
 		Force     bool   `help:"Force removal." short:"f"`
 		Recursive bool   `help:"Recursively remove files." short:"r"`
 

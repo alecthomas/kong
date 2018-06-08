@@ -50,7 +50,7 @@ func TestHelp(t *testing.T) {
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `usage: test-app --required
+		require.Equal(t, `usage: test-app --required <command>
 
 A test app.
 

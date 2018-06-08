@@ -89,6 +89,8 @@ func (n *Node) Summary() string {
 	}
 	if len(args) != 0 {
 		summary += " " + strings.Join(args, " ")
+	} else if len(n.Children) > 0 {
+		summary += " <command>"
 	}
 	return summary
 }
