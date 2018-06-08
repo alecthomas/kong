@@ -41,9 +41,8 @@ type Kong struct {
 	noDefaultHelp bool
 	help          func(*Context) error
 
-	// Set temporarily by Options. These are moved into the Model after build().
-	name        string
-	description string
+	// Set temporarily by Options. These are applied after build().
+	postBuildOptions []Option
 }
 
 // New creates a new Kong parser on grammar.
@@ -67,15 +66,12 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	if err != nil {
 		return k, err
 	}
-	if k.name == "" {
-		model.Name = filepath.Base(os.Args[0])
-	} else {
-		model.Name = k.name
-	}
-	if k.description != "" {
-		model.Help = k.description
-	}
+	model.Name = filepath.Base(os.Args[0])
 	k.Model = model
+
+	for _, option := range k.postBuildOptions {
+		option(k)
+	}
 
 	return k, nil
 }

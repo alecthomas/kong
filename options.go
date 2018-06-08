@@ -23,7 +23,18 @@ func NoDefaultHelp() Option {
 // Name overrides the application name.
 func Name(name string) Option {
 	return func(k *Kong) {
-		k.name = name
+		k.postBuildOptions = append(k.postBuildOptions, func(k *Kong) {
+			k.Model.Name = name
+		})
+	}
+}
+
+// Description sets the application description.
+func Description(description string) Option {
+	return func(k *Kong) {
+		k.postBuildOptions = append(k.postBuildOptions, func(k *Kong) {
+			k.Model.Help = description
+		})
 	}
 }
 
@@ -45,13 +56,6 @@ func ValueMapper(ptr interface{}, mapper Mapper) Option {
 // NamedMapper registers a mapper to a name.
 func NamedMapper(name string, mapper Mapper) Option {
 	return func(k *Kong) { k.registry.RegisterName(name, mapper) }
-}
-
-// Description sets the application description.
-func Description(description string) Option {
-	return func(k *Kong) {
-		k.description = description
-	}
 }
 
 // Writers overrides the default writers. Useful for testing or interactive use.
