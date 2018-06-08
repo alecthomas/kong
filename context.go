@@ -264,22 +264,23 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				break
 			}
 
-			// After positional arguments have been consumed, handle commands and branching arguments.
+			// After positional arguments have been consumed, check commands next...
 			for _, branch := range node.Children {
-				switch branch.Type {
-				case CommandNode:
-					if branch.Name == token.Value {
-						c.scan.Pop()
-						c.Path = append(c.Path, &Path{
-							Parent:  node,
-							Command: branch,
-							Value:   branch.Target,
-							Flags:   node.Flags,
-						})
-						return c.trace(branch)
-					}
+				if branch.Type == CommandNode && branch.Name == token.Value {
+					c.scan.Pop()
+					c.Path = append(c.Path, &Path{
+						Parent:  node,
+						Command: branch,
+						Value:   branch.Target,
+						Flags:   node.Flags,
+					})
+					return c.trace(branch)
+				}
+			}
 
-				case ArgumentNode:
+			// Finally, check arguments.
+			for _, branch := range node.Children {
+				if branch.Type == ArgumentNode {
 					arg := branch.Argument
 					if value, err := arg.Parse(c.scan); err == nil {
 						c.Path = append(c.Path, &Path{
