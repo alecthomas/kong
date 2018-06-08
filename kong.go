@@ -40,6 +40,10 @@ type Kong struct {
 	registry      *Registry
 	noDefaultHelp bool
 	help          func(*Context) error
+
+	// Set temporarily by Options. These are moved into the Model after build().
+	name        string
+	description string
 }
 
 // New creates a new Kong parser on grammar.
@@ -63,12 +67,16 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	if err != nil {
 		return k, err
 	}
-	model.Name = filepath.Base(os.Args[0])
+	if k.name == "" {
+		model.Name = filepath.Base(os.Args[0])
+	} else {
+		model.Name = k.name
+	}
+	if k.description != "" {
+		model.Help = k.description
+	}
 	k.Model = model
 
-	for _, option := range options {
-		option(k)
-	}
 	return k, nil
 }
 

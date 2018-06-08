@@ -6,9 +6,6 @@ import (
 )
 
 // Options apply optional changes to the Kong application.
-//
-// Note that Options are applied twice: once just prior to the grammar is constructed and once after. In the
-// former case, Kong.Application will be nil.
 type Option func(k *Kong)
 
 // ExitFunction overrides the function used to terminate. This is useful for testing or interactive use.
@@ -26,9 +23,7 @@ func NoDefaultHelp() Option {
 // Name overrides the application name.
 func Name(name string) Option {
 	return func(k *Kong) {
-		if k.Model != nil {
-			k.Model.Name = name
-		}
+		k.name = name
 	}
 }
 
@@ -55,9 +50,7 @@ func NamedMapper(name string, mapper Mapper) Option {
 // Description sets the application description.
 func Description(description string) Option {
 	return func(k *Kong) {
-		if k.Model != nil {
-			k.Model.Help = description
-		}
+		k.description = description
 	}
 }
 
