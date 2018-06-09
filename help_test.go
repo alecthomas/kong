@@ -8,6 +8,7 @@ import (
 )
 
 func TestHelp(t *testing.T) {
+	// nolint: govet
 	var cli struct {
 		String   string `help:"A string flag."`
 		Bool     bool   `help:"A bool flag with very long help that wraps a lot and is verbose and is really verbose."`

@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// DecoderContext is passed to a Mapper's Decode(). It contains the Value being decoded into.
 type DecoderContext struct {
 	// Value being decoded into.
 	Value *Value
@@ -27,13 +28,14 @@ type BoolMapper interface {
 	IsBool() bool
 }
 
+// A MapperFunc is a single function that complies with the Mapper interface.
 type MapperFunc func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
 
-func (d MapperFunc) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+func (d MapperFunc) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error { //nolint: golint
 	return d(ctx, scan, target)
 }
 
-// A Registry encapsulates a set of fields and lookups to resolve them.
+// A Registry contains a set of mappers and supporting lookup methods.
 type Registry struct {
 	names  map[string]Mapper
 	types  map[reflect.Type]Mapper
@@ -41,6 +43,7 @@ type Registry struct {
 	values map[reflect.Value]Mapper
 }
 
+// NewRegistry creates a new (empty) Registry.
 func NewRegistry() *Registry {
 	return &Registry{
 		names:  map[string]Mapper{},
@@ -60,6 +63,7 @@ func (d *Registry) ForNamedType(name string, value reflect.Value) Mapper {
 	return d.ForValue(value)
 }
 
+// ForValue looks up the Mapper for a reflect.Value.
 func (d *Registry) ForValue(value reflect.Value) Mapper {
 	if mapper, ok := d.values[value]; ok {
 		return mapper
@@ -67,7 +71,7 @@ func (d *Registry) ForValue(value reflect.Value) Mapper {
 	return d.ForType(value.Type())
 }
 
-// DecoderForType finds a mapper from a type or kind.
+// ForType finds a mapper from a type, by type, then kind.
 //
 // Will return nil if a mapper can not be determined.
 func (d *Registry) ForType(typ reflect.Type) Mapper {
@@ -81,6 +85,7 @@ func (d *Registry) ForType(typ reflect.Type) Mapper {
 	return nil
 }
 
+// RegisterKind registers a Mapper for a reflect.Kind.
 func (d *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
 	d.kinds[kind] = mapper
 	return d
@@ -97,12 +102,13 @@ func (d *Registry) RegisterName(name string, mapper Mapper) *Registry {
 	return d
 }
 
+// RegisterType registers a Mapper for a reflect.Type.
 func (d *Registry) RegisterType(typ reflect.Type, mapper Mapper) *Registry {
 	d.types[typ] = mapper
 	return d
 }
 
-// RegisterValue registers a mapper by a pointer to the mapper value.
+// RegisterValue registers a Mapper by pointer to the field value.
 func (d *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
@@ -113,6 +119,7 @@ func (d *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
 	return d
 }
 
+// RegisterDefaults registers Mappers for all builtin supported Go types and some common stdlib types.
 func (d *Registry) RegisterDefaults() *Registry {
 	return d.RegisterKind(reflect.Int, intDecoder(bits.UintSize)).
 		RegisterKind(reflect.Int8, intDecoder(8)).

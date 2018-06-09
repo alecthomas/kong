@@ -1,11 +1,12 @@
 package kong
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
-	"reflect"
+
+	"github.com/stretchr/testify/require"
 )
 
 type envMap map[string]string
@@ -63,6 +64,7 @@ func TestEnvResolverFlagOverride(t *testing.T) {
 }
 
 func TestEnvResolverOnlyPopulateUsedBranches(t *testing.T) {
+	// nolint
 	var cli struct {
 		UnvisitedArg struct {
 			UnvisitedArg string `arg`
@@ -102,11 +104,13 @@ func TestJsonResolverBasic(t *testing.T) {
 	var cli struct {
 		String string
 		Slice  []int
+		Bool   bool
 	}
 
 	json := `{
 		"string": "🍕",
-		"slice": "5,8"
+		"slice": [5, 8],
+		"bool": true
 	}`
 
 	r, err := JSONResolver(strings.NewReader(json))
@@ -117,6 +121,7 @@ func TestJsonResolverBasic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "🍕", cli.String)
 	require.Equal(t, []int{5, 8}, cli.Slice)
+	require.True(t, cli.Bool)
 }
 
 func TestResolversWithHooks(t *testing.T) {

@@ -25,6 +25,7 @@ type Path struct {
 	Value reflect.Value
 }
 
+// Context contains the current parse context.
 type Context struct {
 	App   *Kong
 	Path  []*Path // A trace through parsed nodes.
@@ -67,6 +68,7 @@ func Trace(k *Kong, args []string) (*Context, error) {
 	return c, nil
 }
 
+// Validate the current context.
 func (c *Context) Validate() error {
 	for _, path := range c.Path {
 		if err := checkMissingFlags(path.Flags); err != nil {
