@@ -201,7 +201,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
 				}
 
-				// Long flag.
+			// Long flag.
 			case strings.HasPrefix(token.Value, "--"):
 				c.scan.Pop()
 				// Parse it and push the tokens.
@@ -211,7 +211,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 				c.scan.PushTyped(parts[0], FlagToken)
 
-				// Short flag.
+			// Short flag.
 			case strings.HasPrefix(token.Value, "-"):
 				c.scan.Pop()
 				// Note: tokens must be pushed in reverse order.
