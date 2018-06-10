@@ -328,7 +328,9 @@ func (c *Context) Apply() (string, error) {
 		}
 	}
 
-	c.applyResolvers(possibleFlags)
+	if err := c.applyResolvers(possibleFlags); err != nil {
+		return "", err
+	}
 
 	return strings.Join(path, " "), nil
 }
@@ -349,7 +351,9 @@ func (c *Context) applyResolvers(possibleFlags []*Flag) error {
 			ctx := DecoderContext{Value: flag.Value}
 			scan := Scanner{args: []Token{{Type: FlagValueToken, Value: s}}}
 
-			flag.Mapper.Decode(&ctx, &scan, flag.Value.Value)
+			if err = flag.Mapper.Decode(&ctx, &scan, flag.Value.Value); err != nil {
+				return err
+			}
 		}
 	}
 

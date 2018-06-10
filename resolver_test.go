@@ -100,7 +100,7 @@ func TestEnvResolverTag(t *testing.T) {
 	require.Equal(t, []int{5, 2, 9}, cli.Slice)
 }
 
-func TestJsonResolverBasic(t *testing.T) {
+func TestJSONResolverBasic(t *testing.T) {
 	var cli struct {
 		String string
 		Slice  []int
@@ -109,7 +109,7 @@ func TestJsonResolverBasic(t *testing.T) {
 
 	json := `{
 		"string": "🍕",
-		"slice": [5, 8],
+		"slice": [5, 6],
 		"bool": true
 	}`
 
