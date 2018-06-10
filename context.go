@@ -347,11 +347,13 @@ func (c *Context) applyResolvers(possibleFlags []*Flag) error {
 				return err
 			}
 
-			// Create a scanner for decoding the resolved value.
-			ctx := DecoderContext{Value: flag.Value}
-			scan := Scanner{args: []Token{{Type: FlagValueToken, Value: s}}}
+			// Create a DecodeContext for decoding the resolved value.
+			ctx := &DecodeContext{
+				Value: flag.Value,
+				Scan:  Scan().PushTyped(s, FlagValueToken),
+			}
 
-			if err = flag.Mapper.Decode(&ctx, &scan, flag.Value.Value); err != nil {
+			if err = flag.Mapper.Decode(ctx, flag.Value.Value); err != nil {
 				return err
 			}
 		}

@@ -36,7 +36,7 @@ func TestNamedMapper(t *testing.T) {
 
 type testMooMapper struct{}
 
-func (testMooMapper) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+func (testMooMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
 	target.SetString("MOO")
 	return nil
 }

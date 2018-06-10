@@ -130,8 +130,8 @@ func TestResolversWithHooks(t *testing.T) {
 
 type testUppercaseMapper struct{}
 
-func (testUppercaseMapper) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	value := scan.PopValue("lowercase")
+func (testUppercaseMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
+	value := ctx.Scan.PopValue("lowercase")
 	target.SetString(strings.ToUpper(value))
 	return nil
 }
