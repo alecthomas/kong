@@ -313,24 +313,22 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 // Apply traced context to the target grammar.
 func (c *Context) Apply() (string, error) {
 	path := []string{}
-	possibleFlags := []*Flag{}
 
 	for _, trace := range c.Path {
 		switch {
 		case trace.App != nil:
-			possibleFlags = append(possibleFlags, trace.App.Flags...)
 		case trace.Argument != nil:
 			path = append(path, "<"+trace.Argument.Name+">")
 			trace.Argument.Argument.Apply(trace.Value)
-			possibleFlags = append(possibleFlags, trace.Argument.Flags...)
 		case trace.Command != nil:
 			path = append(path, trace.Command.Name)
-			possibleFlags = append(possibleFlags, trace.Command.Flags...)
 		case trace.Flag != nil:
 			trace.Flag.Value.Apply(trace.Value)
 		case trace.Positional != nil:
 			path = append(path, "<"+trace.Positional.Name+">")
 			trace.Positional.Apply(trace.Value)
+		default:
+			panic("unsupported path ?!")
 		}
 	}
 
