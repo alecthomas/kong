@@ -133,14 +133,21 @@ func TestResolvedValueTriggersHooks(t *testing.T) {
 		}
 		return "", nil
 	}
-	hooked := false
+	hooked := 0
 	p := mustNew(t, &cli, Resolver(resolver), Hook(&cli.Int, func(ctx *Context, path *Path) error {
-		hooked = true
+		hooked++
 		return nil
 	}))
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
-	require.True(t, hooked)
+	require.Equal(t, 1, cli.Int)
+	require.Equal(t, 1, hooked)
+
+	hooked = 0
+	_, err = p.Parse([]string{"--int=2"})
+	require.NoError(t, err)
+	require.Equal(t, 2, cli.Int)
+	require.Equal(t, 2, hooked)
 }
 
 type testUppercaseMapper struct{}

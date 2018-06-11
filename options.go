@@ -72,6 +72,9 @@ type HookFunc func(ctx *Context, path *Path) error
 // Hook to apply before a command, flag or positional argument is encountered.
 //
 // "ptr" is a pointer to a field of the grammar.
+//
+// Note that the hook will be called once for each time the corresponding node is encountered. This means that if a flag
+// is passed twice, its hook will be called twice.
 func Hook(ptr interface{}, hook HookFunc) Option {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
