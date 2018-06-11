@@ -64,3 +64,14 @@ func TestDurationMapper(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, time.Second*5, cli.Flag)
 }
+
+func TestSplitEscaped(t *testing.T) {
+	require.Equal(t, []string{"a", "b"}, SplitEscaped("a,b", ','))
+	require.Equal(t, []string{"a,b", "c"}, SplitEscaped(`a\,b,c`, ','))
+}
+
+func TestJoinEscaped(t *testing.T) {
+	require.Equal(t, `a,b`, JoinEscaped([]string{"a", "b"}, ','))
+	require.Equal(t, `a\,b,c`, JoinEscaped([]string{`a,b`, `c`}, ','))
+	require.Equal(t, JoinEscaped(SplitEscaped(`a\,b,c`, ','), ','), `a\,b,c`)
+}

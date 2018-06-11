@@ -7,8 +7,10 @@ import (
 
 //go:generate stringer -type=TokenType
 
+// TokenType is the type of a token.
 type TokenType int
 
+// Token types.
 const (
 	UntypedToken TokenType = iota
 	EOLToken

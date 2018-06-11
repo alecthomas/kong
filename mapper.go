@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-// DecodeContext is passed to a Mapper's Decode(). It contains the Value being decoded into.
+// DecodeContext is passed to a Mapper's Decode().
+//
+// It contains the Value being decoded into and the Scanner to parse from.
 type DecodeContext struct {
 	// Value being decoded into.
 	Value *Value
@@ -29,6 +31,7 @@ func (d *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
 //
 // Mappers can be associated with concrete fields via pointer, reflect.Type, reflect.Kind, or via a "type" tag.
 type Mapper interface {
+	// Decode ctx.Value with ctx.Scanner into target.
 	Decode(ctx *DecodeContext, target reflect.Value) error
 }
 
@@ -230,7 +233,7 @@ func sliceDecoder(d *Registry) MapperFunc {
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			// If decoding a flag, we need an argument.
-			childScanner = Scan(strings.Split(ctx.Scan.PopValue("list"), sep)...)
+			childScanner = Scan(SplitEscaped(ctx.Scan.PopValue("list"), sep)...)
 		} else {
 			tokens := ctx.Scan.PopUntil(func(t Token) bool { return !t.IsValue() })
 			childScanner = Scan(tokens...)
@@ -249,4 +252,43 @@ func sliceDecoder(d *Registry) MapperFunc {
 		}
 		return nil
 	}
+}
+
+// SplitEscaped splits a string on a separator.
+//
+// It differs from strings.Split() in that the separator can exist in a field by escaping it with a \. eg.
+//
+//     SplitEscaped(`hello\,there,bob`, ',') == []string{"hello,there", "bob"}
+func SplitEscaped(s string, sep rune) (out []string) {
+	escaped := false
+	token := ""
+	for _, ch := range s {
+		if escaped {
+			token += string(ch)
+			escaped = false
+		} else if ch == '\\' {
+			escaped = true
+		} else if ch == sep && !escaped {
+			out = append(out, token)
+			token = ""
+			escaped = false
+		} else {
+			token += string(ch)
+		}
+	}
+	if token != "" {
+		out = append(out, token)
+	}
+	return
+}
+
+// JoinEscaped joins a slice of strings on sep, but also escapes any instances of sep in the fields with \. eg.
+//
+//     JoinEscaped([]string{"hello,there", "bob"}, ',') == `hello\,there,bob`
+func JoinEscaped(s []string, sep rune) string {
+	escaped := []string{}
+	for _, e := range s {
+		escaped = append(escaped, strings.Replace(e, string(sep), `\`+string(sep), -1))
+	}
+	return strings.Join(escaped, string(sep))
 }

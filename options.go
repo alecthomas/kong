@@ -82,19 +82,21 @@ func Hook(ptr interface{}, hook HookFunc) Option {
 	}
 }
 
+// HelpFunction is the type of a function used to display help.
 type HelpFunction func(*Context) error
 
 // Help function to use.
 //
 // Defaults to PrintHelp.
-func Help(help func(*Context) error) Option {
+func Help(help HelpFunction) Option {
 	return func(k *Kong) {
 		k.help = help
 	}
 }
 
-func Resolver(f ResolverFunc) Option {
+// Resolver registers flag resolvers.
+func Resolver(resolvers ...ResolverFunc) Option {
 	return func(k *Kong) {
-		k.resolvers = append(k.resolvers, f)
+		k.resolvers = append(k.resolvers, resolvers...)
 	}
 }

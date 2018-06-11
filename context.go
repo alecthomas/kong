@@ -23,6 +23,9 @@ type Path struct {
 
 	// Parsed value for non-commands.
 	Value reflect.Value
+
+	// True if this Path element was created as the result of a resolver.
+	Resolved bool
 }
 
 // Context contains the current parse context.
@@ -65,6 +68,10 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		return nil, err
 	}
 	c.Error = c.trace(&c.App.Model.Node)
+	err = c.traceResolvers()
+	if err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 
@@ -260,7 +267,6 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					Parent:     node,
 					Positional: arg,
 					Value:      value,
-					Flags:      node.Flags,
 				})
 				positional++
 				break
@@ -274,7 +280,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 						Parent:  node,
 						Command: branch,
 						Value:   branch.Target,
-						Flags:   node.Flags,
+						Flags:   branch.Flags,
 					})
 					return c.trace(branch)
 				}
@@ -289,7 +295,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 							Parent:   node,
 							Argument: branch,
 							Value:    value,
-							Flags:    node.Flags,
+							Flags:    branch.Flags,
 						})
 						return c.trace(branch)
 					}
@@ -328,37 +334,41 @@ func (c *Context) Apply() (string, error) {
 		}
 	}
 
-	if err := c.applyResolvers(possibleFlags); err != nil {
-		return "", err
-	}
-
 	return strings.Join(path, " "), nil
 }
 
-func (c *Context) applyResolvers(possibleFlags []*Flag) error {
-	for _, resolver := range c.App.resolvers {
-		for _, flag := range possibleFlags {
-			if flag.Set {
-				continue
-			}
+// Walk through flags from existing nodes in the path.
+func (c *Context) traceResolvers() error {
+	if len(c.App.resolvers) == 0 {
+		return nil
+	}
 
-			s, err := resolver(flag)
-			if err != nil {
-				return err
-			}
+	inserted := []*Path{}
+	for _, path := range c.Path {
+		for _, flag := range path.Flags {
+			for _, resolver := range c.App.resolvers {
+				s, err := resolver(c, path, flag)
+				if err != nil {
+					return err
+				}
+				if s == "" {
+					continue
+				}
 
-			// Create a DecodeContext for decoding the resolved value.
-			ctx := &DecodeContext{
-				Value: flag.Value,
-				Scan:  Scan().PushTyped(s, FlagValueToken),
-			}
-
-			if err = flag.Mapper.Decode(ctx, flag.Value.Value); err != nil {
-				return err
+				scan := Scan().PushTyped(s, FlagValueToken)
+				value, err := flag.Parse(scan)
+				if err != nil {
+					return err
+				}
+				inserted = append(inserted, &Path{
+					Flag:     flag,
+					Value:    value,
+					Resolved: true,
+				})
 			}
 		}
 	}
-
+	c.Path = append(inserted, c.Path...)
 	return nil
 }
 
@@ -367,15 +377,16 @@ func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err err
 	token := c.scan.Peek()
 	for _, flag := range flags {
 		// Found a matching flag.
-		if matcher(flag) {
-			c.scan.Pop()
-			value, err := flag.Parse(c.scan)
-			if err != nil {
-				return err
-			}
-			c.Path = append(c.Path, &Path{Flag: flag, Value: value})
-			return nil
+		if !matcher(flag) {
+			continue
 		}
+		c.scan.Pop()
+		value, err := flag.Parse(c.scan)
+		if err != nil {
+			return err
+		}
+		c.Path = append(c.Path, &Path{Flag: flag, Value: value})
+		return nil
 	}
 	return fmt.Errorf("unknown flag --%s", token.Value)
 }

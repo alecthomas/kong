@@ -21,7 +21,7 @@ type Tag struct {
 	Env         string
 	Short       rune
 	Hidden      bool
-	Sep         string
+	Sep         rune
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string]string
@@ -128,12 +128,12 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Short, _ = t.GetRune("short")
 	t.Hidden = t.Has("hidden")
 	t.Format, _ = t.Get("format")
-	t.Sep, _ = t.Get("sep")
-	if t.Sep == "" {
+	t.Sep, _ = t.GetRune("sep")
+	if t.Sep == 0 {
 		if t.Cmd || t.Arg {
-			t.Sep = " "
+			t.Sep = ' '
 		} else {
-			t.Sep = ","
+			t.Sep = ','
 		}
 	}
 

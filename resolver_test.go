@@ -24,13 +24,9 @@ func tempEnv(env envMap) func() {
 }
 
 func newEnvParser(t *testing.T, cli interface{}, env envMap) (*Kong, func()) {
+	t.Helper()
 	restoreEnv := tempEnv(env)
-
-	r, err := EnvResolver("KONG_")
-	require.NoError(t, err)
-
-	parser := mustNew(t, cli, Resolver(r))
-
+	parser := mustNew(t, cli, Resolver(PerFlagEnvResolver("KONG_")))
 	return parser, restoreEnv
 }
 
@@ -102,15 +98,17 @@ func TestEnvResolverTag(t *testing.T) {
 
 func TestJSONResolverBasic(t *testing.T) {
 	var cli struct {
-		String string
-		Slice  []int
-		Bool   bool
+		String          string
+		Slice           []int
+		SliceWithCommas []string
+		Bool            bool
 	}
 
 	json := `{
 		"string": "🍕",
 		"slice": [5, 8],
-		"bool": true
+		"bool": true,
+		"slice_with_commas": ["a,b", "c"]
 	}`
 
 	r, err := JSONResolver(strings.NewReader(json))
@@ -121,11 +119,28 @@ func TestJSONResolverBasic(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "🍕", cli.String)
 	require.Equal(t, []int{5, 8}, cli.Slice)
+	require.Equal(t, []string{"a,b", "c"}, cli.SliceWithCommas)
 	require.True(t, cli.Bool)
 }
 
-func TestResolversWithHooks(t *testing.T) {
-	// require.True(t, false)
+func TestResolvedValueTriggersHooks(t *testing.T) {
+	var cli struct {
+		Int int
+	}
+	resolver := func(context *Context, parent *Path, flag *Flag) (string, error) {
+		if flag.Name == "int" {
+			return "1", nil
+		}
+		return "", nil
+	}
+	hooked := false
+	p := mustNew(t, &cli, Resolver(resolver), Hook(&cli.Int, func(ctx *Context, path *Path) error {
+		hooked = true
+		return nil
+	}))
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.True(t, hooked)
 }
 
 type testUppercaseMapper struct{}
@@ -144,7 +159,7 @@ func TestResolversWithMappers(t *testing.T) {
 	restoreEnv := tempEnv(envMap{"KONG_MOO": "meow"})
 	defer restoreEnv()
 
-	r, _ := EnvResolver("KONG_")
+	r := PerFlagEnvResolver("KONG_")
 
 	parser := mustNew(t, &cli,
 		NamedMapper("upper", testUppercaseMapper{}),
@@ -153,4 +168,63 @@ func TestResolversWithMappers(t *testing.T) {
 	_, err := parser.Parse([]string{})
 	require.NoError(t, err)
 	require.Equal(t, "MEOW", cli.Flag)
+}
+
+func TestResolverWithBool(t *testing.T) {
+	var cli struct {
+		Bool bool
+	}
+
+	resolver := func(context *Context, parent *Path, flag *Flag) (string, error) {
+		if flag.Name == "bool" {
+			return "true", nil
+		}
+		return "", nil
+	}
+
+	p := mustNew(t, &cli, Resolver(resolver))
+
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.True(t, cli.Bool)
+}
+
+func TestLastResolverWins(t *testing.T) {
+	var cli struct {
+		Int []int
+	}
+
+	var first ResolverFunc = func(context *Context, parent *Path, flag *Flag) (string, error) {
+		if flag.Name == "int" {
+			return "1", nil
+		}
+		return "", nil
+	}
+
+	var second ResolverFunc = func(context *Context, parent *Path, flag *Flag) (string, error) {
+		if flag.Name == "int" {
+			return "2", nil
+		}
+		return "", nil
+	}
+
+	p := mustNew(t, &cli, Resolver(first), Resolver(second))
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, []int{2}, cli.Int)
+}
+
+func TestResolverSatisfiesRequired(t *testing.T) {
+	var cli struct {
+		Int int `required`
+	}
+	resolver := func(context *Context, parent *Path, flag *Flag) (string, error) {
+		if flag.Name == "int" {
+			return "1", nil
+		}
+		return "", nil
+	}
+	_, err := mustNew(t, &cli, Resolver(resolver)).Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, cli.Int)
 }

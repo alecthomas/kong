@@ -38,8 +38,8 @@ type Kong struct {
 	Stderr io.Writer
 
 	before        map[reflect.Value]HookFunc
-	registry      *Registry
 	resolvers     []ResolverFunc
+	registry      *Registry
 	noDefaultHelp bool
 	help          func(*Context) error
 
@@ -52,13 +52,12 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:      os.Exit,
-		Stdout:    os.Stdout,
-		Stderr:    os.Stderr,
-		before:    map[reflect.Value]HookFunc{},
-		registry:  NewRegistry().RegisterDefaults(),
-		help:      PrintHelp,
-		resolvers: []ResolverFunc{},
+		Exit:     os.Exit,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		before:   map[reflect.Value]HookFunc{},
+		registry: NewRegistry().RegisterDefaults(),
+		help:     PrintHelp,
 	}
 
 	for _, option := range options {

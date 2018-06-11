@@ -9,17 +9,20 @@ import (
 )
 
 // ResolverFunc resolves a Flag value from an external source.
-type ResolverFunc func(flag *Flag) (string, error)
+type ResolverFunc func(context *Context, parent *Path, flag *Flag) (string, error)
 
 // JSONResolver returns a Resolver that retrieves values from a JSON source.
+//
+// Hyphens in flag names are replaced with underscores.
 func JSONResolver(r io.Reader) (ResolverFunc, error) {
 	values := map[string]interface{}{}
 	err := json.NewDecoder(r).Decode(&values)
 	if err != nil {
 		return nil, err
 	}
-	f := func(flag *Flag) (string, error) {
-		raw, ok := values[flag.Name]
+	f := func(context *Context, parent *Path, flag *Flag) (string, error) {
+		name := strings.Replace(flag.Name, "-", "_", -1)
+		raw, ok := values[name]
 		if !ok {
 			return "", nil
 		}
@@ -33,7 +36,7 @@ func JSONResolver(r io.Reader) (ResolverFunc, error) {
 	return f, nil
 }
 
-func jsonDecodeValue(sep string, value interface{}) (string, error) {
+func jsonDecodeValue(sep rune, value interface{}) (string, error) {
 	switch v := value.(type) {
 	case string:
 		return v, nil
@@ -48,7 +51,7 @@ func jsonDecodeValue(sep string, value interface{}) (string, error) {
 			}
 			out = append(out, sel)
 		}
-		return strings.Join(out, sep), nil
+		return JoinEscaped(out, sep), nil
 	case bool:
 		if v {
 			return "true", nil
@@ -58,14 +61,14 @@ func jsonDecodeValue(sep string, value interface{}) (string, error) {
 	return "", fmt.Errorf("unsupported JSON value %v (of type %T)", value, value)
 }
 
-// EnvResolver automatically determines environment variables based on the name of each flag, transformed to uppercase
-// and underscored, e.g. `my-flag` -> `MY_FLAG` The environment variable key can be overridden with the `env` tag.
-func EnvResolver(prefix string) (ResolverFunc, error) {
-	f := func(flag *Flag) (string, error) {
+// PerFlagEnvResolver automatically determines environment variables based on the name of each flag, transformed to
+// uppercase and underscored, e.g. `my-flag` -> `MY_FLAG` The environment variable key can be overridden with the `env`
+// tag.
+func PerFlagEnvResolver(prefix string) ResolverFunc {
+	return func(context *Context, parent *Path, flag *Flag) (string, error) {
 		v, _ := os.LookupEnv(envString(prefix, flag))
 		return v, nil
 	}
-	return f, nil
 }
 
 func envString(prefix string, flag *Flag) string {
