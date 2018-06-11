@@ -69,9 +69,12 @@ func Writers(stdout, stderr io.Writer) Option {
 // HookFunc is a callback tied to a field of the grammar, called before a value is applied.
 type HookFunc func(ctx *Context, path *Path) error
 
-// Hook to aply before a command, flag or positional argument is encountered.
+// Hook to apply before a command, flag or positional argument is encountered.
 //
 // "ptr" is a pointer to a field of the grammar.
+//
+// Note that the hook will be called once for each time the corresponding node is encountered. This means that if a flag
+// is passed twice, its hook will be called twice.
 func Hook(ptr interface{}, hook HookFunc) Option {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
@@ -82,13 +85,21 @@ func Hook(ptr interface{}, hook HookFunc) Option {
 	}
 }
 
+// HelpFunction is the type of a function used to display help.
 type HelpFunction func(*Context) error
 
 // Help function to use.
 //
 // Defaults to PrintHelp.
-func Help(help func(*Context) error) Option {
+func Help(help HelpFunction) Option {
 	return func(k *Kong) {
 		k.help = help
+	}
+}
+
+// Resolver registers flag resolvers.
+func Resolver(resolvers ...ResolverFunc) Option {
+	return func(k *Kong) {
+		k.resolvers = append(k.resolvers, resolvers...)
 	}
 }

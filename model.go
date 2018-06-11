@@ -139,6 +139,7 @@ type Value struct {
 	Position int    // Position (for positional arguments).
 }
 
+// Summary returns a human-readable summary of the value.
 func (v *Value) Summary() string {
 	if v.Flag != nil {
 		if v.IsBool() {
@@ -156,10 +157,12 @@ func (v *Value) Summary() string {
 	return argText
 }
 
+// IsCumulative returns true of the value is a slice.
 func (v *Value) IsCumulative() bool {
 	return v.Value.Kind() == reflect.Slice
 }
 
+// IsBool returns true if the underlying value is a boolean.
 func (v *Value) IsBool() bool {
 	if m, ok := v.Mapper.(BoolMapper); ok && m.IsBool() {
 		return true
@@ -170,7 +173,7 @@ func (v *Value) IsBool() bool {
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner) (reflect.Value, error) {
 	value := reflect.New(v.Value.Type()).Elem()
-	err := v.Mapper.Decode(&DecoderContext{Value: v}, scan, value)
+	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, value)
 	if err == nil {
 		v.Set = true
 	}
@@ -196,8 +199,10 @@ func (v *Value) Reset() error {
 	return nil
 }
 
+// A Positional represents a non-branching command-line positional argument.
 type Positional = Value
 
+// A Flag represents a command-line flag.
 type Flag struct {
 	*Value
 	PlaceHolder string
@@ -217,6 +222,7 @@ func (f *Flag) String() string {
 	return out
 }
 
+// FormatPlaceHolder formats the placeholder string for a Flag.
 func (f *Flag) FormatPlaceHolder() string {
 	tail := ""
 	if f.Value.IsCumulative() {

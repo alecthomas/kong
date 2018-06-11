@@ -9,16 +9,30 @@ import (
 	"time"
 )
 
-type DecoderContext struct {
+// DecodeContext is passed to a Mapper's Decode().
+//
+// It contains the Value being decoded into and the Scanner to parse from.
+type DecodeContext struct {
 	// Value being decoded into.
 	Value *Value
+	// Scan contains the input to scan into Target.
+	Scan *Scanner
+}
+
+// WithScanner creates a clone of this context with a new Scanner.
+func (d *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
+	return &DecodeContext{
+		Value: d.Value,
+		Scan:  scan,
+	}
 }
 
 // A Mapper represents how a field is mapped from command-line values to Go.
 //
 // Mappers can be associated with concrete fields via pointer, reflect.Type, reflect.Kind, or via a "type" tag.
 type Mapper interface {
-	Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
+	// Decode ctx.Value with ctx.Scanner into target.
+	Decode(ctx *DecodeContext, target reflect.Value) error
 }
 
 // A BoolMapper is a Mapper to a value that is a boolean.
@@ -27,13 +41,14 @@ type BoolMapper interface {
 	IsBool() bool
 }
 
-type MapperFunc func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error
+// A MapperFunc is a single function that complies with the Mapper interface.
+type MapperFunc func(ctx *DecodeContext, target reflect.Value) error
 
-func (d MapperFunc) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-	return d(ctx, scan, target)
+func (d MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { //nolint: golint
+	return d(ctx, target)
 }
 
-// A Registry encapsulates a set of fields and lookups to resolve them.
+// A Registry contains a set of mappers and supporting lookup methods.
 type Registry struct {
 	names  map[string]Mapper
 	types  map[reflect.Type]Mapper
@@ -41,6 +56,7 @@ type Registry struct {
 	values map[reflect.Value]Mapper
 }
 
+// NewRegistry creates a new (empty) Registry.
 func NewRegistry() *Registry {
 	return &Registry{
 		names:  map[string]Mapper{},
@@ -60,6 +76,7 @@ func (d *Registry) ForNamedType(name string, value reflect.Value) Mapper {
 	return d.ForValue(value)
 }
 
+// ForValue looks up the Mapper for a reflect.Value.
 func (d *Registry) ForValue(value reflect.Value) Mapper {
 	if mapper, ok := d.values[value]; ok {
 		return mapper
@@ -67,7 +84,7 @@ func (d *Registry) ForValue(value reflect.Value) Mapper {
 	return d.ForType(value.Type())
 }
 
-// DecoderForType finds a mapper from a type or kind.
+// ForType finds a mapper from a type, by type, then kind.
 //
 // Will return nil if a mapper can not be determined.
 func (d *Registry) ForType(typ reflect.Type) Mapper {
@@ -81,6 +98,7 @@ func (d *Registry) ForType(typ reflect.Type) Mapper {
 	return nil
 }
 
+// RegisterKind registers a Mapper for a reflect.Kind.
 func (d *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
 	d.kinds[kind] = mapper
 	return d
@@ -97,12 +115,13 @@ func (d *Registry) RegisterName(name string, mapper Mapper) *Registry {
 	return d
 }
 
+// RegisterType registers a Mapper for a reflect.Type.
 func (d *Registry) RegisterType(typ reflect.Type, mapper Mapper) *Registry {
 	d.types[typ] = mapper
 	return d
 }
 
-// RegisterValue registers a mapper by a pointer to the mapper value.
+// RegisterValue registers a Mapper by pointer to the field value.
 func (d *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
@@ -113,6 +132,7 @@ func (d *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
 	return d
 }
 
+// RegisterDefaults registers Mappers for all builtin supported Go types and some common stdlib types.
 func (d *Registry) RegisterDefaults() *Registry {
 	return d.RegisterKind(reflect.Int, intDecoder(bits.UintSize)).
 		RegisterKind(reflect.Int8, intDecoder(8)).
@@ -126,8 +146,8 @@ func (d *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Uint64, uintDecoder(64)).
 		RegisterKind(reflect.Float32, floatDecoder(32)).
 		RegisterKind(reflect.Float64, floatDecoder(64)).
-		RegisterKind(reflect.String, MapperFunc(func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-			target.SetString(scan.PopValue("string"))
+		RegisterKind(reflect.String, MapperFunc(func(ctx *DecodeContext, target reflect.Value) error {
+			target.SetString(ctx.Scan.PopValue("string"))
 			return nil
 		})).
 		RegisterKind(reflect.Bool, boolMapper{}).
@@ -138,15 +158,15 @@ func (d *Registry) RegisterDefaults() *Registry {
 
 type boolMapper struct{}
 
-func (boolMapper) Decode(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+func (boolMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
 	target.SetBool(true)
 	return nil
 }
 func (boolMapper) IsBool() bool { return true }
 
 func durationDecoder() MapperFunc {
-	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-		d, err := time.ParseDuration(scan.PopValue("duration"))
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		d, err := time.ParseDuration(ctx.Scan.PopValue("duration"))
 		if err != nil {
 			return err
 		}
@@ -156,12 +176,12 @@ func durationDecoder() MapperFunc {
 }
 
 func timeDecoder() MapperFunc {
-	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	return func(ctx *DecodeContext, target reflect.Value) error {
 		fmt := time.RFC3339
 		if ctx.Value.Format != "" {
 			fmt = ctx.Value.Format
 		}
-		t, err := time.Parse(fmt, scan.PopValue("time"))
+		t, err := time.Parse(fmt, ctx.Scan.PopValue("time"))
 		if err != nil {
 			return err
 		}
@@ -171,8 +191,8 @@ func timeDecoder() MapperFunc {
 }
 
 func intDecoder(bits int) MapperFunc {
-	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-		value := scan.PopValue("int")
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		value := ctx.Scan.PopValue("int")
 		n, err := strconv.ParseInt(value, 10, bits)
 		if err != nil {
 			return fmt.Errorf("invalid int %q", value)
@@ -183,8 +203,8 @@ func intDecoder(bits int) MapperFunc {
 }
 
 func uintDecoder(bits int) MapperFunc {
-	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-		value := scan.PopValue("uint")
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		value := ctx.Scan.PopValue("uint")
 		n, err := strconv.ParseUint(value, 10, bits)
 		if err != nil {
 			return fmt.Errorf("invalid uint %q", value)
@@ -195,8 +215,8 @@ func uintDecoder(bits int) MapperFunc {
 }
 
 func floatDecoder(bits int) MapperFunc {
-	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
-		value := scan.PopValue("float")
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		value := ctx.Scan.PopValue("float")
 		n, err := strconv.ParseFloat(value, bits)
 		if err != nil {
 			return fmt.Errorf("invalid float %q", value)
@@ -207,15 +227,15 @@ func floatDecoder(bits int) MapperFunc {
 }
 
 func sliceDecoder(d *Registry) MapperFunc {
-	return func(ctx *DecoderContext, scan *Scanner, target reflect.Value) error {
+	return func(ctx *DecodeContext, target reflect.Value) error {
 		el := target.Type().Elem()
 		sep := ctx.Value.Tag.Sep
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			// If decoding a flag, we need an argument.
-			childScanner = Scan(strings.Split(scan.PopValue("list"), sep)...)
+			childScanner = Scan(SplitEscaped(ctx.Scan.PopValue("list"), sep)...)
 		} else {
-			tokens := scan.PopUntil(func(t Token) bool { return !t.IsValue() })
+			tokens := ctx.Scan.PopUntil(func(t Token) bool { return !t.IsValue() })
 			childScanner = Scan(tokens...)
 		}
 		childDecoder := d.ForType(el)
@@ -224,7 +244,7 @@ func sliceDecoder(d *Registry) MapperFunc {
 		}
 		for childScanner.Peek().Type != EOLToken {
 			childValue := reflect.New(el).Elem()
-			err := childDecoder.Decode(ctx, childScanner, childValue)
+			err := childDecoder.Decode(ctx.WithScanner(childScanner), childValue)
 			if err != nil {
 				return err
 			}
@@ -232,4 +252,43 @@ func sliceDecoder(d *Registry) MapperFunc {
 		}
 		return nil
 	}
+}
+
+// SplitEscaped splits a string on a separator.
+//
+// It differs from strings.Split() in that the separator can exist in a field by escaping it with a \. eg.
+//
+//     SplitEscaped(`hello\,there,bob`, ',') == []string{"hello,there", "bob"}
+func SplitEscaped(s string, sep rune) (out []string) {
+	escaped := false
+	token := ""
+	for _, ch := range s {
+		if escaped {
+			token += string(ch)
+			escaped = false
+		} else if ch == '\\' {
+			escaped = true
+		} else if ch == sep && !escaped {
+			out = append(out, token)
+			token = ""
+			escaped = false
+		} else {
+			token += string(ch)
+		}
+	}
+	if token != "" {
+		out = append(out, token)
+	}
+	return
+}
+
+// JoinEscaped joins a slice of strings on sep, but also escapes any instances of sep in the fields with \. eg.
+//
+//     JoinEscaped([]string{"hello,there", "bob"}, ',') == `hello\,there,bob`
+func JoinEscaped(s []string, sep rune) string {
+	escaped := []string{}
+	for _, e := range s {
+		escaped = append(escaped, strings.Replace(e, string(sep), `\`+string(sep), -1))
+	}
+	return strings.Join(escaped, string(sep))
 }

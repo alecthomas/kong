@@ -61,7 +61,7 @@ eg.
 
 ```
 $ shell --help
-usage: shell [<flags>]
+usage: shell <command>
 
 A shell-like example app.
 
@@ -70,10 +70,10 @@ Flags:
   --debug  Debug mode.
 
 Commands:
-  rm [<flags>] <paths> ...
+  rm <paths> ...
     Remove files.
 
-  ls [<flags>] [<paths> ...]
+  ls [<paths> ...]
     List paths.
 ```
 
@@ -83,7 +83,7 @@ eg.
 
 ```
 $ shell --help rm
-usage: shell rm [<flags>] <paths> ...
+usage: shell rm <paths> ...
 
 Remove files.
 

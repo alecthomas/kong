@@ -17,6 +17,7 @@ func fail(format string, args ...interface{}) {
 	panic(Error{fmt.Sprintf(format, args...)})
 }
 
+// Must creates a new Parser or panics if there is an error.
 func Must(ast interface{}, options ...Option) *Kong {
 	k, err := New(ast, options...)
 	if err != nil {
@@ -37,6 +38,7 @@ type Kong struct {
 	Stderr io.Writer
 
 	before        map[reflect.Value]HookFunc
+	resolvers     []ResolverFunc
 	registry      *Registry
 	noDefaultHelp bool
 	help          func(*Context) error
@@ -105,7 +107,7 @@ func (k *Kong) extraFlags() []*Flag {
 	return []*Flag{helpFlag}
 }
 
-// Path parses the command-line, validating and collecting matching grammar nodes.
+// Trace parses the command-line, validating and collecting matching grammar nodes.
 func (k *Kong) Trace(args []string) (*Context, error) {
 	return Trace(k, args)
 }
@@ -171,7 +173,7 @@ func (k *Kong) Errorf(format string, args ...interface{}) {
 	fmt.Fprintf(k.Stderr, k.Model.Name+": error: "+format, args...)
 }
 
-// FatalIfError terminates with an error message if err != nil.
+// FatalIfErrorf terminates with an error message if err != nil.
 func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	if err == nil {
 		return

@@ -7,8 +7,10 @@ import (
 
 //go:generate stringer -type=TokenType
 
+// TokenType is the type of a token.
 type TokenType int
 
+// Token types.
 const (
 	UntypedToken TokenType = iota
 	EOLToken
@@ -128,14 +130,17 @@ func (s *Scanner) Peek() Token {
 	return s.args[0]
 }
 
-func (s *Scanner) Push(arg string) {
+func (s *Scanner) Push(arg string) *Scanner {
 	s.PushToken(Token{Value: arg})
+	return s
 }
 
-func (s *Scanner) PushTyped(arg string, typ TokenType) {
+func (s *Scanner) PushTyped(arg string, typ TokenType) *Scanner {
 	s.PushToken(Token{Value: arg, Type: typ})
+	return s
 }
 
-func (s *Scanner) PushToken(token Token) {
+func (s *Scanner) PushToken(token Token) *Scanner {
 	s.args = append([]Token{token}, s.args...)
+	return s
 }

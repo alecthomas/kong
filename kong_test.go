@@ -101,15 +101,37 @@ func TestFlagSlice(t *testing.T) {
 	require.Equal(t, []int{1, 2, 3}, cli.Slice)
 }
 
+func TestFlagSliceWithSeparator(t *testing.T) {
+	var cli struct {
+		Slice []string
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{`--slice=a\,b,c`})
+	require.NoError(t, err)
+	require.Equal(t, []string{"a,b", "c"}, cli.Slice)
+}
+
 func TestArgSlice(t *testing.T) {
 	var cli struct {
-		Slice []int `kong:"arg"`
+		Slice []int `arg`
 		Flag  bool
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"1", "2", "3", "--flag"})
 	require.NoError(t, err)
 	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+	require.Equal(t, true, cli.Flag)
+}
+
+func TestArgSliceWithSeparator(t *testing.T) {
+	var cli struct {
+		Slice []string `arg`
+		Flag  bool
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"a,b", "c", "--flag"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"a,b", "c"}, cli.Slice)
 	require.Equal(t, true, cli.Flag)
 }
 
@@ -355,4 +377,24 @@ func TestShort(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, cli.Bool)
 	require.Equal(t, "hello", cli.String)
+}
+
+func TestDuplicateFlagChoosesLast(t *testing.T) {
+	var cli struct {
+		Flag int
+	}
+
+	_, err := mustNew(t, &cli).Parse([]string{"--flag=1", "--flag=2"})
+	require.NoError(t, err)
+	require.Equal(t, 2, cli.Flag)
+}
+
+func TestDuplicateSliceDoesNotAccumulate(t *testing.T) {
+	var cli struct {
+		Flag []int
+	}
+
+	_, err := mustNew(t, &cli).Parse([]string{"--flag=1,2", "--flag=3,4"})
+	require.NoError(t, err)
+	require.Equal(t, []int{3, 4}, cli.Flag)
 }
