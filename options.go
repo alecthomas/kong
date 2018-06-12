@@ -97,6 +97,13 @@ func Help(help HelpFunction) Option {
 	}
 }
 
+// ClearResolvers clears all existing resolvers.
+func ClearResolvers() Option {
+	return func(k *Kong) {
+		k.resolvers = nil
+	}
+}
+
 // Resolver registers flag resolvers.
 func Resolver(resolvers ...ResolverFunc) Option {
 	return func(k *Kong) {

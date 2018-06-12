@@ -235,3 +235,14 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, cli.Int)
 }
+
+func TestEnvResolver(t *testing.T) {
+	var cli struct {
+		Int int `env:"SOME_ENVAR"`
+	}
+	restoreEnv := tempEnv(envMap{"SOME_ENVAR": "12"})
+	defer restoreEnv()
+	_, err := mustNew(t, &cli, Resolver(EnvResolver())).Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, 12, cli.Int)
+}
