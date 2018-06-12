@@ -144,6 +144,7 @@ Both can coexist with standard Tag parsing.
 | -----------------------| ------------------------------------------- |
 | `cmd`                  | If present, struct is a command.            |
 | `arg`                  | If present, field is an argument.           |
+| `env:"X"`              | Specify envar to use for default value.
 | `type:"X"`             | Specify named Mapper to use.                |
 | `help:"X"`             | Help text.                                  |
 | `placeholder:"X"`      | Placeholder text.                           |

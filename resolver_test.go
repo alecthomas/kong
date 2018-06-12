@@ -26,14 +26,14 @@ func tempEnv(env envMap) func() {
 func newEnvParser(t *testing.T, cli interface{}, env envMap) (*Kong, func()) {
 	t.Helper()
 	restoreEnv := tempEnv(env)
-	parser := mustNew(t, cli, Resolver(PerFlagEnvResolver("KONG_")))
+	parser := mustNew(t, cli)
 	return parser, restoreEnv
 }
 
 func TestEnvResolverFlagBasic(t *testing.T) {
 	var cli struct {
-		String string
-		Slice  []int
+		String string `env:"KONG_STRING"`
+		Slice  []int  `env:"KONG_SLICE"`
 	}
 	parser, unsetEnvs := newEnvParser(t, &cli, envMap{
 		"KONG_STRING": "bye",
@@ -49,7 +49,7 @@ func TestEnvResolverFlagBasic(t *testing.T) {
 
 func TestEnvResolverFlagOverride(t *testing.T) {
 	var cli struct {
-		Flag string
+		Flag string `env:"KONG_FLAG"`
 	}
 	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_FLAG": "bye"})
 	defer restoreEnv()
@@ -64,13 +64,13 @@ func TestEnvResolverOnlyPopulateUsedBranches(t *testing.T) {
 	var cli struct {
 		UnvisitedArg struct {
 			UnvisitedArg string `arg`
-			Int          int
+			Int          int    `env:"KONG_INT"`
 		} `arg`
 		UnvisitedCmd struct {
-			Int int
+			Int int `env:"KONG_INT"`
 		} `cmd`
 		Visited struct {
-			Int int
+			Int int `env:"KONG_INT"`
 		} `cmd`
 	}
 	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_INT": "512"})
@@ -166,11 +166,8 @@ func TestResolversWithMappers(t *testing.T) {
 	restoreEnv := tempEnv(envMap{"KONG_MOO": "meow"})
 	defer restoreEnv()
 
-	r := PerFlagEnvResolver("KONG_")
-
 	parser := mustNew(t, &cli,
 		NamedMapper("upper", testUppercaseMapper{}),
-		Resolver(r),
 	)
 	_, err := parser.Parse([]string{})
 	require.NoError(t, err)
@@ -234,15 +231,4 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	_, err := mustNew(t, &cli, Resolver(resolver)).Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, cli.Int)
-}
-
-func TestEnvResolver(t *testing.T) {
-	var cli struct {
-		Int int `env:"SOME_ENVAR"`
-	}
-	restoreEnv := tempEnv(envMap{"SOME_ENVAR": "12"})
-	defer restoreEnv()
-	_, err := mustNew(t, &cli, Resolver(EnvResolver())).Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, 12, cli.Int)
 }

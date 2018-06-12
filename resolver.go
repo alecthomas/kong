@@ -61,17 +61,6 @@ func jsonDecodeValue(sep rune, value interface{}) (string, error) {
 	return "", fmt.Errorf("unsupported JSON value %v (of type %T)", value, value)
 }
 
-// PerFlagEnvResolver automatically determines environment variables based on the name of each flag, transformed to
-// uppercase and underscored, e.g. `my-flag` -> `MY_FLAG`.
-//
-// The environment variable key can be overridden with the `env:"<name>"` tag.
-func PerFlagEnvResolver(prefix string) ResolverFunc {
-	return func(context *Context, parent *Path, flag *Flag) (string, error) {
-		v, _ := os.LookupEnv(envString(prefix, flag))
-		return v, nil
-	}
-}
-
 // EnvResolver resolves flag values using the `env:"<name>"` tag. It ignores flags without this tag.
 //
 // This resolver is installed by default.
@@ -83,16 +72,4 @@ func EnvResolver() ResolverFunc {
 		v, _ := os.LookupEnv(flag.Tag.Env)
 		return v, nil
 	}
-}
-
-func envString(prefix string, flag *Flag) string {
-	if env, ok := flag.Tag.Get("env"); ok {
-		return env
-	}
-
-	env := strings.ToUpper(flag.Name)
-	env = strings.Replace(env, "-", "_", -1)
-	env = prefix + env
-
-	return env
 }
