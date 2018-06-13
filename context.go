@@ -21,9 +21,6 @@ type Path struct {
 	// Flags added by this node.
 	Flags []*Flag
 
-	// Parsed value for non-commands.
-	Value reflect.Value
-
 	// True if this Path element was created as the result of a resolver.
 	Resolved bool
 }
@@ -34,8 +31,22 @@ type Context struct {
 	Path  []*Path // A trace through parsed nodes.
 	Error error   // Error that occurred during trace, if any.
 
-	args []string
-	scan *Scanner
+	values map[*Value]reflect.Value // Temporary values during tracing.
+	args   []string
+	scan   *Scanner
+}
+
+// Value returns the value for a particular path element.
+func (c *Context) Value(path *Path) reflect.Value {
+	switch {
+	case path.Positional != nil:
+		return c.values[path.Positional]
+	case path.Flag != nil:
+		return c.values[path.Flag.Value]
+	case path.Argument != nil:
+		return c.values[path.Argument.Argument]
+	}
+	panic("can only retrieve value for flag, argument or positional")
 }
 
 // Selected command or argument.
@@ -62,9 +73,10 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		App:  k,
 		args: args,
 		Path: []*Path{
-			{App: k.Model, Flags: k.Model.Flags, Value: k.Model.Target},
+			{App: k.Model, Flags: k.Model.Flags},
 		},
-		scan: Scan(args...),
+		values: map[*Value]reflect.Value{},
+		scan:   Scan(args...),
 	}
 	c.Error = c.trace(&c.App.Model.Node)
 	return c, c.traceResolvers()
@@ -142,7 +154,7 @@ func (c *Context) Command() (command []string) {
 func (c *Context) FlagValue(flag *Flag) reflect.Value {
 	for _, trace := range c.Path {
 		if trace.Flag == flag {
-			return trace.Value
+			return c.values[trace.Flag.Value]
 		}
 	}
 	return reflect.Value{}
@@ -253,14 +265,13 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
-				value, err := arg.Parse(c.scan)
+				err := arg.Parse(c.scan, c.getValue(arg))
 				if err != nil {
 					return err
 				}
 				c.Path = append(c.Path, &Path{
 					Parent:     node,
 					Positional: arg,
-					Value:      value,
 				})
 				positional++
 				break
@@ -273,7 +284,6 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					c.Path = append(c.Path, &Path{
 						Parent:  node,
 						Command: branch,
-						Value:   branch.Target,
 						Flags:   branch.Flags,
 					})
 					return c.trace(branch)
@@ -284,11 +294,10 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			for _, branch := range node.Children {
 				if branch.Type == ArgumentNode {
 					arg := branch.Argument
-					if value, err := arg.Parse(c.scan); err == nil {
+					if err := arg.Parse(c.scan, c.getValue(arg)); err == nil {
 						c.Path = append(c.Path, &Path{
 							Parent:   node,
 							Argument: branch,
-							Value:    value,
 							Flags:    branch.Flags,
 						})
 						return c.trace(branch)
@@ -313,6 +322,10 @@ func (c *Context) traceResolvers() error {
 	inserted := []*Path{}
 	for _, path := range c.Path {
 		for _, flag := range path.Flags {
+			// Flag has already been set on the command-line.
+			if _, ok := c.values[flag.Value]; ok {
+				continue
+			}
 			for _, resolver := range c.App.resolvers {
 				s, err := resolver(c, path, flag)
 				if err != nil {
@@ -323,13 +336,13 @@ func (c *Context) traceResolvers() error {
 				}
 
 				scan := Scan().PushTyped(s, FlagValueToken)
-				value, err := flag.Parse(scan)
+				delete(c.values, flag.Value)
+				err = flag.Parse(scan, c.getValue(flag.Value))
 				if err != nil {
 					return err
 				}
 				inserted = append(inserted, &Path{
 					Flag:     flag,
-					Value:    value,
 					Resolved: true,
 				})
 			}
@@ -337,6 +350,15 @@ func (c *Context) traceResolvers() error {
 	}
 	c.Path = append(inserted, c.Path...)
 	return nil
+}
+
+func (c *Context) getValue(value *Value) reflect.Value {
+	v, ok := c.values[value]
+	if !ok {
+		v = reflect.New(value.Target.Type()).Elem()
+		c.values[value] = v
+	}
+	return v
 }
 
 // Apply traced context to the target grammar.
@@ -349,20 +371,24 @@ func (c *Context) Apply() (string, error) {
 	path := []string{}
 
 	for _, trace := range c.Path {
+		var value *Value
 		switch {
 		case trace.App != nil:
 		case trace.Argument != nil:
 			path = append(path, "<"+trace.Argument.Name+">")
-			trace.Argument.Argument.Apply(trace.Value)
+			value = trace.Argument.Argument
 		case trace.Command != nil:
 			path = append(path, trace.Command.Name)
 		case trace.Flag != nil:
-			trace.Flag.Value.Apply(trace.Value)
+			value = trace.Flag.Value
 		case trace.Positional != nil:
 			path = append(path, "<"+trace.Positional.Name+">")
-			trace.Positional.Apply(trace.Value)
+			value = trace.Positional
 		default:
 			panic("unsupported path ?!")
+		}
+		if value != nil {
+			value.Apply(c.getValue(value))
 		}
 	}
 
@@ -378,11 +404,11 @@ func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err err
 			continue
 		}
 		c.scan.Pop()
-		value, err := flag.Parse(c.scan)
+		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
 			return err
 		}
-		c.Path = append(c.Path, &Path{Flag: flag, Value: value})
+		c.Path = append(c.Path, &Path{Flag: flag})
 		return nil
 	}
 	return fmt.Errorf("unknown flag --%s", token.Value)

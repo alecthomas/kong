@@ -178,13 +178,12 @@ func (v *Value) IsBool() bool {
 }
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
-func (v *Value) Parse(scan *Scanner) (reflect.Value, error) {
-	value := reflect.New(v.Target.Type()).Elem()
-	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, value)
+func (v *Value) Parse(scan *Scanner, target reflect.Value) error {
+	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err == nil {
 		v.Set = true
 	}
-	return value, err
+	return err
 }
 
 // Apply value to field.
@@ -199,12 +198,7 @@ func (v *Value) Apply(value reflect.Value) {
 func (v *Value) Reset() error {
 	v.Target.Set(reflect.Zero(v.Target.Type()))
 	if v.Default != "" {
-		value, err := v.Parse(Scan(v.Default))
-		if err != nil {
-			return err
-		}
-		v.Apply(value)
-		v.Set = false
+		return v.Parse(Scan(v.Default), v.Target)
 	}
 	return nil
 }

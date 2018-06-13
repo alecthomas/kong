@@ -352,8 +352,8 @@ func TestHooks(t *testing.T) {
 		{"ArgAndFlag", "one two --three=three", values{true, "two", "three"}},
 	}
 	setOne := func(ctx *Context, path *Path) error { hooked.one = true; return nil }
-	setTwo := func(ctx *Context, path *Path) error { hooked.two = path.Value.String(); return nil }
-	setThree := func(ctx *Context, path *Path) error { hooked.three = path.Value.String(); return nil }
+	setTwo := func(ctx *Context, path *Path) error { hooked.two = ctx.Value(path).String(); return nil }
+	setThree := func(ctx *Context, path *Path) error { hooked.three = ctx.Value(path).String(); return nil }
 	p := mustNew(t, &cli,
 		Hook(&cli.One, setOne),
 		Hook(&cli.One.Two, setTwo),
