@@ -1,4 +1,4 @@
-<p align="center"><img src="kong.png" /></p>
+<p align="center"><img width="90%" src="kong.png" /></p>
 
 # Kong is a command-line parser for Go [![CircleCI](https://circleci.com/gh/alecthomas/kong.svg?style=svg&circle-token=477fecac758383bf281453187269b913130f17d2)](https://circleci.com/gh/alecthomas/kong)
 
@@ -9,7 +9,7 @@
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Supported tags](#supported-tags)
-1. [Configuring Kong](#configuring-kong)
+1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
     1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
@@ -159,7 +159,7 @@ Both can coexist with standard Tag parsing.
 | `format:"X"`           | Format for parsing input, if supported.     |
 | `sep:"X"`              | Separator for sequences (defaults to ",")   |
 
-## Configuring Kong
+## Modifying Kong's behaviour
 
 Each Kong parser can be configured via functional options passed to `New(cli interface{}, options...Option)`.
 

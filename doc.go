@@ -27,4 +27,6 @@
 //     func main() {
 //       kong.Parse(&CLI)
 //     }
+//
+// See https://github.com/alecthomas/kong for details.
 package kong
