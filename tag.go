@@ -130,6 +130,13 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Hidden = t.Has("hidden")
 	t.Format, _ = t.Get("format")
 	t.Sep, _ = t.GetRune("sep")
+	if t.Sep == 0 {
+		if fv.Kind() == reflect.Map {
+			t.Sep = '='
+		} else {
+			t.Sep = ','
+		}
+	}
 	t.PlaceHolder, _ = t.Get("placeholder")
 	if t.PlaceHolder == "" {
 		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))

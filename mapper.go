@@ -234,9 +234,6 @@ func mapDecoder(d *Registry) MapperFunc {
 		}
 		el := target.Type()
 		sep := ctx.Value.Tag.Sep
-		if sep == 0 {
-			sep = '='
-		}
 		token := ctx.Scan.PopValue("map")
 		parts := SplitEscaped(token, sep)
 		if len(parts) != 2 {
@@ -267,9 +264,6 @@ func sliceDecoder(d *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		el := target.Type().Elem()
 		sep := ctx.Value.Tag.Sep
-		if sep == 0 {
-			sep = ','
-		}
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			// If decoding a flag, we need an argument.

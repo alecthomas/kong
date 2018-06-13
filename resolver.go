@@ -27,9 +27,6 @@ func JSON(r io.Reader) (ResolverFunc, error) {
 			return "", nil
 		}
 		sep := flag.Tag.Sep
-		if sep == 0 {
-			sep = ','
-		}
 		value, err := jsonDecodeValue(sep, raw)
 		if err != nil {
 			return "", err
