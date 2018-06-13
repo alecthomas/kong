@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 )
 
+// Tag represents the parsed state of Kong tags in a struct field tag.
 type Tag struct {
 	Cmd         bool
 	Arg         bool
@@ -145,28 +146,34 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	return t
 }
 
+// Has returns true if the tag contained the given key.
 func (t *Tag) Has(k string) bool {
 	_, ok := t.items[k]
 	return ok
 }
 
+// Get returns the value of the given tag.
 func (t *Tag) Get(k string) (string, bool) {
 	s, ok := t.items[k]
 	return s, ok
 }
 
+// GetBool returns true if the given tag looks like a boolean truth string.
 func (t *Tag) GetBool(k string) (bool, error) {
 	return strconv.ParseBool(t.items[k])
 }
 
+// GetFloat parses the given tag as a float64.
 func (t *Tag) GetFloat(k string) (float64, error) {
 	return strconv.ParseFloat(t.items[k], 64)
 }
 
+// GetInt parses the given tag as an int64.
 func (t *Tag) GetInt(k string) (int64, error) {
 	return strconv.ParseInt(t.items[k], 10, 64)
 }
 
+// GetRune parses the given tag as a rune.
 func (t *Tag) GetRune(k string) (rune, error) {
 	r, _ := utf8.DecodeRuneInString(t.items[k])
 	if r == utf8.RuneError {

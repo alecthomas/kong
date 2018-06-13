@@ -2,10 +2,14 @@ package kong
 
 import (
 	"io"
+	"os"
+	"os/user"
+	"path/filepath"
 	"reflect"
+	"strings"
 )
 
-// Options apply optional changes to the Kong application.
+// An Option applies optional changes to the Kong application.
 type Option func(k *Kong)
 
 // ExitFunction overrides the function used to terminate. This is useful for testing or interactive use.
@@ -109,4 +113,49 @@ func Resolver(resolvers ...ResolverFunc) Option {
 	return func(k *Kong) {
 		k.resolvers = append(k.resolvers, resolvers...)
 	}
+}
+
+// ConfigurationFunc is a function that builds a resolver from a file.
+type ConfigurationFunc func(r io.Reader) (ResolverFunc, error)
+
+// Configuration provides Kong with support for loading defaults from a set of configuration files.
+//
+// Paths will be opened in order, and "loader" will be used to provide a ResolverFunc which is registered with Kong.
+//
+// Note: The JSON function is a ConfigurationFunc.
+//
+// ~ expansion will occur on the provided paths.
+func Configuration(loader ConfigurationFunc, paths ...string) Option {
+	return func(k *Kong) {
+		for _, path := range paths {
+			path = expandPath(path)
+			r, err := os.Open(path) // nolint: gas
+			if err != nil {
+				continue
+			}
+			resolver, err := loader(r)
+			if err == nil {
+				k.resolvers = append(k.resolvers, resolver)
+			}
+			_ = r.Close()
+		}
+	}
+}
+
+func expandPath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	if strings.HasPrefix(path, "~/") {
+		user, err := user.Current()
+		if err != nil {
+			return path
+		}
+		return filepath.Join(user.HomeDir, path[2:])
+	}
+	abspath, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return abspath
 }

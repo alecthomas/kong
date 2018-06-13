@@ -7,23 +7,29 @@ import (
 	"strings"
 )
 
+// Application is the root of the Kong model.
 type Application struct {
 	Node
 	HelpFlag *Flag
 }
 
+// Argument represents a branching positional argument.
 type Argument = Node
 
+// Command represents a command in the CLI.
 type Command = Node
 
+// NodeType is an enum representing the type of a Node.
 type NodeType int
 
+// Node type enumerations.
 const (
 	ApplicationNode NodeType = iota
 	CommandNode
 	ArgumentNode
 )
 
+// Node is a branch in the CLI. ie. a command or positional argument.
 type Node struct {
 	Type       NodeType
 	Parent     *Node
@@ -37,6 +43,7 @@ type Node struct {
 	Argument *Value // Populated when Type is ArgumentNode.
 }
 
+// AllFlags returns flags from all ancestor branches encountered.
 func (n *Node) AllFlags() (out [][]*Flag) {
 	if n.Parent != nil {
 		out = append(out, n.Parent.AllFlags()...)
@@ -186,6 +193,9 @@ func (v *Value) Apply(value reflect.Value) {
 	v.Set = true
 }
 
+// Reset this value to its default, either the zero value or the parsed result of its "default" tag.
+//
+// Does not include resolvers.
 func (v *Value) Reset() error {
 	v.Value.Set(reflect.Zero(v.Value.Type()))
 	if v.Default != "" {

@@ -112,6 +112,7 @@ func TestFlagSliceWithSeparator(t *testing.T) {
 }
 
 func TestArgSlice(t *testing.T) {
+	// nolint: govet
 	var cli struct {
 		Slice []int `arg`
 		Flag  bool
@@ -124,6 +125,7 @@ func TestArgSlice(t *testing.T) {
 }
 
 func TestArgSliceWithSeparator(t *testing.T) {
+	// nolint: govet
 	var cli struct {
 		Slice []string `arg`
 		Flag  bool

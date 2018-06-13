@@ -26,9 +26,9 @@ func guessWidth(w io.Writer) int {
 
 		if _, _, err := syscall.Syscall6(
 			syscall.SYS_IOCTL,
-			uintptr(fd),
+			uintptr(fd), // nolint: unconvert
 			uintptr(syscall.TIOCGWINSZ),
-			uintptr(unsafe.Pointer(&dimensions)),
+			uintptr(unsafe.Pointer(&dimensions)), // nolint: gas
 			0, 0, 0,
 		); err == 0 {
 			return int(dimensions[1])

@@ -30,7 +30,7 @@ func newEnvParser(t *testing.T, cli interface{}, env envMap) (*Kong, func()) {
 	return parser, restoreEnv
 }
 
-func TestEnvResolverFlagBasic(t *testing.T) {
+func TestEnvarsFlagBasic(t *testing.T) {
 	var cli struct {
 		String string `env:"KONG_STRING"`
 		Slice  []int  `env:"KONG_SLICE"`
@@ -47,7 +47,7 @@ func TestEnvResolverFlagBasic(t *testing.T) {
 	require.Equal(t, []int{5, 2, 9}, cli.Slice)
 }
 
-func TestEnvResolverFlagOverride(t *testing.T) {
+func TestEnvarsFlagOverride(t *testing.T) {
 	var cli struct {
 		Flag string `env:"KONG_FLAG"`
 	}
@@ -59,7 +59,7 @@ func TestEnvResolverFlagOverride(t *testing.T) {
 	require.Equal(t, "hello", cli.Flag)
 }
 
-func TestEnvResolverOnlyPopulateUsedBranches(t *testing.T) {
+func TestEnvarsOnlyPopulateUsedBranches(t *testing.T) {
 	// nolint
 	var cli struct {
 		UnvisitedArg struct {
@@ -84,7 +84,7 @@ func TestEnvResolverOnlyPopulateUsedBranches(t *testing.T) {
 	require.Equal(t, 0, cli.UnvisitedCmd.Int)
 }
 
-func TestEnvResolverTag(t *testing.T) {
+func TestEnvarsTag(t *testing.T) {
 	var cli struct {
 		Slice []int `env:"KONG_NUMBERS"`
 	}
@@ -96,7 +96,7 @@ func TestEnvResolverTag(t *testing.T) {
 	require.Equal(t, []int{5, 2, 9}, cli.Slice)
 }
 
-func TestJSONResolverBasic(t *testing.T) {
+func TestJSONBasic(t *testing.T) {
 	var cli struct {
 		String          string
 		Slice           []int
@@ -111,7 +111,7 @@ func TestJSONResolverBasic(t *testing.T) {
 		"slice_with_commas": ["a,b", "c"]
 	}`
 
-	r, err := JSONResolver(strings.NewReader(json))
+	r, err := JSON(strings.NewReader(json))
 	require.NoError(t, err)
 
 	parser := mustNew(t, &cli, Resolver(r))
@@ -219,6 +219,7 @@ func TestLastResolverWins(t *testing.T) {
 }
 
 func TestResolverSatisfiesRequired(t *testing.T) {
+	// nolint: govet
 	var cli struct {
 		Int int `required`
 	}

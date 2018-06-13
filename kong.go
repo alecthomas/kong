@@ -58,7 +58,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		before:    map[reflect.Value]HookFunc{},
 		registry:  NewRegistry().RegisterDefaults(),
 		help:      PrintHelp,
-		resolvers: []ResolverFunc{EnvResolver()},
+		resolvers: []ResolverFunc{Envars()},
 	}
 
 	for _, option := range options {
@@ -123,7 +123,7 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 	if err != nil {
 		return "", err
 	}
-	if err := k.applyHooks(ctx); err != nil {
+	if err = k.applyHooks(ctx); err != nil {
 		return "", err
 	}
 	if ctx.Error != nil {

@@ -11,10 +11,10 @@ import (
 // ResolverFunc resolves a Flag value from an external source.
 type ResolverFunc func(context *Context, parent *Path, flag *Flag) (string, error)
 
-// JSONResolver returns a Resolver that retrieves values from a JSON source.
+// JSON returns a Resolver that retrieves values from a JSON source.
 //
 // Hyphens in flag names are replaced with underscores.
-func JSONResolver(r io.Reader) (ResolverFunc, error) {
+func JSON(r io.Reader) (ResolverFunc, error) {
 	values := map[string]interface{}{}
 	err := json.NewDecoder(r).Decode(&values)
 	if err != nil {
@@ -61,10 +61,10 @@ func jsonDecodeValue(sep rune, value interface{}) (string, error) {
 	return "", fmt.Errorf("unsupported JSON value %v (of type %T)", value, value)
 }
 
-// EnvResolver resolves flag values using the `env:"<name>"` tag. It ignores flags without this tag.
+// Envars resolves flag values using the `env:"<name>"` tag. It ignores flags without this tag.
 //
 // This resolver is installed by default.
-func EnvResolver() ResolverFunc {
+func Envars() ResolverFunc {
 	return func(context *Context, parent *Path, flag *Flag) (string, error) {
 		if flag.Tag.Env == "" {
 			return "", nil

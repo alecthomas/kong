@@ -21,6 +21,7 @@ const (
 	PositionalArgumentToken // <arg>
 )
 
+// Token created by Scanner.
 type Token struct {
 	Value string
 	Type  TokenType
@@ -42,10 +43,12 @@ func (t Token) String() string {
 	}
 }
 
+// IsEOL returns true if this Token is past the end of the line.
 func (t Token) IsEOL() bool {
 	return t.Type == EOLToken
 }
 
+// IsAny returns true if the token's type is any of those provided.
 func (t Token) IsAny(types ...TokenType) bool {
 	for _, typ := range types {
 		if t.Type == typ {
@@ -75,6 +78,7 @@ type Scanner struct {
 	args []Token
 }
 
+// Scan creates a new Scanner from args with untyped tokens.
 func Scan(args ...string) *Scanner {
 	s := &Scanner{}
 	for _, arg := range args {
@@ -83,10 +87,12 @@ func Scan(args ...string) *Scanner {
 	return s
 }
 
+// Len returns the number of input arguments.
 func (s *Scanner) Len() int {
 	return len(s.args)
 }
 
+// Pop the front token off the Scanner.
 func (s *Scanner) Pop() Token {
 	if len(s.args) == 0 {
 		return Token{Type: EOLToken}
@@ -123,6 +129,7 @@ func (s *Scanner) PopUntil(predicate func(Token) bool) (values []string) {
 	return
 }
 
+// Peek at the next Token or return an EOLToken.
 func (s *Scanner) Peek() Token {
 	if len(s.args) == 0 {
 		return Token{Type: EOLToken}
@@ -130,16 +137,19 @@ func (s *Scanner) Peek() Token {
 	return s.args[0]
 }
 
+// Push an untyped Token onto the front of the Scanner.
 func (s *Scanner) Push(arg string) *Scanner {
 	s.PushToken(Token{Value: arg})
 	return s
 }
 
+// PushTyped pushes a typed token onto the front of the Scanner.
 func (s *Scanner) PushTyped(arg string, typ TokenType) *Scanner {
 	s.PushToken(Token{Value: arg, Type: typ})
 	return s
 }
 
+// PushToken pushes a preconstructed Token onto the front of the Scanner.
 func (s *Scanner) PushToken(token Token) *Scanner {
 	s.args = append([]Token{token}, s.args...)
 	return s

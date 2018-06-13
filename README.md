@@ -10,6 +10,8 @@
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Supported tags](#supported-tags)
 1. [Configuring Kong](#configuring-kong)
+    1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
     1. [`Help(HelpFunc)` - customising help](#helphelpfunc---customising-help)
     1. [`Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed](#hookfield-hookfunc---callback-hooks-to-execute-when-the-command-line-is-parsed)
@@ -159,7 +161,25 @@ Both can coexist with standard Tag parsing.
 
 ## Configuring Kong
 
-Each Kong parser can be configured via functional options passed to `New(cli interface{}, options...Option)`. The full set of options can be found in `options.go`.
+Each Kong parser can be configured via functional options passed to `New(cli interface{}, options...Option)`.
+
+The full set of options can be found in [options.go](https://github.com/alecthomas/kong/blob/master/options.go).
+
+### `Configuration(loader, paths...)` - load defaults from configuration files
+
+This option provides Kong with support for loading defaults from a set of configuration files. Each file is opened, if possible, and the loader called to create a resolver for that file.
+
+eg.
+
+```go
+kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json"))
+```
+
+### `Resolver(...)` - support for default values from external sources
+
+Resolvers are Kong's extension point for providing default values from external sources. As an example, support for environment variables via the `env` tag is provided by a resolver. There's also a builtin resolver for JSON configuration files.
+
+Example resolvers can be found in [resolver.go](https://github.com/alecthomas/kong/blob/master/resolver.go).
 
 ### `*Mapper(...)` - customising how the command-line is mapped to Go values
 
@@ -176,7 +196,7 @@ type Mapper interface {
 }
 ```
 
-All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`) have mapperss registered by default. Mappers for custom types can be added using `kong.??Mapper(...)` options. Mappers are applied to fields in four ways:
+All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`) have mappers registered by default. Mappers for custom types can be added using `kong.??Mapper(...)` options. Mappers are applied to fields in four ways:
 
 1. `NamedMapper(string, Mapper)` and using the tag key `type:"<name>"`.
 2. `KindMapper(reflect.Kind, Mapper)`.
