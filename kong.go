@@ -90,7 +90,7 @@ func (k *Kong) extraFlags() []*Flag {
 		Value: &Value{
 			Name:   "help",
 			Help:   "Show context-sensitive help.",
-			Value:  value,
+			Target: value,
 			Tag:    &Tag{},
 			Mapper: k.registry.ForValue(value),
 		},
@@ -152,9 +152,9 @@ func (k *Kong) applyHooks(ctx *Context) error {
 		case trace.Command != nil:
 			key = trace.Command.Target
 		case trace.Positional != nil:
-			key = trace.Positional.Value
+			key = trace.Positional.Target
 		case trace.Flag != nil:
-			key = trace.Flag.Value.Value
+			key = trace.Flag.Value.Target
 		default:
 			panic("unsupported Path")
 		}

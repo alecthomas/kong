@@ -226,6 +226,12 @@ func floatDecoder(bits int) MapperFunc {
 	}
 }
 
+func mapDecoder(d *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		return nil
+	}
+}
+
 func sliceDecoder(d *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		el := target.Type().Elem()
@@ -242,7 +248,7 @@ func sliceDecoder(d *Registry) MapperFunc {
 		if childDecoder == nil {
 			return fmt.Errorf("no mapper for element type of %s", target.Type())
 		}
-		for childScanner.Peek().Type != EOLToken {
+		for !childScanner.Peek().IsEOL() {
 			childValue := reflect.New(el).Elem()
 			err := childDecoder.Decode(ctx.WithScanner(childScanner), childValue)
 			if err != nil {

@@ -197,7 +197,7 @@ func formatFlag(haveShort bool, flag *Flag) string {
 	if !isBool {
 		flagString += fmt.Sprintf("=%s", flag.FormatPlaceHolder())
 	}
-	if flag.Value.Value.Kind() == reflect.Slice {
+	if flag.Value.Target.Kind() == reflect.Slice {
 		flagString += " ..."
 	}
 	return flagString

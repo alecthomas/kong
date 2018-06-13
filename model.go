@@ -139,7 +139,7 @@ type Value struct {
 	Default  string
 	Mapper   Mapper
 	Tag      *Tag
-	Value    reflect.Value
+	Target   reflect.Value
 	Required bool
 	Set      bool   // Set to true when this value is set through some mechanism.
 	Format   string // Formatting directive, if applicable.
@@ -166,7 +166,7 @@ func (v *Value) Summary() string {
 
 // IsCumulative returns true of the value is a slice.
 func (v *Value) IsCumulative() bool {
-	return v.Value.Kind() == reflect.Slice
+	return v.Target.Kind() == reflect.Slice
 }
 
 // IsBool returns true if the underlying value is a boolean.
@@ -174,12 +174,12 @@ func (v *Value) IsBool() bool {
 	if m, ok := v.Mapper.(BoolMapper); ok && m.IsBool() {
 		return true
 	}
-	return v.Value.Kind() == reflect.Bool
+	return v.Target.Kind() == reflect.Bool
 }
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner) (reflect.Value, error) {
-	value := reflect.New(v.Value.Type()).Elem()
+	value := reflect.New(v.Target.Type()).Elem()
 	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, value)
 	if err == nil {
 		v.Set = true
@@ -189,7 +189,7 @@ func (v *Value) Parse(scan *Scanner) (reflect.Value, error) {
 
 // Apply value to field.
 func (v *Value) Apply(value reflect.Value) {
-	v.Value.Set(value)
+	v.Target.Set(value)
 	v.Set = true
 }
 
@@ -197,7 +197,7 @@ func (v *Value) Apply(value reflect.Value) {
 //
 // Does not include resolvers.
 func (v *Value) Reset() error {
-	v.Value.Set(reflect.Zero(v.Value.Type()))
+	v.Target.Set(reflect.Zero(v.Target.Type()))
 	if v.Default != "" {
 		value, err := v.Parse(Scan(v.Default))
 		if err != nil {
@@ -239,7 +239,7 @@ func (f *Flag) FormatPlaceHolder() string {
 		tail += ", ..."
 	}
 	if f.Default != "" {
-		if f.Value.Value.Kind() == reflect.String {
+		if f.Value.Target.Kind() == reflect.String {
 			return strconv.Quote(f.Default) + tail
 		}
 		return f.Default + tail

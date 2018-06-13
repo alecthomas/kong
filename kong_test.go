@@ -391,12 +391,13 @@ func TestDuplicateFlagChoosesLast(t *testing.T) {
 	require.Equal(t, 2, cli.Flag)
 }
 
-func TestDuplicateSliceDoesNotAccumulate(t *testing.T) {
+func TestDuplicateSliceAccumulates(t *testing.T) {
 	var cli struct {
 		Flag []int
 	}
 
-	_, err := mustNew(t, &cli).Parse([]string{"--flag=1,2", "--flag=3,4"})
+	args := []string{"--flag=1,2", "--flag=3,4"}
+	_, err := mustNew(t, &cli).Parse(args)
 	require.NoError(t, err)
-	require.Equal(t, []int{3, 4}, cli.Flag)
+	require.Equal(t, []int{1, 2, 3, 4}, cli.Flag)
 }
