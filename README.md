@@ -11,6 +11,8 @@
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Branching positional arguments](#branching-positional-arguments)
 1. [Terminating positional arguments](#terminating-positional-arguments)
+1. [Slices](#slices)
+1. [Maps](#maps)
 1. [Supported tags](#supported-tags)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
     1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
@@ -157,7 +159,47 @@ This looks a little verbose in this contrived example, but typically this will n
 
 ## Terminating positional arguments
 
-If a [mapped type](#mapper---customising-how-the-command-line-is-mapped-to-go-values) is tagged with `arg`,
+If a [mapped type](#mapper---customising-how-the-command-line-is-mapped-to-go-values) is tagged with `arg` it will be treated as the final positional values to be parsed on the command line.
+
+If a positional argument is a slice, all remaining arguments will be appended to that slice.
+
+## Slices
+
+Slice values are treated specially. First the input is split on the `sep:"<rune>"` tag (defaults to `,`), then each element is parsed by the slice element type and appended to the slice. If the same value is encountered multiple times, elements continue to be appended.
+
+To represent the following command-line:
+
+    cmd ls <file> <file> ...
+
+You would use the following:
+
+```go
+var CLI struct {
+  Ls struct {
+    Files []string `arg`
+  } `cmd`
+}
+```
+
+## Maps
+
+Maps are similar to slices except that only one key/value pair can be assigned per value, and the `sep` tag denotes the assignment character and defaults to `=`.
+
+To represent the following command-line:
+
+    cmd config set <key>=<value> <key>=<value> ...
+
+You would use the following:
+
+```go
+var CLI struct {
+  Config struct {
+    Set struct {
+      Config map[string]float64 `arg`
+    } `cmd`
+  } `cmd`
+}
+```
 
 ## Supported tags
 
@@ -183,7 +225,7 @@ Both can coexist with standard Tag parsing.
 | `optional`             | If present, flag/arg is optional.           |
 | `hidden`               | If present, flag is hidden.                 |
 | `format:"X"`           | Format for parsing input, if supported.     |
-| `sep:"X"`              | Separator for sequences (defaults to ",")   |
+| `sep:"X"`              | Separator for sequences (defaults to ",") or maps (defaults to "=") |
 
 ## Modifying Kong's behaviour
 
