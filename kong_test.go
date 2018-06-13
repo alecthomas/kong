@@ -10,7 +10,7 @@ import (
 func mustNew(t *testing.T, cli interface{}, options ...Option) *Kong {
 	t.Helper()
 	options = append([]Option{
-		ExitFunction(func(int) {
+		Exit(func(int) {
 			t.Helper()
 			t.Fatalf("unexpected exit()")
 		}),
@@ -322,7 +322,7 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
-	ctx, err := p.Trace([]string{"one", "bad"})
+	ctx, err := Trace(p, []string{"one", "bad"})
 	require.NoError(t, err)
 	require.Error(t, ctx.Error)
 	require.Equal(t, []string{"one"}, ctx.Command())

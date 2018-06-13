@@ -12,8 +12,8 @@ import (
 // An Option applies optional changes to the Kong application.
 type Option func(k *Kong)
 
-// ExitFunction overrides the function used to terminate. This is useful for testing or interactive use.
-func ExitFunction(exit func(int)) Option {
+// Exit overrides the function used to terminate. This is useful for testing or interactive use.
+func Exit(exit func(int)) Option {
 	return func(k *Kong) { k.Exit = exit }
 }
 

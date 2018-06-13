@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 MD033 -->
 <p align="center"><img width="90%" src="kong.png" /></p>
 
 # Kong is a command-line parser for Go [![CircleCI](https://circleci.com/gh/alecthomas/kong.svg?style=svg&circle-token=477fecac758383bf281453187269b913130f17d2)](https://circleci.com/gh/alecthomas/kong)
@@ -8,16 +9,19 @@
 1. [Help](#help)
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
+1. [Branching positional arguments](#branching-positional-arguments)
+1. [Terminating positional arguments](#terminating-positional-arguments)
 1. [Supported tags](#supported-tags)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
+    1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
     1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
     1. [`Help(HelpFunc)` - customising help](#helphelpfunc---customising-help)
     1. [`Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed](#hookfield-hookfunc---callback-hooks-to-execute-when-the-command-line-is-parsed)
+    1. [Other options](#other-options)
 
 <!-- /MarkdownTOC -->
-
 
 ## Introduction
 
@@ -27,10 +31,8 @@ To achieve that, command-lines are expressed as Go types, with the structure and
 
 For example, the following command-line:
 
-```
-shell rm [-f] [-r] <paths> ...
-shell ls [<paths> ...]
-```
+    shell rm [-f] [-r] <paths> ...
+    shell ls [<paths> ...]
 
 Can be represented by the following command-line structure:
 
@@ -63,59 +65,78 @@ Help is automatically generated. With no other arguments provided, help will dis
 
 eg.
 
-```
-$ shell --help
-usage: shell <command>
+    $ shell --help
+    usage: shell <command>
 
-A shell-like example app.
+    A shell-like example app.
 
-Flags:
-  --help   Show context-sensitive help.
-  --debug  Debug mode.
+    Flags:
+      --help   Show context-sensitive help.
+      --debug  Debug mode.
 
-Commands:
-  rm <paths> ...
-    Remove files.
+    Commands:
+      rm <paths> ...
+        Remove files.
 
-  ls [<paths> ...]
-    List paths.
-```
+      ls [<paths> ...]
+        List paths.
 
 If a command is provided, the help will show full detail on the command including all available flags.
 
 eg.
 
-```
-$ shell --help rm
-usage: shell rm <paths> ...
+    $ shell --help rm
+    usage: shell rm <paths> ...
 
-Remove files.
+    Remove files.
 
-Arguments:
-  <paths> ...  Paths to remove.
+    Arguments:
+      <paths> ...  Paths to remove.
 
-Flags:
-      --debug        Debug mode.
+    Flags:
+          --debug        Debug mode.
 
-  -f, --force        Force removal.
-  -r, --recursive    Recursively remove files.
-```
+      -f, --force        Force removal.
+      -r, --recursive    Recursively remove files.
 
 ## Flags
 
-Any field in the command structure *not* tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
+Any [mapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) field in the command structure *not* tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
+
+eg. The command-line `app [--flag="foo"]` can be represented by the following.
+
+```go
+type CLI struct {
+  Flag string
+}
+```
 
 ## Commands and sub-commands
 
-Kong supports arbitrarily nested commands and positional arguments. Nested structs tagged with `cmd` will be treated as commands.
+Sub-commands are specified by tagging a struct field with `cmd`. Kong supports arbitrarily nested commands.
 
-Arguments can also optionally have children, in order to support commands like the following:
+eg. The following struct represents the CLI structure `command [--flag="str"] sub-command`.
 
+```go
+type CLI struct {
+  Command struct {
+    Flag string
+
+    SubCommand struct {
+    } `cmd`
+  } `cmd`
+}
 ```
-app rename <name> to <name>
-```
 
-This is achieved by tagging a nested struct with `arg`, then including a positional argument field inside that struct with the same name. For example:
+## Branching positional arguments
+
+In addition to sub-commands, structs can also be configured as branching positional arguments.
+
+This is achieved by tagging an [unmapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) nested struct field with `arg`, then including a positional argument field inside that struct _with the same name_. For example, the following command structure:
+
+    app rename <name> to <name>
+
+Can be represented with the following:
 
 ```go
 var CLI struct {
@@ -131,7 +152,12 @@ var CLI struct {
   } `cmd`
 }
 ```
+
 This looks a little verbose in this contrived example, but typically this will not be the case.
+
+## Terminating positional arguments
+
+If a [mapped type](#mapper---customising-how-the-command-line-is-mapped-to-go-values) is tagged with `arg`,
 
 ## Supported tags
 
@@ -147,12 +173,12 @@ Both can coexist with standard Tag parsing.
 | `cmd`                  | If present, struct is a command.            |
 | `arg`                  | If present, field is an argument.           |
 | `env:"X"`              | Specify envar to use for default value.
-| `type:"X"`             | Specify named Mapper to use.                |
+| `name:"X"`             | Long name, for overriding field name.       |
 | `help:"X"`             | Help text.                                  |
+| `type:"X"`             | Specify named Mapper to use.                |
 | `placeholder:"X"`      | Placeholder text.                           |
 | `default:"X"`          | Default value.                              |
 | `short:"X"`            | Short name, if flag.                        |
-| `name:"X"`             | Long name, for overriding field name.       |
 | `required`             | If present, flag/arg is required.           |
 | `optional`             | If present, flag/arg is optional.           |
 | `hidden`               | If present, flag is hidden.                 |
@@ -163,7 +189,15 @@ Both can coexist with standard Tag parsing.
 
 Each Kong parser can be configured via functional options passed to `New(cli interface{}, options...Option)`.
 
-The full set of options can be found in [options.go](https://github.com/alecthomas/kong/blob/master/options.go).
+The full set of options can be found [here](https://godoc.org/github.com/alecthomas/kong#Option).
+
+### `Name(help)` and `Description(help)` - set the application name description
+
+Set the application name and/or description.
+
+The name of the application will default to the binary name, but can be overridden with `Name(name)`.
+
+As with all help in Kong, text will be wrapped to the terminal.
 
 ### `Configuration(loader, paths...)` - load defaults from configuration files
 
@@ -201,8 +235,7 @@ All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`
 1. `NamedMapper(string, Mapper)` and using the tag key `type:"<name>"`.
 2. `KindMapper(reflect.Kind, Mapper)`.
 3. `TypeMapper(reflect.Type, Mapper)`.
-4.  `ValueMapper(interface{}, Mapper)`, passing in a pointer to a field of the grammar.
-
+4. `ValueMapper(interface{}, Mapper)`, passing in a pointer to a field of the grammar.
 
 ### `Help(HelpFunc)` - customising help
 
@@ -230,3 +263,7 @@ if CLI.Debug {
 ```
 
 But under some circumstances, hooks are the right choice.
+
+### Other options
+
+The full set of options can be found [here](https://godoc.org/github.com/alecthomas/kong#Option).

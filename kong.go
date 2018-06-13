@@ -108,9 +108,15 @@ func (k *Kong) extraFlags() []*Flag {
 	return []*Flag{helpFlag}
 }
 
-// Trace parses the command-line, validating and collecting matching grammar nodes.
-func (k *Kong) Trace(args []string) (*Context, error) {
-	return Trace(k, args)
+// Help writes help for the given args to the stdout io.Writer associated with this Kong.
+//
+// See Help() and Writers() for overriding the help function and stdout, respectively.
+func (k *Kong) Help(args []string) error {
+	ctx, err := Trace(k, args)
+	if err != nil {
+		return err
+	}
+	return k.help(ctx)
 }
 
 // Parse arguments into target.
@@ -119,7 +125,7 @@ func (k *Kong) Trace(args []string) (*Context, error) {
 // the command name while positional arguments are the argument name surrounded by "<argument>".
 func (k *Kong) Parse(args []string) (command string, err error) {
 	defer catch(&err)
-	ctx, err := k.Trace(args)
+	ctx, err := Trace(k, args)
 	if err != nil {
 		return "", err
 	}
@@ -165,13 +171,15 @@ func (k *Kong) applyHooks(ctx *Context) error {
 }
 
 // Printf writes a message to Kong.Stdout with the application name prefixed.
-func (k *Kong) Printf(format string, args ...interface{}) {
+func (k *Kong) Printf(format string, args ...interface{}) *Kong {
 	fmt.Fprintf(k.Stdout, k.Model.Name+": "+format, args...)
+	return k
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
-func (k *Kong) Errorf(format string, args ...interface{}) {
+func (k *Kong) Errorf(format string, args ...interface{}) *Kong {
 	fmt.Fprintf(k.Stderr, k.Model.Name+": error: "+format, args...)
+	return k
 }
 
 // FatalIfErrorf terminates with an error message if err != nil.

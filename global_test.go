@@ -25,7 +25,7 @@ func TestParseHandlingBadBuild(t *testing.T) {
 		}
 	}()
 
-	Parse(&cli, ExitFunction(func(_ int) { panic("exiting") }))
+	Parse(&cli, Exit(func(_ int) { panic("exiting") }))
 
 	require.Fail(t, "we were expecting a panic")
 }

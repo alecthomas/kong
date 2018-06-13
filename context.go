@@ -55,6 +55,8 @@ func (c *Context) Selected() *Node {
 // Trace path of "args" through the gammar tree.
 //
 // The returned Context will include a Path of all commands, arguments, positionals and flags.
+//
+// Note that this will not modify the target grammar. Call Apply() to do so.
 func Trace(k *Kong, args []string) (*Context, error) {
 	c := &Context{
 		App:  k,
@@ -62,17 +64,10 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		Path: []*Path{
 			{App: k.Model, Flags: k.Model.Flags, Value: k.Model.Target},
 		},
-	}
-	err := c.reset(&c.App.Model.Node)
-	if err != nil {
-		return nil, err
+		scan: Scan(args...),
 	}
 	c.Error = c.trace(&c.App.Model.Node)
-	err = c.traceResolvers()
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+	return c, c.traceResolvers()
 }
 
 // Validate the current context.
@@ -155,7 +150,6 @@ func (c *Context) FlagValue(flag *Flag) reflect.Value {
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) reset(node *Node) error {
-	c.scan = Scan(c.args...)
 	for _, flag := range node.Flags {
 		err := flag.Value.Reset()
 		if err != nil {
@@ -310,31 +304,6 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	return nil
 }
 
-// Apply traced context to the target grammar.
-func (c *Context) Apply() (string, error) {
-	path := []string{}
-
-	for _, trace := range c.Path {
-		switch {
-		case trace.App != nil:
-		case trace.Argument != nil:
-			path = append(path, "<"+trace.Argument.Name+">")
-			trace.Argument.Argument.Apply(trace.Value)
-		case trace.Command != nil:
-			path = append(path, trace.Command.Name)
-		case trace.Flag != nil:
-			trace.Flag.Value.Apply(trace.Value)
-		case trace.Positional != nil:
-			path = append(path, "<"+trace.Positional.Name+">")
-			trace.Positional.Apply(trace.Value)
-		default:
-			panic("unsupported path ?!")
-		}
-	}
-
-	return strings.Join(path, " "), nil
-}
-
 // Walk through flags from existing nodes in the path.
 func (c *Context) traceResolvers() error {
 	if len(c.App.resolvers) == 0 {
@@ -368,6 +337,36 @@ func (c *Context) traceResolvers() error {
 	}
 	c.Path = append(inserted, c.Path...)
 	return nil
+}
+
+// Apply traced context to the target grammar.
+func (c *Context) Apply() (string, error) {
+	err := c.reset(&c.App.Model.Node)
+	if err != nil {
+		return "", err
+	}
+
+	path := []string{}
+
+	for _, trace := range c.Path {
+		switch {
+		case trace.App != nil:
+		case trace.Argument != nil:
+			path = append(path, "<"+trace.Argument.Name+">")
+			trace.Argument.Argument.Apply(trace.Value)
+		case trace.Command != nil:
+			path = append(path, trace.Command.Name)
+		case trace.Flag != nil:
+			trace.Flag.Value.Apply(trace.Value)
+		case trace.Positional != nil:
+			path = append(path, "<"+trace.Positional.Name+">")
+			trace.Positional.Apply(trace.Value)
+		default:
+			panic("unsupported path ?!")
+		}
+	}
+
+	return strings.Join(path, " "), nil
 }
 
 func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {

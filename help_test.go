@@ -38,7 +38,7 @@ func TestHelp(t *testing.T) {
 		Name("test-app"),
 		Description("A test app."),
 		Writers(w, w),
-		ExitFunction(func(int) {
+		Exit(func(int) {
 			exited = true
 			panic(true) // Panic to fake "exit".
 		}),
