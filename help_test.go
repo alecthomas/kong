@@ -10,9 +10,11 @@ import (
 func TestHelp(t *testing.T) {
 	// nolint: govet
 	var cli struct {
-		String   string `help:"A string flag."`
-		Bool     bool   `help:"A bool flag with very long help that wraps a lot and is verbose and is really verbose."`
-		Required bool   `required help:"A required flag."`
+		String   string         `help:"A string flag."`
+		Bool     bool           `help:"A bool flag with very long help that wraps a lot and is verbose and is really verbose."`
+		Slice    []string       `help:"A slice of strings." placeholder:"STR"`
+		Map      map[string]int `help:"A map of strings to ints."`
+		Required bool           `required help:"A required flag."`
 
 		One struct {
 			Flag string `help:"Nested flag."`
@@ -60,6 +62,8 @@ Flags:
   --string=STRING  A string flag.
   --bool           A bool flag with very long help that wraps a lot and is
                    verbose and is really verbose.
+  --slice=STR,...  A slice of strings.
+  --map=KEY=VALUE  A map of strings to ints.
   --required       A required flag.
 
 Commands:
@@ -91,6 +95,8 @@ Flags:
   --string=STRING   A string flag.
   --bool            A bool flag with very long help that wraps a lot and is
                     verbose and is really verbose.
+  --slice=STR,...   A slice of strings.
+  --map=KEY=VALUE   A map of strings to ints.
   --required        A required flag.
 
   --flag=STRING     Nested flag under two.

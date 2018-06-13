@@ -153,7 +153,8 @@ func (d *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Bool, boolMapper{}).
 		RegisterType(reflect.TypeOf(time.Time{}), timeDecoder()).
 		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
-		RegisterKind(reflect.Slice, sliceDecoder(d))
+		RegisterKind(reflect.Slice, sliceDecoder(d)).
+		RegisterKind(reflect.Map, mapDecoder(d))
 }
 
 type boolMapper struct{}
@@ -228,6 +229,36 @@ func floatDecoder(bits int) MapperFunc {
 
 func mapDecoder(d *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
+		if target.IsNil() {
+			target.Set(reflect.MakeMap(target.Type()))
+		}
+		el := target.Type()
+		sep := ctx.Value.Tag.Sep
+		if sep == 0 {
+			sep = '='
+		}
+		token := ctx.Scan.PopValue("map")
+		parts := SplitEscaped(token, sep)
+		if len(parts) != 2 {
+			return fmt.Errorf("expected \"<key>%c<value>\" but got %q", sep, token)
+		}
+		key, value := parts[0], parts[1]
+
+		keyScanner := Scan(key)
+		keyDecoder := d.ForType(el.Key())
+		keyValue := reflect.New(el.Key()).Elem()
+		if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
+			return fmt.Errorf("invalid map key %q", key)
+		}
+
+		valueScanner := Scan(value)
+		valueDecoder := d.ForType(el.Elem())
+		valueValue := reflect.New(el.Elem()).Elem()
+		if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
+			return fmt.Errorf("invalid map value %q", value)
+		}
+
+		target.SetMapIndex(keyValue, valueValue)
 		return nil
 	}
 }
@@ -236,12 +267,15 @@ func sliceDecoder(d *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		el := target.Type().Elem()
 		sep := ctx.Value.Tag.Sep
+		if sep == 0 {
+			sep = ','
+		}
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			// If decoding a flag, we need an argument.
 			childScanner = Scan(SplitEscaped(ctx.Scan.PopValue("list"), sep)...)
 		} else {
-			tokens := ctx.Scan.PopUntil(func(t Token) bool { return !t.IsValue() })
+			tokens := ctx.Scan.PopWhile(func(t Token) bool { return t.IsValue() })
 			childScanner = Scan(tokens...)
 		}
 		childDecoder := d.ForType(el)

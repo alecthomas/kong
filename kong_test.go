@@ -139,7 +139,7 @@ func TestArgSliceWithSeparator(t *testing.T) {
 
 func TestUnsupportedFieldErrors(t *testing.T) {
 	var cli struct {
-		Keys map[string]string
+		Keys struct{}
 	}
 	_, err := New(&cli)
 	require.Error(t, err)
@@ -400,4 +400,13 @@ func TestDuplicateSliceAccumulates(t *testing.T) {
 	_, err := mustNew(t, &cli).Parse(args)
 	require.NoError(t, err)
 	require.Equal(t, []int{1, 2, 3, 4}, cli.Flag)
+}
+
+func TestMapFlag(t *testing.T) {
+	var cli struct {
+		Set map[string]int
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=10", "--set", "b=20"})
+	require.NoError(t, err)
+	require.Equal(t, map[string]int{"a": 10, "b": 20}, cli.Set)
 }

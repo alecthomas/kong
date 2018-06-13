@@ -164,9 +164,19 @@ func (v *Value) Summary() string {
 	return argText
 }
 
-// IsCumulative returns true of the value is a slice.
+// IsCumulative returns true if the type can be accumulated into.
 func (v *Value) IsCumulative() bool {
+	return v.IsSlice() || v.IsMap()
+}
+
+// IsSlice returns true if the value is a slice.
+func (v *Value) IsSlice() bool {
 	return v.Target.Kind() == reflect.Slice
+}
+
+// IsMap returns true if the value is a map.
+func (v *Value) IsMap() bool {
+	return v.Target.Kind() == reflect.Map
 }
 
 // IsBool returns true if the underlying value is a boolean.
@@ -229,8 +239,8 @@ func (f *Flag) String() string {
 // FormatPlaceHolder formats the placeholder string for a Flag.
 func (f *Flag) FormatPlaceHolder() string {
 	tail := ""
-	if f.Value.IsCumulative() {
-		tail += ", ..."
+	if f.Value.IsSlice() {
+		tail += ",..."
 	}
 	if f.Default != "" {
 		if f.Value.Target.Kind() == reflect.String {
@@ -240,6 +250,9 @@ func (f *Flag) FormatPlaceHolder() string {
 	}
 	if f.PlaceHolder != "" {
 		return f.PlaceHolder + tail
+	}
+	if f.Value.IsMap() {
+		return "KEY=VALUE" + tail
 	}
 	return strings.ToUpper(f.Name) + tail
 }
