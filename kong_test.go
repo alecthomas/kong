@@ -410,3 +410,37 @@ func TestMapFlag(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, map[string]int{"a": 10, "b": 20}, cli.Set)
 }
+
+func TestMapFlagWithSliceValue(t *testing.T) {
+	var cli struct {
+		Set map[string][]int
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=1,2", "--set", "b=3"})
+	require.NoError(t, err)
+	require.Equal(t, map[string][]int{"a": {1, 2}, "b": {3}}, cli.Set)
+}
+
+type embeddedFlags struct {
+	Embedded string
+}
+
+func TestEmbeddedStruct(t *testing.T) {
+	var cli struct {
+		embeddedFlags
+		NotEmbedded string
+	}
+
+	_, err := mustNew(t, &cli).Parse([]string{"--embedded=moo", "--not-embedded=foo"})
+	require.NoError(t, err)
+	require.Equal(t, "moo", cli.Embedded)
+	require.Equal(t, "foo", cli.NotEmbedded)
+}
+
+func TestSliceWithDisabledSeparator(t *testing.T) {
+	var cli struct {
+		Flag []string `sep:"none"`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--flag=a,b", "--flag=b,c"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"a,b", "b,c"}, cli.Flag)
+}

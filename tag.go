@@ -122,22 +122,22 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	}
 	t.Required = required
 	t.Optional = optional
-	t.Default, _ = t.Get("default")
-	t.Help, _ = t.Get("help")
-	t.Type, _ = t.Get("type")
-	t.Env, _ = t.Get("env")
+	t.Default = t.Get("default")
+	t.Help = t.Get("help")
+	t.Type = t.Get("type")
+	t.Env = t.Get("env")
 	t.Short, _ = t.GetRune("short")
 	t.Hidden = t.Has("hidden")
-	t.Format, _ = t.Get("format")
+	t.Format = t.Get("format")
 	t.Sep, _ = t.GetRune("sep")
 	if t.Sep == 0 {
-		if fv.Kind() == reflect.Map {
-			t.Sep = '='
+		if t.Get("sep") == "none" {
+			t.Sep = -1
 		} else {
 			t.Sep = ','
 		}
 	}
-	t.PlaceHolder, _ = t.Get("placeholder")
+	t.PlaceHolder = t.Get("placeholder")
 	if t.PlaceHolder == "" {
 		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
 	}
@@ -152,9 +152,10 @@ func (t *Tag) Has(k string) bool {
 }
 
 // Get returns the value of the given tag.
-func (t *Tag) Get(k string) (string, bool) {
-	s, ok := t.items[k]
-	return s, ok
+//
+// Note that this will return the empty string if the tag is missing.
+func (t *Tag) Get(k string) string {
+	return t.items[k]
 }
 
 // GetBool returns true if the given tag looks like a boolean truth string.

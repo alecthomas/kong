@@ -225,7 +225,7 @@ Both can coexist with standard Tag parsing.
 | `optional`             | If present, flag/arg is optional.           |
 | `hidden`               | If present, flag is hidden.                 |
 | `format:"X"`           | Format for parsing input, if supported.     |
-| `sep:"X"`              | Separator for sequences (defaults to ",") or maps (defaults to "=") |
+| `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting. |
 
 ## Modifying Kong's behaviour
 

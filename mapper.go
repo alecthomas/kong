@@ -233,11 +233,10 @@ func mapDecoder(d *Registry) MapperFunc {
 			target.Set(reflect.MakeMap(target.Type()))
 		}
 		el := target.Type()
-		sep := ctx.Value.Tag.Sep
 		token := ctx.Scan.PopValue("map")
-		parts := SplitEscaped(token, sep)
+		parts := strings.SplitN(token, "=", 2)
 		if len(parts) != 2 {
-			return fmt.Errorf("expected \"<key>%c<value>\" but got %q", sep, token)
+			return fmt.Errorf("expected \"<key>=<value>\" but got %q", token)
 		}
 		key, value := parts[0], parts[1]
 

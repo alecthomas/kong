@@ -33,17 +33,35 @@ func dashedString(s string) string {
 	return strings.Join(camelCase(s), "-")
 }
 
+type flattenedField struct {
+	field reflect.StructField
+	value reflect.Value
+}
+
+func flattenedFields(v reflect.Value) (out []flattenedField) {
+	for i := 0; i < v.NumField(); i++ {
+		ft := v.Type().Field(i)
+		fv := v.Field(i)
+		if ft.Anonymous {
+			out = append(out, flattenedFields(fv)...)
+			continue
+		}
+		if !fv.CanSet() {
+			continue
+		}
+		out = append(out, flattenedField{ft, fv})
+	}
+	return
+}
+
 func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
 	node := &Node{
 		Type:   typ,
 		Target: v,
 	}
-	for i := 0; i < v.NumField(); i++ {
-		ft := v.Type().Field(i)
-		if strings.ToLower(ft.Name[0:1]) == ft.Name[0:1] {
-			continue
-		}
-		fv := v.Field(i)
+	for _, field := range flattenedFields(v) {
+		ft := field.field
+		fv := field.value
 
 		name := ft.Tag.Get("name")
 		if name == "" {
