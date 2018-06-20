@@ -43,6 +43,7 @@ type Kong struct {
 	registry      *Registry
 	noDefaultHelp bool
 	help          func(*Context) error
+	helpOptions   []HelpOption
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -58,12 +59,17 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		Stderr:    os.Stderr,
 		before:    map[reflect.Value]HookFunc{},
 		registry:  NewRegistry().RegisterDefaults(),
-		help:      PrintHelp,
 		resolvers: []ResolverFunc{Envars()},
 	}
 
 	for _, option := range options {
-		option(k)
+		if err := option(k); err != nil {
+			return nil, err
+		}
+	}
+
+	if k.help == nil {
+		k.help = HelpPrinter(k.helpOptions...)
 	}
 
 	model, err := build(k, grammar)
@@ -74,8 +80,11 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k.Model = model
 
 	for _, option := range k.postBuildOptions {
-		option(k)
+		if err := option(k); err != nil {
+			return nil, err
+		}
 	}
+	k.postBuildOptions = nil
 
 	return k, nil
 }
@@ -98,14 +107,14 @@ func (k *Kong) extraFlags() []*Flag {
 	}
 	helpFlag.Flag = helpFlag
 	hook := Hook(&helpValue, func(ctx *Context, path *Path) error {
-		err := PrintHelp(ctx)
+		err := k.help(ctx)
 		if err != nil {
 			return err
 		}
 		k.Exit(1)
 		return nil
 	})
-	hook(k)
+	_ = hook(k)
 	return []*Flag{helpFlag}
 }
 

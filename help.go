@@ -9,28 +9,49 @@ import (
 )
 
 const (
-	defaultIndent = 2
+	defaultIndent        = 2
+	defaultColumnPadding = 4
 )
 
-// PrintHelp is the default help printer.
-func PrintHelp(ctx *Context) error {
-	w := newHelpWriter(guessWidth(ctx.App.Stdout))
-	selected := ctx.Selected()
-	if selected == nil {
-		printApp(w, ctx.App.Model)
-	} else {
-		printCommand(w, ctx.App.Model, selected)
+// HelpOption configures the default help.
+type HelpOption func(options *helpWriterOptions)
+
+// CompactHelp writes help in a more compact form.
+func CompactHelp() HelpOption {
+	return func(options *helpWriterOptions) {
+		options.compact = true
 	}
-	return w.Write(ctx.App.Stdout)
+}
+
+// HelpPrinter returns a HelpFunction configured with the given HelpOptions.
+func HelpPrinter(options ...HelpOption) HelpFunction {
+	return func(ctx *Context) error {
+		w := newHelpWriter(guessWidth(ctx.App.Stdout))
+		for _, option := range options {
+			option(&w.options)
+		}
+		selected := ctx.Selected()
+		if selected == nil {
+			printApp(w, ctx.App.Model)
+		} else {
+			printCommand(w, ctx.App.Model, selected)
+		}
+		return w.Write(ctx.App.Stdout)
+	}
 }
 
 func printApp(w *helpWriter, app *Application) {
-	w.Printf("usage: %s", app.Summary())
+	w.Printf("Usage: %s", app.Summary())
 	printNodeDetail(w, &app.Node)
+	cmds := app.Leaves()
+	if len(cmds) > 0 {
+		w.Print("")
+		w.Printf(`Run "%s <command> --help" for more information on a command.`, app.Name)
+	}
 }
 
 func printCommand(w *helpWriter, app *Application, cmd *Command) {
-	w.Printf("usage: %s %s", app.Name, cmd.Summary())
+	w.Printf("Usage: %s %s", app.Name, cmd.Summary())
 	printNodeDetail(w, cmd)
 }
 
@@ -54,10 +75,18 @@ func printNodeDetail(w *helpWriter, node *Node) {
 		w.Print("")
 		w.Print("Commands:")
 		iw := w.Indent()
-		for i, cmd := range cmds {
-			printCommandSummary(iw, cmd)
-			if i != len(cmds)-1 {
-				iw.Print("")
+		if w.options.compact {
+			rows := [][2]string{}
+			for _, cmd := range cmds {
+				rows = append(rows, [2]string{cmd.Name, cmd.Help})
+			}
+			writeTwoColumns(iw, defaultColumnPadding, rows)
+		} else {
+			for i, cmd := range cmds {
+				printCommandSummary(iw, cmd)
+				if i != len(cmds)-1 {
+					iw.Print("")
+				}
 			}
 		}
 	}
@@ -71,9 +100,14 @@ func printCommandSummary(w *helpWriter, cmd *Command) {
 }
 
 type helpWriter struct {
-	indent string
-	width  int
-	lines  *[]string
+	indent  string
+	width   int
+	lines   *[]string
+	options helpWriterOptions
+}
+
+type helpWriterOptions struct {
+	compact bool
 }
 
 func newHelpWriter(width int) *helpWriter {
@@ -94,7 +128,7 @@ func (h *helpWriter) Print(text string) {
 }
 
 func (h *helpWriter) Indent() *helpWriter {
-	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2}
+	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, options: h.options}
 }
 
 func (h *helpWriter) String() string {
@@ -113,7 +147,7 @@ func (h *helpWriter) Write(w io.Writer) error {
 
 func (h *helpWriter) Wrap(text string) {
 	w := bytes.NewBuffer(nil)
-	doc.ToText(w, strings.TrimSpace(text), "", "", h.width)
+	doc.ToText(w, strings.TrimSpace(text), "", "    ", h.width)
 	for _, line := range strings.Split(strings.TrimSpace(w.String()), "\n") {
 		h.Print(line)
 	}
@@ -124,7 +158,7 @@ func writePositionals(w *helpWriter, args []*Positional) {
 	for _, arg := range args {
 		rows = append(rows, [2]string{arg.Summary(), arg.Help})
 	}
-	writeTwoColumns(w, 2, rows)
+	writeTwoColumns(w, defaultColumnPadding, rows)
 }
 
 func writeFlags(w *helpWriter, groups [][]*Flag) {
@@ -148,7 +182,7 @@ func writeFlags(w *helpWriter, groups [][]*Flag) {
 			}
 		}
 	}
-	writeTwoColumns(w, 2, rows)
+	writeTwoColumns(w, defaultColumnPadding, rows)
 }
 
 func writeTwoColumns(w *helpWriter, padding int, rows [][2]string) {

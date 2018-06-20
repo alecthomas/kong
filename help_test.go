@@ -53,18 +53,18 @@ func TestHelp(t *testing.T) {
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `usage: test-app --required <command>
+		require.Equal(t, `Usage: test-app --required <command>
 
 A test app.
 
 Flags:
-  --help           Show context-sensitive help.
-  --string=STRING  A string flag.
-  --bool           A bool flag with very long help that wraps a lot and is
-                   verbose and is really verbose.
-  --slice=STR,...  A slice of strings.
-  --map=KEY=VALUE  A map of strings to ints.
-  --required       A required flag.
+  --help             Show context-sensitive help.
+  --string=STRING    A string flag.
+  --bool             A bool flag with very long help that wraps a lot and is
+                     verbose and is really verbose.
+  --slice=STR,...    A slice of strings.
+  --map=KEY=VALUE    A map of strings to ints.
+  --required         A required flag.
 
 Commands:
   one --required
@@ -75,6 +75,8 @@ Commands:
 
   two four --required --required-two
     Sub-sub-command.
+
+Run "test-app <command> --help" for more information on a command.
 `, w.String())
 	})
 
@@ -87,19 +89,19 @@ Commands:
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `usage: test-app two <three> --required --required-two --required-three
+		require.Equal(t, `Usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
 
 Flags:
-  --string=STRING   A string flag.
-  --bool            A bool flag with very long help that wraps a lot and is
-                    verbose and is really verbose.
-  --slice=STR,...   A slice of strings.
-  --map=KEY=VALUE   A map of strings to ints.
-  --required        A required flag.
+  --string=STRING     A string flag.
+  --bool              A bool flag with very long help that wraps a lot and is
+                      verbose and is really verbose.
+  --slice=STR,...     A slice of strings.
+  --map=KEY=VALUE     A map of strings to ints.
+  --required          A required flag.
 
-  --flag=STRING     Nested flag under two.
+  --flag=STRING       Nested flag under two.
   --required-two
 
   --required-three

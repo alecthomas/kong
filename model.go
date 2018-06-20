@@ -43,6 +43,29 @@ type Node struct {
 	Argument *Value // Populated when Type is ArgumentNode.
 }
 
+// Find a command/argument/flag by pointer to its field.
+//
+// Returns nil if not found. Panics if ptr is not a pointer.
+func (n *Node) Find(ptr interface{}) *Node {
+	key := reflect.ValueOf(ptr)
+	if key.Kind() != reflect.Ptr {
+		panic("expected a pointer")
+	}
+	return n.findNode(key)
+}
+
+func (n *Node) findNode(key reflect.Value) *Node {
+	if n.Target == key {
+		return n
+	}
+	for _, child := range n.Children {
+		if found := child.findNode(key); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
 // AllFlags returns flags from all ancestor branches encountered.
 func (n *Node) AllFlags() (out [][]*Flag) {
 	if n.Parent != nil {
