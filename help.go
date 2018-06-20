@@ -78,7 +78,7 @@ func printNodeDetail(w *helpWriter, node *Node) {
 		if w.options.compact {
 			rows := [][2]string{}
 			for _, cmd := range cmds {
-				rows = append(rows, [2]string{cmd.Name, cmd.Help})
+				rows = append(rows, [2]string{cmd.Path(), cmd.Help})
 			}
 			writeTwoColumns(iw, defaultColumnPadding, rows)
 		} else {
