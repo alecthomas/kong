@@ -258,12 +258,12 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			c.scan.PushTyped(token.Value[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := c.matchFlags(flags, func(f *Flag) bool { return f.Name == token.Value }); err != nil {
+			if err := c.parseFlag(flags, "--"+token.Value); err != nil {
 				return err
 			}
 
 		case ShortFlagToken:
-			if err := c.matchFlags(flags, func(f *Flag) bool { return string(f.Short) == token.Value }); err != nil {
+			if err := c.parseFlag(flags, "-"+token.Value); err != nil {
 				return err
 			}
 
@@ -404,14 +404,13 @@ func (c *Context) Apply() (string, error) {
 	return strings.Join(path, " "), nil
 }
 
-func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err error) {
+func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	defer catch(&err)
-	token := c.scan.Peek()
 	for _, flag := range flags {
-		// Found a matching flag.
-		if !matcher(flag) {
+		if "-"+string(flag.Short) != match && "--"+flag.Name != match {
 			continue
 		}
+		// Found a matching flag.
 		c.scan.Pop()
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
@@ -420,7 +419,7 @@ func (c *Context) matchFlags(flags []*Flag, matcher func(f *Flag) bool) (err err
 		c.Path = append(c.Path, &Path{Flag: flag})
 		return nil
 	}
-	return fmt.Errorf("unknown flag --%s", token.Value)
+	return fmt.Errorf("unknown flag %s", match)
 }
 
 func checkMissingFlags(flags []*Flag) error {
