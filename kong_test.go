@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 func mustNew(t *testing.T, cli interface{}, options ...Option) *Kong {
 	t.Helper()
 	options = append([]Option{
+		Name("test"),
 		Exit(func(int) {
 			t.Helper()
 			t.Fatalf("unexpected exit()")
@@ -443,4 +445,12 @@ func TestSliceWithDisabledSeparator(t *testing.T) {
 	_, err := mustNew(t, &cli).Parse([]string{"--flag=a,b", "--flag=b,c"})
 	require.NoError(t, err)
 	require.Equal(t, []string{"a,b", "b,c"}, cli.Flag)
+}
+
+func TestMultilineMessage(t *testing.T) {
+	w := &bytes.Buffer{}
+	var cli struct{}
+	p := mustNew(t, &cli, Writers(w, w))
+	p.Printf("hello\nworld")
+	require.Equal(t, "test: hello\n      world\n", w.String())
 }

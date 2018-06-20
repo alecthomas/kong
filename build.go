@@ -49,7 +49,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 		if !fv.CanSet() {
 			continue
 		}
-		out = append(out, flattenedField{ft, fv})
+		out = append(out, flattenedField{field: ft, value: fv})
 	}
 	return
 }

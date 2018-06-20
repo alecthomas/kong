@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 )
 
 // Error reported by Kong.
@@ -14,7 +15,7 @@ type Error struct{ msg string }
 func (e Error) Error() string { return e.msg }
 
 func fail(format string, args ...interface{}) {
-	panic(Error{fmt.Sprintf(format, args...)})
+	panic(Error{msg: fmt.Sprintf(format, args...)})
 }
 
 // Must creates a new Parser or panics if there is an error.
@@ -170,15 +171,23 @@ func (k *Kong) applyHooks(ctx *Context) error {
 	return nil
 }
 
+func formatMultilineMessage(w io.Writer, leader string, format string, args ...interface{}) {
+	lines := strings.Split(fmt.Sprintf(format, args...), "\n")
+	fmt.Fprintf(w, "%s%s\n", leader, lines[0])
+	for _, line := range lines[1:] {
+		fmt.Fprintf(w, "%*s%s\n", len(leader), " ", line)
+	}
+}
+
 // Printf writes a message to Kong.Stdout with the application name prefixed.
 func (k *Kong) Printf(format string, args ...interface{}) *Kong {
-	fmt.Fprintf(k.Stdout, k.Model.Name+": "+format, args...)
+	formatMultilineMessage(k.Stdout, k.Model.Name+": ", format, args...)
 	return k
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
 func (k *Kong) Errorf(format string, args ...interface{}) *Kong {
-	fmt.Fprintf(k.Stderr, k.Model.Name+": error: "+format, args...)
+	formatMultilineMessage(k.Stderr, k.Model.Name+": error: ", format, args...)
 	return k
 }
 
@@ -191,7 +200,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error()
 	}
-	k.Errorf("%s\n", msg)
+	k.Errorf("%s", msg)
 	k.Exit(1)
 }
 
