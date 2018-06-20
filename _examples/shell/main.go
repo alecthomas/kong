@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/alecthomas/kong"
 )
 
@@ -24,6 +26,8 @@ func main() {
 	cmd := kong.Parse(&cli, kong.Description("A shell-like example app."), kong.HelpOptions(kong.CompactHelp()))
 	switch cmd {
 	case "rm":
+		fmt.Println(cli.Rm.Paths, cli.Rm.Force)
+
 	case "ls":
 	}
 }

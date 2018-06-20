@@ -25,6 +25,21 @@ type Path struct {
 	Resolved bool
 }
 
+// Node returns the Node associated with this Path, or nil if Path is a non-Node.
+func (p *Path) Node() *Node {
+	switch {
+	case p.App != nil:
+		return &p.App.Node
+
+	case p.Argument != nil:
+		return p.Argument
+
+	case p.Command != nil:
+		return p.Command
+	}
+	return nil
+}
+
 // Context contains the current parse context.
 type Context struct {
 	App   *Kong
@@ -90,36 +105,30 @@ func (c *Context) Validate() error {
 		}
 	}
 	// Check the terminal node.
-	path := c.Path[len(c.Path)-1]
-	switch {
-	case path.App != nil:
-		if err := checkMissingChildren(&path.App.Node); err != nil {
-			return err
-		}
-		if err := checkMissingPositionals(0, path.App.Positional); err != nil {
-			return err
-		}
+	node := c.Selected()
+	if node == nil {
+		node = &c.App.Model.Node
+	}
 
-	case path.Command != nil:
-		if err := checkMissingChildren(path.Command); err != nil {
-			return err
+	// Find deepest positional argument so we can check if all required positionals have been provided.
+	positionals := 0
+	for _, path := range c.Path {
+		if path.Positional != nil {
+			positionals = path.Positional.Position + 1
 		}
-		if err := checkMissingPositionals(0, path.Parent.Positional); err != nil {
-			return err
-		}
+	}
 
-	case path.Argument != nil:
-		value := path.Argument.Argument
+	if err := checkMissingChildren(node); err != nil {
+		return err
+	}
+	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
+		return err
+	}
+
+	if node.Type == ArgumentNode {
+		value := node.Argument
 		if value.Required && !value.Set {
-			return fmt.Errorf("%s is required", path.Argument.Summary())
-		}
-		if err := checkMissingChildren(path.Argument); err != nil {
-			return err
-		}
-
-	case path.Positional != nil:
-		if err := checkMissingPositionals(path.Positional.Position+1, path.Parent.Positional); err != nil {
-			return err
+			return fmt.Errorf("%s is required", node.Summary())
 		}
 	}
 	return nil
