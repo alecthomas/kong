@@ -281,7 +281,10 @@ All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`
 
 ### `Help(HelpFunc)` - customising help
 
-Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
+The default help output is usually sufficient, but if it's not, there are two solutions.
+
+1. Use `HelpOptions(options...HelpOption)` to configure the default help (see [HelpOption](https://godoc.org/github.com/alecthomas/kong#HelpOption) for details).
+2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
 
 ### `Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed
 
