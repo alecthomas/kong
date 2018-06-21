@@ -80,6 +80,8 @@ func main() {
 			ctx.App.Printf("1.0.0").Exit(0)
 			return nil
 		}))
-	err := parser.Run(os.Args[1:], "ofo")
+	ctx, err := parser.Parse(os.Args[1:])
+	parser.FatalIfErrorf(err)
+	err = ctx.Run(&cli.Globals)
 	parser.FatalIfErrorf(err)
 }
