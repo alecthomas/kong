@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"net/url"
 	"reflect"
 	"testing"
 	"time"
@@ -94,4 +95,16 @@ func TestMapWithNamedTypes(t *testing.T) {
 	_, err = k.Parse([]string{"--typed-key", "first=5s", "--typed-key", "second=10s"})
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"FIRST": "5s", "SECOND": "10s"}, cli.TypedKey)
+}
+
+func TestURLMapper(t *testing.T) {
+	var cli struct {
+		URL *url.URL `arg:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"http://w3.org"})
+	require.NoError(t, err)
+	require.Equal(t, "http://w3.org", cli.URL.String())
+	_, err = p.Parse([]string{":foo"})
+	require.Error(t, err)
 }

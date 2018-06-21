@@ -3,6 +3,7 @@ package kong
 import (
 	"fmt"
 	"math/bits"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -162,10 +163,11 @@ func (r *Registry) RegisterDefaults() *Registry {
 			return nil
 		})).
 		RegisterKind(reflect.Bool, boolMapper{}).
-		RegisterType(reflect.TypeOf(time.Time{}), timeDecoder()).
-		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
 		RegisterKind(reflect.Slice, sliceDecoder(r)).
 		RegisterKind(reflect.Map, mapDecoder(r)).
+		RegisterType(reflect.TypeOf(time.Time{}), timeDecoder()).
+		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
+		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r))
@@ -356,6 +358,17 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return fmt.Errorf("%q exists but is not a directory", path)
 		}
 		target.SetString(path)
+		return nil
+	}
+}
+
+func urlMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		url, err := url.Parse(ctx.Scan.PopValue("url"))
+		if err != nil {
+			return err
+		}
+		target.Set(reflect.ValueOf(url))
 		return nil
 	}
 }
