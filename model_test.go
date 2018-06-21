@@ -1,4 +1,4 @@
-package kong
+package kong_test
 
 import (
 	"testing"

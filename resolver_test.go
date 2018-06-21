@@ -1,4 +1,4 @@
-package kong
+package kong_test
 
 import (
 	"os"
@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
 type envMap map[string]string
@@ -23,7 +25,7 @@ func tempEnv(env envMap) func() {
 	}
 }
 
-func newEnvParser(t *testing.T, cli interface{}, env envMap) (*Kong, func()) {
+func newEnvParser(t *testing.T, cli interface{}, env envMap) (*kong.Kong, func()) {
 	t.Helper()
 	restoreEnv := tempEnv(env)
 	parser := mustNew(t, cli)
@@ -111,10 +113,10 @@ func TestJSONBasic(t *testing.T) {
 		"slice_with_commas": ["a,b", "c"]
 	}`
 
-	r, err := JSON(strings.NewReader(json))
+	r, err := kong.JSON(strings.NewReader(json))
 	require.NoError(t, err)
 
-	parser := mustNew(t, &cli, Resolver(r))
+	parser := mustNew(t, &cli, kong.Resolver(r))
 	_, err = parser.Parse([]string{})
 	require.NoError(t, err)
 	require.Equal(t, "🍕", cli.String)
@@ -127,14 +129,14 @@ func TestResolvedValueTriggersHooks(t *testing.T) {
 	var cli struct {
 		Int int
 	}
-	resolver := func(context *Context, parent *Path, flag *Flag) (string, error) {
+	resolver := func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "int" {
 			return "1", nil
 		}
 		return "", nil
 	}
 	hooked := 0
-	p := mustNew(t, &cli, Resolver(resolver), Hook(&cli.Int, func(ctx *Context, path *Path) error {
+	p := mustNew(t, &cli, kong.Resolver(resolver), kong.Hook(&cli.Int, func(ctx *kong.Context, path *kong.Path) error {
 		hooked++
 		return nil
 	}))
@@ -152,7 +154,7 @@ func TestResolvedValueTriggersHooks(t *testing.T) {
 
 type testUppercaseMapper struct{}
 
-func (testUppercaseMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
+func (testUppercaseMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
 	value := ctx.Scan.PopValue("lowercase")
 	target.SetString(strings.ToUpper(value))
 	return nil
@@ -167,7 +169,7 @@ func TestResolversWithMappers(t *testing.T) {
 	defer restoreEnv()
 
 	parser := mustNew(t, &cli,
-		NamedMapper("upper", testUppercaseMapper{}),
+		kong.NamedMapper("upper", testUppercaseMapper{}),
 	)
 	_, err := parser.Parse([]string{})
 	require.NoError(t, err)
@@ -179,14 +181,14 @@ func TestResolverWithBool(t *testing.T) {
 		Bool bool
 	}
 
-	resolver := func(context *Context, parent *Path, flag *Flag) (string, error) {
+	resolver := func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "bool" {
 			return "true", nil
 		}
 		return "", nil
 	}
 
-	p := mustNew(t, &cli, Resolver(resolver))
+	p := mustNew(t, &cli, kong.Resolver(resolver))
 
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
@@ -198,21 +200,21 @@ func TestLastResolverWins(t *testing.T) {
 		Int []int
 	}
 
-	var first ResolverFunc = func(context *Context, parent *Path, flag *Flag) (string, error) {
+	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "int" {
 			return "1", nil
 		}
 		return "", nil
 	}
 
-	var second ResolverFunc = func(context *Context, parent *Path, flag *Flag) (string, error) {
+	var second kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "int" {
 			return "2", nil
 		}
 		return "", nil
 	}
 
-	p := mustNew(t, &cli, Resolver(first), Resolver(second))
+	p := mustNew(t, &cli, kong.Resolver(first), kong.Resolver(second))
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, []int{2}, cli.Int)
@@ -223,13 +225,13 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	var cli struct {
 		Int int `required`
 	}
-	resolver := func(context *Context, parent *Path, flag *Flag) (string, error) {
+	resolver := func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "int" {
 			return "1", nil
 		}
 		return "", nil
 	}
-	_, err := mustNew(t, &cli, Resolver(resolver)).Parse(nil)
+	_, err := mustNew(t, &cli, kong.Resolver(resolver)).Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, cli.Int)
 }

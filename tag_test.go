@@ -1,9 +1,11 @@
-package kong
+package kong_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
 func TestDefaultValueForOptionalArg(t *testing.T) {
@@ -42,7 +44,7 @@ func TestBadString(t *testing.T) {
 	var cli struct {
 		Numbers string `kong:"default='yay'n"`
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -50,7 +52,7 @@ func TestNoQuoteEnd(t *testing.T) {
 	var cli struct {
 		Numbers string `kong:"default='yay"`
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 

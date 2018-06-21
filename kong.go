@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+var (
+	expectedRunReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
+)
+
 // Error reported by Kong.
 type Error struct{ msg string }
 
@@ -121,47 +125,32 @@ func (k *Kong) extraFlags() []*Flag {
 	return []*Flag{helpFlag}
 }
 
-// Help writes help for the given error to the stdout io.Writer associated with this Kong.
-//
-// "err" should be the error returned by Parse().
-//
-// See Help() and Writers() for overriding the help function and stdout, respectively.
-func (k *Kong) Help(err error) error {
-	var ctx *Context
-	if perr, ok := err.(*ParseError); ok {
-		ctx = perr.Context
-	} else {
-		ctx, err = Trace(k, nil)
-		if err != nil {
-			return err
-		}
-	}
-	return k.help(k.helpOptions, ctx)
-}
-
 // Parse arguments into target.
 //
-// The returned "command" is a space separated path to the final selected command, if any. Commands appear as
-// the command name while positional arguments are the argument name surrounded by "<argument>".
+// The return Context can be used to further inspect the parsed command-line, to format help, to find the
+// selected command, to run command Run() methods, and so on. See Context and README for more information.
 //
 // Will return a ParseError if a *semantically* invalid command-line is encountered (as opposed to a syntactically
 // invalid one, which will report a normal error).
-func (k *Kong) Parse(args []string) (command string, err error) {
+func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	defer catch(&err)
-	ctx, err := Trace(k, args)
+	ctx, err = Trace(k, args)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if err = k.applyHooks(ctx); err != nil {
-		return "", &ParseError{error: err, Context: ctx}
+		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if ctx.Error != nil {
-		return "", &ParseError{error: ctx.Error, Context: ctx}
+		return nil, &ParseError{error: ctx.Error, Context: ctx}
 	}
 	if err = ctx.Validate(); err != nil {
-		return "", &ParseError{error: err, Context: ctx}
+		return nil, &ParseError{error: err, Context: ctx}
 	}
-	return ctx.Apply()
+	if _, err = ctx.Apply(); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
+	return ctx, nil
 }
 
 func (k *Kong) applyHooks(ctx *Context) error {

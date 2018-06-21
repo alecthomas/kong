@@ -14,9 +14,9 @@ func Parse(cli interface{}, options ...Option) string {
 		panic(err)
 	}
 	App = parser
-	cmd, err := parser.Parse(os.Args[1:])
+	ctx, err := parser.Parse(os.Args[1:])
 	parser.FatalIfErrorf(err)
-	return cmd
+	return ctx.Command()
 }
 
 // FatalIfErrorf terminates with an error message if err != nil.

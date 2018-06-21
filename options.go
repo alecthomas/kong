@@ -92,6 +92,8 @@ func Writers(stdout, stderr io.Writer) Option {
 }
 
 // HookFunc is a callback tied to a field of the grammar, called before a value is applied.
+//
+// "ctx" is the current parse Context, "path" is the Path entry corresponding to the hooked value.
 type HookFunc func(ctx *Context, path *Path) error
 
 // Hook to apply before a command, flag or positional argument is encountered.

@@ -43,6 +43,11 @@ type Node struct {
 	Argument *Value // Populated when Type is ArgumentNode.
 }
 
+// Leaf returns true if this Node is a leaf node.
+func (n *Node) Leaf() bool {
+	return len(n.Children) == 0
+}
+
 // Find a command/argument/flag by pointer to its field.
 //
 // Returns nil if not found. Panics if ptr is not a pointer.

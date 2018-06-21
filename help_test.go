@@ -1,10 +1,12 @@
-package kong
+package kong_test
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
 func TestHelp(t *testing.T) {
@@ -37,10 +39,10 @@ func TestHelp(t *testing.T) {
 	w := bytes.NewBuffer(nil)
 	exited := false
 	app := mustNew(t, &cli,
-		Name("test-app"),
-		Description("A test app."),
-		Writers(w, w),
-		Exit(func(int) {
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
 			exited = true
 			panic(true) // Panic to fake "exit".
 		}),

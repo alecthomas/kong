@@ -1,4 +1,4 @@
-package kong
+package kong_test
 
 import (
 	"encoding/json"
@@ -7,11 +7,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
 func TestOptions(t *testing.T) {
 	var cli struct{}
-	p, err := New(&cli, Name("name"), Description("description"), Writers(nil, nil), Exit(nil))
+	p, err := kong.New(&cli, kong.Name("name"), kong.Description("description"), kong.Writers(nil, nil), kong.Exit(nil))
 	require.NoError(t, err)
 	require.Equal(t, "name", p.Model.Name)
 	require.Equal(t, "description", p.Model.Help)
@@ -42,7 +44,7 @@ func TestConfigLoading(t *testing.T) {
 	err = json.NewEncoder(second).Encode(&cli)
 	require.NoError(t, err)
 
-	p := mustNew(t, &cli, Configuration(JSON, first.Name(), second.Name()))
+	p := mustNew(t, &cli, kong.Configuration(kong.JSON, first.Name(), second.Name()))
 	_, err = p.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "first", cli.Flag)

@@ -1,4 +1,4 @@
-package kong
+package kong_test
 
 import (
 	"net/url"
@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
 func TestValueMapper(t *testing.T) {
 	var cli struct {
 		Flag string
 	}
-	k := mustNew(t, &cli, ValueMapper(&cli.Flag, testMooMapper{}))
+	k := mustNew(t, &cli, kong.ValueMapper(&cli.Flag, testMooMapper{}))
 	_, err := k.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "", cli.Flag)
@@ -26,7 +28,7 @@ func TestNamedMapper(t *testing.T) {
 	var cli struct {
 		Flag string `type:"moo"`
 	}
-	k := mustNew(t, &cli, NamedMapper("moo", testMooMapper{}))
+	k := mustNew(t, &cli, kong.NamedMapper("moo", testMooMapper{}))
 	_, err := k.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "", cli.Flag)
@@ -39,7 +41,7 @@ type testMooMapper struct {
 	text string
 }
 
-func (t testMooMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
+func (t testMooMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
 	if t.text == "" {
 		target.SetString("MOO")
 	} else {
@@ -73,14 +75,14 @@ func TestDurationMapper(t *testing.T) {
 }
 
 func TestSplitEscaped(t *testing.T) {
-	require.Equal(t, []string{"a", "b"}, SplitEscaped("a,b", ','))
-	require.Equal(t, []string{"a,b", "c"}, SplitEscaped(`a\,b,c`, ','))
+	require.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
+	require.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
 }
 
 func TestJoinEscaped(t *testing.T) {
-	require.Equal(t, `a,b`, JoinEscaped([]string{"a", "b"}, ','))
-	require.Equal(t, `a\,b,c`, JoinEscaped([]string{`a,b`, `c`}, ','))
-	require.Equal(t, JoinEscaped(SplitEscaped(`a\,b,c`, ','), ','), `a\,b,c`)
+	require.Equal(t, `a,b`, kong.JoinEscaped([]string{"a", "b"}, ','))
+	require.Equal(t, `a\,b,c`, kong.JoinEscaped([]string{`a,b`, `c`}, ','))
+	require.Equal(t, kong.JoinEscaped(kong.SplitEscaped(`a\,b,c`, ','), ','), `a\,b,c`)
 }
 
 func TestMapWithNamedTypes(t *testing.T) {
@@ -88,7 +90,7 @@ func TestMapWithNamedTypes(t *testing.T) {
 		TypedValue map[string]string `type:":moo"`
 		TypedKey   map[string]string `type:"upper:"`
 	}
-	k := mustNew(t, &cli, NamedMapper("moo", testMooMapper{}), NamedMapper("upper", testUppercaseMapper{}))
+	k := mustNew(t, &cli, kong.NamedMapper("moo", testMooMapper{}), kong.NamedMapper("upper", testUppercaseMapper{}))
 	_, err := k.Parse([]string{"--typed-value", "first=5s", "--typed-value", "second=10s"})
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"first": "MOO", "second": "MOO"}, cli.TypedValue)

@@ -1,23 +1,26 @@
-package kong
+package kong_test
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
-func mustNew(t *testing.T, cli interface{}, options ...Option) *Kong {
+func mustNew(t *testing.T, cli interface{}, options ...kong.Option) *kong.Kong {
 	t.Helper()
-	options = append([]Option{
-		Name("test"),
-		Exit(func(int) {
+	options = append([]kong.Option{
+		kong.Name("test"),
+		kong.Exit(func(int) {
 			t.Helper()
 			t.Fatalf("unexpected exit()")
 		}),
 	}, options...)
-	parser, err := New(cli, options...)
+	parser, err := kong.New(cli, options...)
 	require.NoError(t, err)
 	return parser
 }
@@ -33,9 +36,9 @@ func TestPositionalArguments(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
-	cmd, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
+	ctx, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
 	require.NoError(t, err)
-	require.Equal(t, "user create <id> <first> <last>", cmd)
+	require.Equal(t, "user create <id> <first> <last>", ctx.Command())
 	t.Run("Missing", func(t *testing.T) {
 		_, err := p.Parse([]string{"user", "create", "10"})
 		require.Error(t, err)
@@ -69,10 +72,10 @@ func TestBranchingArgument(t *testing.T) {
 		} `kong:"cmd,help='User management.'"`
 	}
 	p := mustNew(t, &cli)
-	cmd, err := p.Parse([]string{"user", "10", "delete"})
+	ctx, err := p.Parse([]string{"user", "10", "delete"})
 	require.NoError(t, err)
 	require.Equal(t, 10, cli.User.ID.ID)
-	require.Equal(t, "user <id> delete", cmd)
+	require.Equal(t, "user <id> delete", ctx.Command())
 	t.Run("Missing", func(t *testing.T) {
 		_, err = p.Parse([]string{"user"})
 		require.Error(t, err)
@@ -143,7 +146,7 @@ func TestUnsupportedFieldErrors(t *testing.T) {
 	var cli struct {
 		Keys struct{}
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -154,7 +157,7 @@ func TestMatchingArgField(t *testing.T) {
 		} `kong:"arg"`
 	}
 
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -164,7 +167,7 @@ func TestCantMixPositionalAndBranches(t *testing.T) {
 		Command struct {
 		} `kong:"cmd"`
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -220,7 +223,7 @@ func TestInvalidRequiredAfterOptional(t *testing.T) {
 		Name string `kong:"arg"`
 	}
 
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -288,7 +291,7 @@ func TestCommandMissingTagIsInvalid(t *testing.T) {
 	var cli struct {
 		One struct{}
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -299,7 +302,7 @@ func TestDuplicateFlag(t *testing.T) {
 			Flag bool
 		} `kong:"cmd"`
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.Error(t, err)
 }
 
@@ -312,7 +315,7 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 			Flag bool
 		} `kong:"cmd"`
 	}
-	_, err := New(&cli)
+	_, err := kong.New(&cli)
 	require.NoError(t, err)
 }
 
@@ -324,10 +327,10 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
-	ctx, err := Trace(p, []string{"one", "bad"})
+	ctx, err := kong.Trace(p, []string{"one", "bad"})
 	require.NoError(t, err)
 	require.Error(t, ctx.Error)
-	require.Equal(t, []string{"one"}, ctx.Command())
+	require.Equal(t, "one", ctx.Command())
 }
 
 func TestHooks(t *testing.T) {
@@ -353,13 +356,13 @@ func TestHooks(t *testing.T) {
 		{"Flag", "one --three=three", values{true, "", "three"}},
 		{"ArgAndFlag", "one two --three=three", values{true, "two", "three"}},
 	}
-	setOne := func(ctx *Context, path *Path) error { hooked.one = true; return nil }
-	setTwo := func(ctx *Context, path *Path) error { hooked.two = ctx.Value(path).String(); return nil }
-	setThree := func(ctx *Context, path *Path) error { hooked.three = ctx.Value(path).String(); return nil }
+	setOne := func(ctx *kong.Context, path *kong.Path) error { hooked.one = true; return nil }
+	setTwo := func(ctx *kong.Context, path *kong.Path) error { hooked.two = ctx.Value(path).String(); return nil }
+	setThree := func(ctx *kong.Context, path *kong.Path) error { hooked.three = ctx.Value(path).String(); return nil }
 	p := mustNew(t, &cli,
-		Hook(&cli.One, setOne),
-		Hook(&cli.One.Two, setTwo),
-		Hook(&cli.One.Three, setThree))
+		kong.Hook(&cli.One, setOne),
+		kong.Hook(&cli.One.Two, setTwo),
+		kong.Hook(&cli.One.Three, setThree))
 
 	for _, test := range tests {
 		hooked = values{}
@@ -450,7 +453,40 @@ func TestSliceWithDisabledSeparator(t *testing.T) {
 func TestMultilineMessage(t *testing.T) {
 	w := &bytes.Buffer{}
 	var cli struct{}
-	p := mustNew(t, &cli, Writers(w, w))
+	p := mustNew(t, &cli, kong.Writers(w, w))
 	p.Printf("hello\nworld")
 	require.Equal(t, "test: hello\n      world\n", w.String())
+}
+
+type cmdWithRun struct {
+	Arg string `arg:""`
+}
+
+func (c *cmdWithRun) Run(key string) error {
+	c.Arg += key
+	if key == "ERROR" {
+		return fmt.Errorf("ERROR")
+	}
+	return nil
+}
+
+type grammarWithRun struct {
+	One cmdWithRun `cmd:""`
+	Two cmdWithRun `cmd:""`
+}
+
+func TestRun(t *testing.T) {
+	cli := &grammarWithRun{}
+	p := mustNew(t, cli)
+
+	ctx, err := p.Parse([]string{"one", "two"})
+	require.NoError(t, err)
+	err = ctx.Run("hello")
+	require.NoError(t, err)
+	require.Equal(t, "twohello", cli.One.Arg)
+
+	ctx, err = p.Parse([]string{"two", "three"})
+	require.NoError(t, err)
+	err = ctx.Run("ERROR")
+	require.Error(t, err)
 }
