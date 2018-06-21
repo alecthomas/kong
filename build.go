@@ -138,7 +138,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 }
 
 func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
-	mapper := k.registry.ForNamedType(tag.Type, fv)
+	mapper := k.registry.ForNamedValue(tag.Type, fv)
 	if mapper == nil {
 		fail("unsupported field type %s.%s (of type %s)", v.Type(), ft.Name, ft.Type)
 	}

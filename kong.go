@@ -38,13 +38,13 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	before         map[reflect.Value]HookFunc
-	resolvers      []ResolverFunc
-	registry       *Registry
-	noDefaultHelp  bool
-	noUsageOnError bool
-	help           func(*Context) error
-	helpOptions    []HelpOption
+	before        map[reflect.Value]HookFunc
+	resolvers     []ResolverFunc
+	registry      *Registry
+	noDefaultHelp bool
+	usageOnError  bool
+	help          HelpPrinter
+	helpOptions   HelpPrinterOptions
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -70,7 +70,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	}
 
 	if k.help == nil {
-		k.help = HelpPrinter(k.helpOptions...)
+		k.help = DefaultHelpPrinter
 	}
 
 	model, err := build(k, grammar)
@@ -108,7 +108,9 @@ func (k *Kong) extraFlags() []*Flag {
 	}
 	helpFlag.Flag = helpFlag
 	hook := Hook(&helpValue, func(ctx *Context, path *Path) error {
-		err := k.help(ctx)
+		options := k.helpOptions
+		options.Summary = false
+		err := k.help(options, ctx)
 		if err != nil {
 			return err
 		}
@@ -119,15 +121,22 @@ func (k *Kong) extraFlags() []*Flag {
 	return []*Flag{helpFlag}
 }
 
-// Help writes help for the given args to the stdout io.Writer associated with this Kong.
+// Help writes help for the given error to the stdout io.Writer associated with this Kong.
+//
+// "err" should be the error returned by Parse().
 //
 // See Help() and Writers() for overriding the help function and stdout, respectively.
-func (k *Kong) Help(args []string) error {
-	ctx, err := Trace(k, args)
-	if err != nil {
-		return err
+func (k *Kong) Help(err error) error {
+	var ctx *Context
+	if perr, ok := err.(*ParseError); ok {
+		ctx = perr.Context
+	} else {
+		ctx, err = Trace(k, nil)
+		if err != nil {
+			return err
+		}
 	}
-	return k.help(ctx)
+	return k.help(k.helpOptions, ctx)
 }
 
 // Parse arguments into target.
@@ -215,9 +224,11 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	}
 	k.Errorf("%s", msg)
 	// Maybe display usage information.
-	if err, ok := err.(*ParseError); ok && !k.noUsageOnError {
+	if err, ok := err.(*ParseError); ok && k.usageOnError {
 		fmt.Fprintln(k.Stdout)
-		_ = k.help(err.Context)
+		options := k.helpOptions
+		options.Summary = true
+		_ = k.help(options, err.Context)
 	}
 	k.Exit(1)
 }

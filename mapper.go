@@ -3,6 +3,7 @@ package kong
 import (
 	"fmt"
 	"math/bits"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,9 +21,9 @@ type DecodeContext struct {
 }
 
 // WithScanner creates a clone of this context with a new Scanner.
-func (d *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
+func (r *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
 	return &DecodeContext{
-		Value: d.Value,
+		Value: r.Value,
 		Scan:  scan,
 	}
 }
@@ -44,8 +45,8 @@ type BoolMapper interface {
 // A MapperFunc is a single function that complies with the Mapper interface.
 type MapperFunc func(ctx *DecodeContext, target reflect.Value) error
 
-func (d MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { //nolint: golint
-	return d(ctx, target)
+func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { //nolint: golint
+	return m(ctx, target)
 }
 
 // A Registry contains a set of mappers and supporting lookup methods.
@@ -66,42 +67,52 @@ func NewRegistry() *Registry {
 	}
 }
 
-// ForNamedType finds a mapper for a value with a user-specified type.
+// ForNamedValue finds a mapper for a value with a user-specified name.
 //
 // Will return nil if a mapper can not be determined.
-func (d *Registry) ForNamedType(name string, value reflect.Value) Mapper {
-	if mapper, ok := d.names[name]; ok {
+func (r *Registry) ForNamedValue(name string, value reflect.Value) Mapper {
+	if mapper, ok := r.names[name]; ok {
 		return mapper
 	}
-	return d.ForValue(value)
+	return r.ForValue(value)
+}
+
+// ForNamedType finds a mapper for a type with a user-specified name.
+//
+// Will return nil if a mapper can not be determined.
+func (r *Registry) ForNamedType(name string, typ reflect.Type) Mapper {
+	if mapper, ok := r.names[name]; ok {
+		return mapper
+	}
+	return r.ForType(typ)
 }
 
 // ForValue looks up the Mapper for a reflect.Value.
-func (d *Registry) ForValue(value reflect.Value) Mapper {
-	if mapper, ok := d.values[value]; ok {
+func (r *Registry) ForValue(value reflect.Value) Mapper {
+	if mapper, ok := r.values[value]; ok {
 		return mapper
 	}
-	return d.ForType(value.Type())
+	return r.ForType(value.Type())
 }
 
 // ForType finds a mapper from a type, by type, then kind.
 //
 // Will return nil if a mapper can not be determined.
-func (d *Registry) ForType(typ reflect.Type) Mapper {
+func (r *Registry) ForType(typ reflect.Type) Mapper {
 	var mapper Mapper
 	var ok bool
-	if mapper, ok = d.types[typ]; ok {
+	if mapper, ok = r.types[typ]; ok {
 		return mapper
-	} else if mapper, ok = d.kinds[typ.Kind()]; ok {
+	} else if mapper, ok = r.kinds[typ.Kind()]; ok {
 		return mapper
 	}
 	return nil
 }
 
 // RegisterKind registers a Mapper for a reflect.Kind.
-func (d *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
-	d.kinds[kind] = mapper
-	return d
+func (r *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
+	r.kinds[kind] = mapper
+	return r
 }
 
 // RegisterName registeres a mapper to be used if the value mapper has a "type" tag matching name.
@@ -110,31 +121,31 @@ func (d *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
 //
 // 		Mapper string `kong:"type='colour'`
 //   	registry.RegisterName("colour", ...)
-func (d *Registry) RegisterName(name string, mapper Mapper) *Registry {
-	d.names[name] = mapper
-	return d
+func (r *Registry) RegisterName(name string, mapper Mapper) *Registry {
+	r.names[name] = mapper
+	return r
 }
 
 // RegisterType registers a Mapper for a reflect.Type.
-func (d *Registry) RegisterType(typ reflect.Type, mapper Mapper) *Registry {
-	d.types[typ] = mapper
-	return d
+func (r *Registry) RegisterType(typ reflect.Type, mapper Mapper) *Registry {
+	r.types[typ] = mapper
+	return r
 }
 
 // RegisterValue registers a Mapper by pointer to the field value.
-func (d *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
+func (r *Registry) RegisterValue(ptr interface{}, mapper Mapper) *Registry {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
 		panic("expected a pointer")
 	}
 	key = key.Elem()
-	d.values[key] = mapper
-	return d
+	r.values[key] = mapper
+	return r
 }
 
 // RegisterDefaults registers Mappers for all builtin supported Go types and some common stdlib types.
-func (d *Registry) RegisterDefaults() *Registry {
-	return d.RegisterKind(reflect.Int, intDecoder(bits.UintSize)).
+func (r *Registry) RegisterDefaults() *Registry {
+	return r.RegisterKind(reflect.Int, intDecoder(bits.UintSize)).
 		RegisterKind(reflect.Int8, intDecoder(8)).
 		RegisterKind(reflect.Int16, intDecoder(16)).
 		RegisterKind(reflect.Int32, intDecoder(32)).
@@ -153,8 +164,11 @@ func (d *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Bool, boolMapper{}).
 		RegisterType(reflect.TypeOf(time.Time{}), timeDecoder()).
 		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
-		RegisterKind(reflect.Slice, sliceDecoder(d)).
-		RegisterKind(reflect.Map, mapDecoder(d))
+		RegisterKind(reflect.Slice, sliceDecoder(r)).
+		RegisterKind(reflect.Map, mapDecoder(r)).
+		RegisterName("path", pathMapper(r)).
+		RegisterName("existingfile", existingFileMapper(r)).
+		RegisterName("existingdir", existingDirMapper(r))
 }
 
 type boolMapper struct{}
@@ -167,11 +181,11 @@ func (boolMapper) IsBool() bool { return true }
 
 func durationDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		d, err := time.ParseDuration(ctx.Scan.PopValue("duration"))
+		r, err := time.ParseDuration(ctx.Scan.PopValue("duration"))
 		if err != nil {
 			return err
 		}
-		target.Set(reflect.ValueOf(d))
+		target.Set(reflect.ValueOf(r))
 		return nil
 	}
 }
@@ -227,7 +241,7 @@ func floatDecoder(bits int) MapperFunc {
 	}
 }
 
-func mapDecoder(d *Registry) MapperFunc {
+func mapDecoder(r *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		if target.IsNil() {
 			target.Set(reflect.MakeMap(target.Type()))
@@ -240,15 +254,24 @@ func mapDecoder(d *Registry) MapperFunc {
 		}
 		key, value := parts[0], parts[1]
 
+		keyTypeName, valueTypeName := "", ""
+		if typ := ctx.Value.Tag.Type; typ != "" {
+			parts := strings.Split(typ, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("type:\"\" on map field must be in the form \"[<keytype>]:[<valuetype>]\"")
+			}
+			keyTypeName, valueTypeName = parts[0], parts[1]
+		}
+
 		keyScanner := Scan(key)
-		keyDecoder := d.ForType(el.Key())
+		keyDecoder := r.ForNamedType(keyTypeName, el.Key())
 		keyValue := reflect.New(el.Key()).Elem()
 		if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
 			return fmt.Errorf("invalid map key %q", key)
 		}
 
 		valueScanner := Scan(value)
-		valueDecoder := d.ForType(el.Elem())
+		valueDecoder := r.ForNamedType(valueTypeName, el.Elem())
 		valueValue := reflect.New(el.Elem()).Elem()
 		if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
 			return fmt.Errorf("invalid map value %q", value)
@@ -259,7 +282,7 @@ func mapDecoder(d *Registry) MapperFunc {
 	}
 }
 
-func sliceDecoder(d *Registry) MapperFunc {
+func sliceDecoder(r *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		el := target.Type().Elem()
 		sep := ctx.Value.Tag.Sep
@@ -271,7 +294,7 @@ func sliceDecoder(d *Registry) MapperFunc {
 			tokens := ctx.Scan.PopWhile(func(t Token) bool { return t.IsValue() })
 			childScanner = Scan(tokens...)
 		}
-		childDecoder := d.ForType(el)
+		childDecoder := r.ForNamedType(ctx.Value.Tag.Type, el)
 		if childDecoder == nil {
 			return fmt.Errorf("no mapper for element type of %s", target.Type())
 		}
@@ -283,6 +306,56 @@ func sliceDecoder(d *Registry) MapperFunc {
 			}
 			target.Set(reflect.Append(target, childValue))
 		}
+		return nil
+	}
+}
+
+func pathMapper(r *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		if target.Kind() == reflect.Slice {
+			return sliceDecoder(r)(ctx, target)
+		}
+		path := ctx.Scan.PopValue("file")
+		path = expandPath(path)
+		target.SetString(path)
+		return nil
+	}
+}
+
+func existingFileMapper(r *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		if target.Kind() == reflect.Slice {
+			return sliceDecoder(r)(ctx, target)
+		}
+		path := ctx.Scan.PopValue("file")
+		path = expandPath(path)
+		stat, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+		if stat.IsDir() {
+			return fmt.Errorf("%q exists but is a directory", path)
+		}
+		target.SetString(path)
+		return nil
+	}
+}
+
+func existingDirMapper(r *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		if target.Kind() == reflect.Slice {
+			return sliceDecoder(r)(ctx, target)
+		}
+		path := ctx.Scan.PopValue("file")
+		path = expandPath(path)
+		stat, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+		if !stat.IsDir() {
+			return fmt.Errorf("%q exists but is not a directory", path)
+		}
+		target.SetString(path)
 		return nil
 	}
 }

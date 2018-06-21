@@ -111,31 +111,26 @@ func Hook(ptr interface{}, hook HookFunc) Option {
 	}
 }
 
-// HelpFunction is the type of a function used to display help.
-type HelpFunction func(*Context) error
-
-// Help function to use.
-//
-// Defaults to PrintHelp.
-func Help(help HelpFunction) Option {
+// Help printer to use.
+func Help(help HelpPrinter) Option {
 	return func(k *Kong) error {
 		k.help = help
 		return nil
 	}
 }
 
-// HelpOptions specifies options for the default help printer, if used.
-func HelpOptions(options ...HelpOption) Option {
+// HelpOptions sets the HelpPrinterOptions to use for printing help.
+func HelpOptions(options HelpPrinterOptions) Option {
 	return func(k *Kong) error {
 		k.helpOptions = options
 		return nil
 	}
 }
 
-// NoUsageOnError configures Kong to NOT display context-sensitive usage if FatalIfErrorf is called with an error.
-func NoUsageOnError() Option {
+// UsageOnError configures Kong to display context-sensitive usage if FatalIfErrorf is called with an error.
+func UsageOnError() Option {
 	return func(k *Kong) error {
-		k.noUsageOnError = true
+		k.usageOnError = true
 		return nil
 	}
 }

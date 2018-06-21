@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD013 MD033 -->
 <p align="center"><img width="90%" src="kong.png" /></p>
 
-# Kong is a command-line parser for Go [![CircleCI](https://circleci.com/gh/alecthomas/kong.svg?style=svg&circle-token=477fecac758383bf281453187269b913130f17d2)](https://circleci.com/gh/alecthomas/kong)
+# Kong is a command-line parser for Go [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong)
 
 <!-- MarkdownTOC -->
 
@@ -13,13 +13,14 @@
 1. [Terminating positional arguments](#terminating-positional-arguments)
 1. [Slices](#slices)
 1. [Maps](#maps)
+1. [Custom named types](#custom-named-types)
 1. [Supported tags](#supported-tags)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
     1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
     1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    1. [`HelpOptions(...HelpOption)` and `Help(HelpFunc)` - customising help](#helpoptionshelpoption-and-helphelpfunc---customising-help)
+    1. [`HelpOptions(HelpPrinterOptions)` and `Help(HelpFunc)` - customising help](#helpoptionshelpprinteroptions-and-helphelpfunc---customising-help)
     1. [`Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed](#hookfield-hookfunc---callback-hooks-to-execute-when-the-command-line-is-parsed)
     1. [Other options](#other-options)
 
@@ -176,7 +177,7 @@ You would use the following:
 ```go
 var CLI struct {
   Ls struct {
-    Files []string `arg`
+    Files []string `arg type:"existingfile"`
   } `cmd`
 }
 ```
@@ -195,11 +196,29 @@ You would use the following:
 var CLI struct {
   Config struct {
     Set struct {
-      Config map[string]float64 `arg`
+      Config map[string]float64 `arg type:"file:"`
     } `cmd`
   } `cmd`
 }
 ```
+
+## Custom named types
+
+Kong includes a number of builtin custom type mappers. These can be used by
+specifying the tag `type:"<type>"`. They are registered with the option
+function `NamedMapper(name, mapper)`.
+
+| Name              | Description                                       |
+|-------------------|---------------------------------------------------|
+| `file`            | A path. ~ expansion is applied.                   |
+| `existingfile`    | An existing path. ~ expansion is applied.         |
+| `existingdir`     | An existing directory. ~ expansion is applied.    |
+
+
+Slices and maps treat type tags specially. For slices, the `type:""` tag
+specifies the element type. For maps, the tag has the format
+`tag:"[<key>]:[<value>]"` where either may be omitted.
+
 
 ## Supported tags
 
@@ -217,7 +236,7 @@ Both can coexist with standard Tag parsing.
 | `env:"X"`              | Specify envar to use for default value.
 | `name:"X"`             | Long name, for overriding field name.       |
 | `help:"X"`             | Help text.                                  |
-| `type:"X"`             | Specify named Mapper to use.                |
+| `type:"X"`             | Specify [named types](#custom-named-types) to use.                |
 | `placeholder:"X"`      | Placeholder text.                           |
 | `default:"X"`          | Default value.                              |
 | `short:"X"`            | Short name, if flag.                        |
@@ -279,11 +298,11 @@ All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`
 3. `TypeMapper(reflect.Type, Mapper)`.
 4. `ValueMapper(interface{}, Mapper)`, passing in a pointer to a field of the grammar.
 
-### `HelpOptions(...HelpOption)` and `Help(HelpFunc)` - customising help
+### `HelpOptions(HelpPrinterOptions)` and `Help(HelpFunc)` - customising help
 
-The default help output is usually sufficient, but if it's not, there are two solutions.
+The default help output is usually sufficient, but if not there are two solutions.
 
-1. Use `HelpOptions(options...HelpOption)` to configure the default help (see [HelpOption](https://godoc.org/github.com/alecthomas/kong#HelpOption) for details).
+1. Use `HelpOptions(HelpPrinterOptions)` to configure how help is formatted (see [HelpPrinterOptions](https://godoc.org/github.com/alecthomas/kong#HelpPrinterOptions) for details).
 2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
 
 ### `Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed

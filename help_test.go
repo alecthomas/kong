@@ -53,7 +53,7 @@ func TestHelp(t *testing.T) {
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `Usage: test-app --required <command>
+		require.Equal(t, `Usage:  test-app --required <command>
 
 A test app.
 
@@ -89,7 +89,7 @@ Run "test-app <command> --help" for more information on a command.
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `Usage: test-app two <three> --required --required-two --required-three
+		require.Equal(t, `Usage:  test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
 

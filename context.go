@@ -97,6 +97,16 @@ func Trace(k *Kong, args []string) (*Context, error) {
 	return c, c.traceResolvers()
 }
 
+// Empty returns true if there were no arguments provided.
+func (c *Context) Empty() bool {
+	for _, path := range c.Path {
+		if !path.Resolved && path.App == nil {
+			return false
+		}
+	}
+	return true
+}
+
 // Validate the current context.
 func (c *Context) Validate() error {
 	for _, path := range c.Path {

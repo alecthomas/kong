@@ -34,10 +34,16 @@ func TestNamedMapper(t *testing.T) {
 	require.Equal(t, "MOO", cli.Flag)
 }
 
-type testMooMapper struct{}
+type testMooMapper struct {
+	text string
+}
 
-func (testMooMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
-	target.SetString("MOO")
+func (t testMooMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
+	if t.text == "" {
+		target.SetString("MOO")
+	} else {
+		target.SetString(t.text)
+	}
 	return nil
 }
 func (testMooMapper) IsBool() bool { return true }
@@ -74,4 +80,18 @@ func TestJoinEscaped(t *testing.T) {
 	require.Equal(t, `a,b`, JoinEscaped([]string{"a", "b"}, ','))
 	require.Equal(t, `a\,b,c`, JoinEscaped([]string{`a,b`, `c`}, ','))
 	require.Equal(t, JoinEscaped(SplitEscaped(`a\,b,c`, ','), ','), `a\,b,c`)
+}
+
+func TestMapWithNamedTypes(t *testing.T) {
+	var cli struct {
+		TypedValue map[string]string `type:":moo"`
+		TypedKey   map[string]string `type:"upper:"`
+	}
+	k := mustNew(t, &cli, NamedMapper("moo", testMooMapper{}), NamedMapper("upper", testUppercaseMapper{}))
+	_, err := k.Parse([]string{"--typed-value", "first=5s", "--typed-value", "second=10s"})
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"first": "MOO", "second": "MOO"}, cli.TypedValue)
+	_, err = k.Parse([]string{"--typed-key", "first=5s", "--typed-key", "second=10s"})
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"FIRST": "5s", "SECOND": "10s"}, cli.TypedKey)
 }
