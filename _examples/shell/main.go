@@ -14,7 +14,7 @@ var cli struct {
 		Force     bool   `help:"Force removal." short:"f"`
 		Recursive bool   `help:"Recursively remove files." short:"r"`
 
-		Paths []string `arg:"" help:"Paths to remove." type:"path"`
+		Paths []string `arg:"" help:"Paths to remove." type:"path" name:"path"`
 	} `cmd:"" help:"Remove files."`
 
 	Ls struct {

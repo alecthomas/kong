@@ -43,11 +43,11 @@ func (p *Path) Node() *Node {
 // Context contains the current parse context.
 type Context struct {
 	App   *Kong
-	Path  []*Path // A trace through parsed nodes.
-	Error error   // Error that occurred during trace, if any.
+	Path  []*Path  // A trace through parsed nodes.
+	Args  []string // Original command-line arguments.
+	Error error    // Error that occurred during trace, if any.
 
 	values map[*Value]reflect.Value // Temporary values during tracing.
-	args   []string
 	scan   *Scanner
 }
 
@@ -86,7 +86,7 @@ func (c *Context) Selected() *Node {
 func Trace(k *Kong, args []string) (*Context, error) {
 	c := &Context{
 		App:  k,
-		args: args,
+		Args: args,
 		Path: []*Path{
 			{App: k.Model, Flags: k.Model.Flags},
 		},
@@ -460,6 +460,9 @@ func checkMissingChildren(node *Node) error {
 
 	if len(missing) == 1 {
 		return fmt.Errorf("%q should be followed by %s", node.Path(), missing[0])
+	}
+	if len(missing) > 5 {
+		missing = append(missing[:5], "...")
 	}
 	return fmt.Errorf("%q should be followed by one of %s", node.Path(), strings.Join(missing, ", "))
 }

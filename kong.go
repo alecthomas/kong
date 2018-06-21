@@ -38,12 +38,13 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	before        map[reflect.Value]HookFunc
-	resolvers     []ResolverFunc
-	registry      *Registry
-	noDefaultHelp bool
-	help          func(*Context) error
-	helpOptions   []HelpOption
+	before         map[reflect.Value]HookFunc
+	resolvers      []ResolverFunc
+	registry       *Registry
+	noDefaultHelp  bool
+	noUsageOnError bool
+	help           func(*Context) error
+	helpOptions    []HelpOption
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -133,6 +134,9 @@ func (k *Kong) Help(args []string) error {
 //
 // The returned "command" is a space separated path to the final selected command, if any. Commands appear as
 // the command name while positional arguments are the argument name surrounded by "<argument>".
+//
+// Will return a ParseError if a *semantically* invalid command-line is encountered (as opposed to a syntactically
+// invalid one, which will report a normal error).
 func (k *Kong) Parse(args []string) (command string, err error) {
 	defer catch(&err)
 	ctx, err := Trace(k, args)
@@ -140,13 +144,13 @@ func (k *Kong) Parse(args []string) (command string, err error) {
 		return "", err
 	}
 	if err = k.applyHooks(ctx); err != nil {
-		return "", err
+		return "", &ParseError{error: err, Context: ctx}
 	}
 	if ctx.Error != nil {
-		return "", ctx.Error
+		return "", &ParseError{error: ctx.Error, Context: ctx}
 	}
 	if err = ctx.Validate(); err != nil {
-		return "", err
+		return "", &ParseError{error: err, Context: ctx}
 	}
 	return ctx.Apply()
 }
@@ -210,6 +214,11 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error()
 	}
 	k.Errorf("%s", msg)
+	// Maybe display usage information.
+	if err, ok := err.(*ParseError); ok && !k.noUsageOnError {
+		fmt.Fprintln(k.Stdout)
+		_ = k.help(err.Context)
+	}
 	k.Exit(1)
 }
 

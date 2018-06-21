@@ -23,6 +23,7 @@ type Tag struct {
 	Short       rune
 	Hidden      bool
 	Sep         rune
+	Enum        map[string]bool
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string]string
@@ -112,6 +113,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	s, chars := getTagInfo(ft)
 	t := &Tag{
 		items: parseTagItems(s, chars),
+		Enum:  map[string]bool{},
 	}
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
@@ -140,6 +142,9 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.PlaceHolder = t.Get("placeholder")
 	if t.PlaceHolder == "" {
 		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
+	}
+	for _, part := range strings.Split(t.Get("enum"), ",") {
+		t.Enum[part] = true
 	}
 
 	return t

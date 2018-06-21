@@ -19,7 +19,7 @@
     1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    1. [`Help(HelpFunc)` - customising help](#helphelpfunc---customising-help)
+    1. [`HelpOptions(...HelpOption)` and `Help(HelpFunc)` - customising help](#helpoptionshelpoption-and-helphelpfunc---customising-help)
     1. [`Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed](#hookfield-hookfunc---callback-hooks-to-execute-when-the-command-line-is-parsed)
     1. [Other options](#other-options)
 
@@ -279,7 +279,7 @@ All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`
 3. `TypeMapper(reflect.Type, Mapper)`.
 4. `ValueMapper(interface{}, Mapper)`, passing in a pointer to a field of the grammar.
 
-### `Help(HelpFunc)` - customising help
+### `HelpOptions(...HelpOption)` and `Help(HelpFunc)` - customising help
 
 The default help output is usually sufficient, but if it's not, there are two solutions.
 

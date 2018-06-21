@@ -132,6 +132,14 @@ func HelpOptions(options ...HelpOption) Option {
 	}
 }
 
+// NoUsageOnError configures Kong to NOT display context-sensitive usage if FatalIfErrorf is called with an error.
+func NoUsageOnError() Option {
+	return func(k *Kong) error {
+		k.noUsageOnError = true
+		return nil
+	}
+}
+
 // ClearResolvers clears all existing resolvers.
 func ClearResolvers() Option {
 	return func(k *Kong) error {
