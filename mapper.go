@@ -159,7 +159,8 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Float32, floatDecoder(32)).
 		RegisterKind(reflect.Float64, floatDecoder(64)).
 		RegisterKind(reflect.String, MapperFunc(func(ctx *DecodeContext, target reflect.Value) error {
-			target.SetString(ctx.Scan.PopValue("string"))
+			token := ctx.Scan.PopValue("string")
+			target.SetString(token)
 			return nil
 		})).
 		RegisterKind(reflect.Bool, boolMapper{}).
@@ -294,7 +295,7 @@ func sliceDecoder(r *Registry) MapperFunc {
 			childScanner = Scan(SplitEscaped(ctx.Scan.PopValue("list"), sep)...)
 		} else {
 			tokens := ctx.Scan.PopWhile(func(t Token) bool { return t.IsValue() })
-			childScanner = Scan(tokens...)
+			childScanner = ScanFromTokens(tokens...)
 		}
 		childDecoder := r.ForNamedType(ctx.Value.Tag.Type, el)
 		if childDecoder == nil {

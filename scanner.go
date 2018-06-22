@@ -87,6 +87,11 @@ func Scan(args ...string) *Scanner {
 	return s
 }
 
+// ScanFromTokens creates a new Scanner from a slice of tokens.
+func ScanFromTokens(tokens ...Token) *Scanner {
+	return &Scanner{args: tokens}
+}
+
 // Len returns the number of input arguments.
 func (s *Scanner) Len() int {
 	return len(s.args)
@@ -114,17 +119,17 @@ func (s *Scanner) PopValue(context string) string {
 }
 
 // PopWhile predicate returns true.
-func (s *Scanner) PopWhile(predicate func(Token) bool) (values []string) {
+func (s *Scanner) PopWhile(predicate func(Token) bool) (values []Token) {
 	for predicate(s.Peek()) {
-		values = append(values, s.Pop().Value)
+		values = append(values, s.Pop())
 	}
 	return
 }
 
 // PopUntil predicate returns true.
-func (s *Scanner) PopUntil(predicate func(Token) bool) (values []string) {
+func (s *Scanner) PopUntil(predicate func(Token) bool) (values []Token) {
 	for !predicate(s.Peek()) {
-		values = append(values, s.Pop().Value)
+		values = append(values, s.Pop())
 	}
 	return
 }

@@ -110,3 +110,13 @@ func TestURLMapper(t *testing.T) {
 	_, err = p.Parse([]string{":foo"})
 	require.Error(t, err)
 }
+
+func TestSliceConsumesRemainingPositionalArgs(t *testing.T) {
+	var cli struct {
+		Remainder []string `arg:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--", "ls", "-lart"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"ls", "-lart"}, cli.Remainder)
+}
