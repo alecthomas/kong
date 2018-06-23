@@ -8,8 +8,8 @@
 1. [Introduction](#introduction)
 1. [Help](#help)
 1. [Command handling](#command-handling)
-    1. [Switch on the command string](#switch-on-the-command-string)
-    1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+    1. [1. Switch on the command string](#1-switch-on-the-command-string)
+    1. [2. Attach a `Run(...) error` method to each command](#2-attach-a-run-error-method-to-each-command)
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Branching positional arguments](#branching-positional-arguments)
@@ -115,19 +115,49 @@ eg.
 
 There are two ways to handle commands in Kong.
 
-### Switch on the command string
+### 1. Switch on the command string
 
-When you call `kong.Parse()` it will return a unique string representation of the command. Each command branch in the hierarchy will be a bare word and each branching argument or required positional argument will be the name surrounded by angle brackets.
+When you call `kong.Parse()` it will return a unique string representation of the command. Each command branch in the hierarchy will be a bare word and each branching argument or required positional argument will be the name surrounded by angle brackets. Here's an example:
+
+```go
+package main
+
+import "github.com/alecthomas/kong"
+
+var CLI struct {
+  Rm struct {
+    Force     bool `help:"Force removal."`
+    Recursive bool `help:"Recursively remove files."`
+
+    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
+  } `cmd help:"Remove files."`
+
+  Ls struct {
+    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
+  } `cmd help:"List paths."`
+}
+
+func main() {
+  cmd := kong.Parse(&CLI)
+  switch cmd {
+  case "rm <path>":
+  case "ls":
+  default:
+    panic(cmd)
+  }
+}
+```
 
 This has the advantage that it is convenient, but the downside that if you modify your CLI structure, the strings may change. This can be fragile.
 
-### Attach a `Run(...) error` method to each command
+### 2. Attach a `Run(...) error` method to each command
 
 A more robust approach is to break each command out into their own structs:
 
-1. Attach a `Run(...) error` method to all leaf commands (`Run()` signatures must match).
-2. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
-3. Call `kong.Context.Run(params...)` to call the selected parsed command.
+1. Break leaf commands out into separate structs.
+2. Attach a `Run(...) error` method to all leaf commands (`Run()` signatures must match).
+3. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
+4. Call `kong.Context.Run(params...)` to call the selected parsed command.
 
 eg.
 
