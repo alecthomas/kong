@@ -8,8 +8,8 @@
 1. [Introduction](#introduction)
 1. [Help](#help)
 1. [Command handling](#command-handling)
-    1. [1. Switch on the command string](#1-switch-on-the-command-string)
-    1. [2. Attach a `Run(...) error` method to each command](#2-attach-a-run-error-method-to-each-command)
+    1. [Switch on the command string](#switch-on-the-command-string)
+    1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Branching positional arguments](#branching-positional-arguments)
@@ -115,9 +115,13 @@ eg.
 
 There are two ways to handle commands in Kong.
 
-### 1. Switch on the command string
+### Switch on the command string
 
 When you call `kong.Parse()` it will return a unique string representation of the command. Each command branch in the hierarchy will be a bare word and each branching argument or required positional argument will be the name surrounded by angle brackets. Here's an example:
+
+There's an example of this pattern [here](https://github.com/alecthomas/kong/blob/master/_examples/shell/main.go).
+
+eg.
 
 ```go
 package main
@@ -150,7 +154,7 @@ func main() {
 
 This has the advantage that it is convenient, but the downside that if you modify your CLI structure, the strings may change. This can be fragile.
 
-### 2. Attach a `Run(...) error` method to each command
+### Attach a `Run(...) error` method to each command
 
 A more robust approach is to break each command out into their own structs:
 
@@ -158,6 +162,8 @@ A more robust approach is to break each command out into their own structs:
 2. Attach a `Run(...) error` method to all leaf commands (`Run()` signatures must match).
 3. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
 4. Call `kong.Context.Run(params...)` to call the selected parsed command.
+
+There's a full example emulating part of the Docker CLI [here](https://github.com/alecthomas/kong/tree/master/_examples/docker).
 
 eg.
 
