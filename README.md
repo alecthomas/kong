@@ -23,7 +23,7 @@
     1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    1. [`HelpOptions(HelpPrinterOptions)` and `Help(HelpFunc)` - customising help](#helpoptionshelpprinteroptions-and-helphelpfunc---customising-help)
+    1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
     1. [`Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed](#hookfield-hookfunc---callback-hooks-to-execute-when-the-command-line-is-parsed)
     1. [Other options](#other-options)
 
@@ -61,12 +61,12 @@ var CLI struct {
 }
 
 func main() {
-  cmd := kong.Parse(&CLI)
-  switch cmd {
+  ctx := kong.Parse(&CLI)
+  switch ctx.Command() {
   case "rm <path>":
   case "ls":
   default:
-    panic(cmd)
+    panic(ctx.Command())
   }
 }
 ```
@@ -142,12 +142,12 @@ var CLI struct {
 }
 
 func main() {
-  cmd := kong.Parse(&CLI)
-  switch cmd {
+  ctx := kong.Parse(&CLI)
+  switch ctx.Command() {
   case "rm <path>":
   case "ls":
   default:
-    panic(cmd)
+    panic(ctx.Command())
   }
 }
 ```
@@ -197,15 +197,10 @@ var cli struct {
 }
 
 func main() {
-  parser := kong.Must(&cli)
-
-  // Parse and apply the command-line.
-  ctx, err := parser.Parse(os.Args[1:])
-  parser.FatalIfErrorf(err)
-
+  ctx := kong.Parse(&cli)
   // Call the Run() method of the selected parsed command.
   err = ctx.Run(cli.Debug)
-  parser.FatalIfErrorf(err)
+  ctx.FatalIfErrorf(err)
 }
 
 ```
@@ -350,7 +345,7 @@ Both can coexist with standard Tag parsing.
 | `short:"X"`            | Short name, if flag.                        |
 | `required`             | If present, flag/arg is required.           |
 | `optional`             | If present, flag/arg is optional.           |
-| `hidden`               | If present, flag is hidden.                 |
+| `hidden`               | If present, command or flag is hidden.      |
 | `format:"X"`           | Format for parsing input, if supported.     |
 | `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting. |
 
@@ -406,11 +401,11 @@ All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`
 3. `TypeMapper(reflect.Type, Mapper)`.
 4. `ValueMapper(interface{}, Mapper)`, passing in a pointer to a field of the grammar.
 
-### `HelpOptions(HelpPrinterOptions)` and `Help(HelpFunc)` - customising help
+### `ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help
 
 The default help output is usually sufficient, but if not there are two solutions.
 
-1. Use `HelpOptions(HelpPrinterOptions)` to configure how help is formatted (see [HelpPrinterOptions](https://godoc.org/github.com/alecthomas/kong#HelpPrinterOptions) for details).
+1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
 2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
 
 ### `Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed
@@ -426,7 +421,7 @@ app := kong.Must(&CLI, kong.Hook(&CLI.Debug, func(ctx *Context, path *Path) erro
 }))
 ```
 
-Note: it is generally more advisable to use an imperative approach to building command-lines, eg.
+Note: it is generally less verbose to use an imperative approach to building command-lines, eg.
 
 ```go
 if CLI.Debug {
@@ -434,7 +429,7 @@ if CLI.Debug {
 }
 ```
 
-But under some circumstances, hooks are the right choice.
+But under some circumstances, hooks can be useful.
 
 ### Other options
 

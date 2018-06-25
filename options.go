@@ -121,8 +121,8 @@ func Help(help HelpPrinter) Option {
 	}
 }
 
-// HelpOptions sets the HelpPrinterOptions to use for printing help.
-func HelpOptions(options HelpPrinterOptions) Option {
+// ConfigureHelp sets the HelpOptions to use for printing help.
+func ConfigureHelp(options HelpOptions) Option {
 	return func(k *Kong) error {
 		k.helpOptions = options
 		return nil

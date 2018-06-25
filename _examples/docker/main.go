@@ -2,8 +2,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/alecthomas/kong"
 )
 
@@ -68,20 +66,18 @@ type CLI struct {
 
 func main() {
 	cli := CLI{}
-	parser := kong.Must(&cli,
+	ctx := kong.Parse(&cli,
 		kong.Name("docker"),
 		kong.Description("A self-sufficient runtime for containers"),
 		kong.UsageOnError(),
-		kong.HelpOptions(kong.HelpPrinterOptions{
+		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 		}),
 		//
 		kong.Hook(&cli.VersionFlag, func(ctx *kong.Context, path *kong.Path) error {
-			ctx.App.Printf("1.0.0").Exit(0)
+			ctx.Printf("1.0.0").Exit(0)
 			return nil
 		}))
-	ctx, err := parser.Parse(os.Args[1:])
-	parser.FatalIfErrorf(err)
-	err = ctx.Run(&cli.Globals)
-	parser.FatalIfErrorf(err)
+	err := ctx.Run(&cli.Globals)
+	ctx.FatalIfErrorf(err)
 }

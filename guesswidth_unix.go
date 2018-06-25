@@ -31,6 +31,9 @@ func guessWidth(w io.Writer) int {
 			uintptr(unsafe.Pointer(&dimensions)), // nolint: gas
 			0, 0, 0,
 		); err == 0 {
+			if dimensions[1] == 0 {
+				return 80
+			}
 			return int(dimensions[1])
 		}
 	}

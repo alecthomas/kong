@@ -14,6 +14,7 @@ type Tag struct {
 	Arg         bool
 	Required    bool
 	Optional    bool
+	Name        string
 	Help        string
 	Type        string
 	Default     string
@@ -125,6 +126,11 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Required = required
 	t.Optional = optional
 	t.Default = t.Get("default")
+	// Arguments with defaults are always optional.
+	if t.Arg && t.Default != "" {
+		t.Optional = true
+	}
+	t.Name = t.Get("name")
 	t.Help = t.Get("help")
 	t.Type = t.Get("type")
 	t.Env = t.Get("env")

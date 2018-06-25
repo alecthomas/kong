@@ -9,7 +9,8 @@ import (
 
 // Application is the root of the Kong model.
 type Application struct {
-	Node
+	*Node
+	// Help flag, if the NoDefaultHelp() option is not specified.
 	HelpFlag *Flag
 }
 
@@ -35,6 +36,7 @@ type Node struct {
 	Parent     *Node
 	Name       string
 	Help       string
+	Hidden     bool
 	Flags      []*Flag
 	Positional []*Positional
 	Children   []*Node
@@ -72,20 +74,33 @@ func (n *Node) findNode(key reflect.Value) *Node {
 }
 
 // AllFlags returns flags from all ancestor branches encountered.
-func (n *Node) AllFlags() (out [][]*Flag) {
+//
+// If "hide" is true hidden flags will be omitted.
+func (n *Node) AllFlags(hide bool) (out [][]*Flag) {
 	if n.Parent != nil {
-		out = append(out, n.Parent.AllFlags()...)
+		out = append(out, n.Parent.AllFlags(hide)...)
 	}
-	if len(n.Flags) > 0 {
-		out = append(out, n.Flags)
+	group := []*Flag{}
+	for _, flag := range n.Flags {
+		if !hide || !flag.Hidden {
+			group = append(group, flag)
+		}
+	}
+	if len(group) > 0 {
+		out = append(out, group)
 	}
 	return
 }
 
 // Leaves returns the leaf commands/arguments under Node.
-func (n *Node) Leaves() (out []*Node) {
+//
+// If "hidden" is true hidden leaves will be omitted.
+func (n *Node) Leaves(hide bool) (out []*Node) {
 	var walk func(n *Node)
 	walk = func(n *Node) {
+		if hide && n.Hidden {
+			return
+		}
 		if len(n.Children) == 0 && n.Type != ApplicationNode {
 			out = append(out, n)
 		}
@@ -112,10 +127,10 @@ func (n *Node) Depth() int {
 	return depth
 }
 
-// Summary help string for the node.
+// Summary help string for the node (not including application name).
 func (n *Node) Summary() string {
 	summary := n.Path()
-	if flags := n.FlagSummary(); flags != "" {
+	if flags := n.FlagSummary(true); flags != "" {
 		summary += " " + flags
 	}
 	args := []string{}
@@ -131,10 +146,10 @@ func (n *Node) Summary() string {
 }
 
 // FlagSummary for the node.
-func (n *Node) FlagSummary() string {
+func (n *Node) FlagSummary(hide bool) string {
 	required := []string{}
 	count := 0
-	for _, group := range n.AllFlags() {
+	for _, group := range n.AllFlags(hide) {
 		for _, flag := range group {
 			count++
 			if flag.Required {
@@ -145,13 +160,22 @@ func (n *Node) FlagSummary() string {
 	return strings.Join(required, " ")
 }
 
+// FullPath is like Path() but includes the Application root node.
+func (n *Node) FullPath() string {
+	root := n
+	for root.Parent != nil {
+		root = root.Parent
+	}
+	return strings.TrimSpace(root.Name + " " + n.Path())
+}
+
 // Path through ancestors to this Node.
 func (n *Node) Path() (out string) {
 	if n.Parent != nil {
 		out += " " + n.Parent.Path()
 	}
 	switch n.Type {
-	case ApplicationNode, CommandNode:
+	case CommandNode:
 		out += " " + n.Name
 	case ArgumentNode:
 		out += " " + "<" + n.Name + ">"

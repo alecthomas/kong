@@ -42,13 +42,15 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	before        map[reflect.Value]HookFunc
-	resolvers     []ResolverFunc
-	registry      *Registry
+	before    map[reflect.Value]HookFunc
+	resolvers []ResolverFunc
+	registry  *Registry
+
 	noDefaultHelp bool
 	usageOnError  bool
 	help          HelpPrinter
-	helpOptions   HelpPrinterOptions
+	helpOptions   HelpOptions
+	helpFlag      *Flag
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -83,6 +85,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	}
 	model.Name = filepath.Base(os.Args[0])
 	k.Model = model
+	k.Model.HelpFlag = k.helpFlag
 
 	for _, option := range k.postBuildOptions {
 		if err := option(k); err != nil {
@@ -121,6 +124,7 @@ func (k *Kong) extraFlags() []*Flag {
 		k.Exit(1)
 		return nil
 	})
+	k.helpFlag = helpFlag
 	_ = hook(k)
 	return []*Flag{helpFlag}
 }
@@ -182,8 +186,15 @@ func (k *Kong) applyHooks(ctx *Context) error {
 	return nil
 }
 
-func formatMultilineMessage(w io.Writer, leader string, format string, args ...interface{}) {
+func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...interface{}) {
 	lines := strings.Split(fmt.Sprintf(format, args...), "\n")
+	leader := ""
+	for _, l := range leaders {
+		if l == "" {
+			continue
+		}
+		leader += l + ": "
+	}
 	fmt.Fprintf(w, "%s%s\n", leader, lines[0])
 	for _, line := range lines[1:] {
 		fmt.Fprintf(w, "%*s%s\n", len(leader), " ", line)
@@ -192,14 +203,20 @@ func formatMultilineMessage(w io.Writer, leader string, format string, args ...i
 
 // Printf writes a message to Kong.Stdout with the application name prefixed.
 func (k *Kong) Printf(format string, args ...interface{}) *Kong {
-	formatMultilineMessage(k.Stdout, k.Model.Name+": ", format, args...)
+	formatMultilineMessage(k.Stdout, []string{k.Model.Name}, format, args...)
 	return k
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
 func (k *Kong) Errorf(format string, args ...interface{}) *Kong {
-	formatMultilineMessage(k.Stderr, k.Model.Name+": error: ", format, args...)
+	formatMultilineMessage(k.Stderr, []string{k.Model.Name, "error"}, format, args...)
 	return k
+}
+
+// Fatalf writes a message to Kong.Stderr with the application name prefixed then exits with a non-zero status.
+func (k *Kong) Fatalf(format string, args ...interface{}) {
+	k.Errorf(format, args...)
+	k.Exit(1)
 }
 
 // FatalIfErrorf terminates with an error message if err != nil.

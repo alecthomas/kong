@@ -23,13 +23,15 @@ var cli struct {
 }
 
 func main() {
-	cmd := kong.Parse(&cli, kong.Description("A shell-like example app."),
+	ctx := kong.Parse(&cli,
+		kong.Name("shell"),
+		kong.Description("A shell-like example app."),
 		kong.UsageOnError(),
-		kong.HelpOptions(kong.HelpPrinterOptions{
+		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 			Summary: true,
 		}))
-	switch cmd {
+	switch ctx.Command() {
 	case "rm <path>":
 		fmt.Println(cli.Rm.Paths, cli.Rm.Force, cli.Rm.Recursive)
 

@@ -24,7 +24,7 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
 	}
-	app.Node = *node
+	app.Node = node
 	app.Node.Flags = append(extraFlags, app.Node.Flags...)
 	return app, nil
 }
@@ -63,12 +63,12 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 		ft := field.field
 		fv := field.value
 
-		name := ft.Tag.Get("name")
+		tag := parseTag(fv, ft)
+
+		name := tag.Name
 		if name == "" {
 			name = strings.ToLower(dashedString(ft.Name))
 		}
-
-		tag := parseTag(fv, ft)
 
 		// Nested structs are either commands or args.
 		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) {
@@ -105,6 +105,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	child := buildNode(k, fv, typ, seenFlags)
 	child.Parent = node
 	child.Help = tag.Help
+	child.Hidden = tag.Hidden
 
 	// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
 	// a positional argument is provided to the child, and move it to the branching argument field.

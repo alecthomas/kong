@@ -29,7 +29,7 @@ type Path struct {
 func (p *Path) Node() *Node {
 	switch {
 	case p.App != nil:
-		return &p.App.Node
+		return p.App.Node
 
 	case p.Argument != nil:
 		return p.Argument
@@ -42,7 +42,7 @@ func (p *Path) Node() *Node {
 
 // Context contains the current parse context.
 type Context struct {
-	App *Kong
+	*Kong
 	// A trace through parsed nodes.
 	Path []*Path
 	// Original command-line arguments.
@@ -61,7 +61,7 @@ type Context struct {
 // Note that this will not modify the target grammar. Call Apply() to do so.
 func Trace(k *Kong, args []string) (*Context, error) {
 	c := &Context{
-		App:  k,
+		Kong: k,
 		Args: args,
 		Path: []*Path{
 			{App: k.Model, Flags: k.Model.Flags},
@@ -69,7 +69,7 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		values: map[*Value]reflect.Value{},
 		scan:   Scan(args...),
 	}
-	c.Error = c.trace(&c.App.Model.Node)
+	c.Error = c.trace(c.Model.Node)
 	return c, c.traceResolvers()
 }
 
@@ -120,7 +120,7 @@ func (c *Context) Validate() error {
 	// Check the terminal node.
 	node := c.Selected()
 	if node == nil {
-		node = &c.App.Model.Node
+		node = c.Model.Node
 	}
 
 	// Find deepest positional argument so we can check if all required positionals have been provided.
@@ -216,7 +216,10 @@ func (c *Context) reset(node *Node) error {
 func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 
-	flags := append(c.Flags(), node.Flags...)
+	flags := []*Flag{}
+	for _, group := range node.AllFlags(false) {
+		flags = append(flags, group...)
+	}
 
 	for !c.scan.Peek().IsEOL() {
 		token := c.scan.Peek()
@@ -285,6 +288,8 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			return fmt.Errorf("unexpected flag argument %q", token.Value)
 
 		case PositionalArgumentToken:
+			candidates := []string{}
+
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
@@ -302,6 +307,9 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 
 			// After positional arguments have been consumed, check commands next...
 			for _, branch := range node.Children {
+				if branch.Type == CommandNode {
+					candidates = append(candidates, branch.Name)
+				}
 				if branch.Type == CommandNode && branch.Name == token.Value {
 					c.scan.Pop()
 					c.Path = append(c.Path, &Path{
@@ -327,8 +335,8 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					}
 				}
 			}
-			return fmt.Errorf("unexpected positional argument %s", token)
 
+			return findPotentialCandidates(token.Value, candidates, "unexpected argument %s", token)
 		default:
 			return fmt.Errorf("unexpected token %s", token)
 		}
@@ -336,9 +344,28 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	return nil
 }
 
+func findPotentialCandidates(needle string, haystack []string, format string, args ...interface{}) error {
+	if len(haystack) == 0 {
+		return fmt.Errorf(format, args...)
+	}
+	closestCandidates := []string{}
+	for _, candidate := range haystack {
+		if strings.HasPrefix(candidate, needle) || levenshtein(candidate, needle) <= 2 {
+			closestCandidates = append(closestCandidates, fmt.Sprintf("%q", candidate))
+		}
+	}
+	prefix := fmt.Sprintf(format, args...)
+	if len(closestCandidates) == 1 {
+		return fmt.Errorf("%s, did you mean %s?", prefix, closestCandidates[0])
+	} else if len(closestCandidates) > 1 {
+		return fmt.Errorf("%s, did you mean one of %s?", prefix, strings.Join(closestCandidates, ", "))
+	}
+	return fmt.Errorf("%s", prefix)
+}
+
 // Walk through flags from existing nodes in the path.
 func (c *Context) traceResolvers() error {
-	if len(c.App.resolvers) == 0 {
+	if len(c.resolvers) == 0 {
 		return nil
 	}
 
@@ -349,7 +376,7 @@ func (c *Context) traceResolvers() error {
 			if _, ok := c.values[flag.Value]; ok {
 				continue
 			}
-			for _, resolver := range c.App.resolvers {
+			for _, resolver := range c.resolvers {
 				s, err := resolver(c, path, flag)
 				if err != nil {
 					return err
@@ -386,7 +413,7 @@ func (c *Context) getValue(value *Value) reflect.Value {
 
 // Apply traced context to the target grammar.
 func (c *Context) Apply() (string, error) {
-	err := c.reset(&c.App.Model.Node)
+	err := c.reset(c.Model.Node)
 	if err != nil {
 		return "", err
 	}
@@ -420,8 +447,15 @@ func (c *Context) Apply() (string, error) {
 
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	defer catch(&err)
+	candidates := []string{}
 	for _, flag := range flags {
-		if "-"+string(flag.Short) != match && "--"+flag.Name != match {
+		long := "--" + flag.Name
+		short := "-" + string(flag.Short)
+		candidates = append(candidates, long)
+		if flag.Short != 0 {
+			candidates = append(candidates, short)
+		}
+		if short != match && long != match {
 			continue
 		}
 		// Found a matching flag.
@@ -433,7 +467,7 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		c.Path = append(c.Path, &Path{Flag: flag})
 		return nil
 	}
-	return fmt.Errorf("unknown flag %s", match)
+	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
 }
 
 // Run executes the corresponding Run(params...) method on the target command selected by the parsed args.
@@ -441,7 +475,7 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 // The target Run() method must exist and have the type signature "Run(params...) error".
 func (c *Context) Run(params ...interface{}) (err error) {
 	defer catch(&err)
-	expectedRunSignature, err := c.validateRun(&c.App.Model.Node, nil)
+	expectedRunSignature, err := c.validateRun(c.Model.Node, nil)
 	if err != nil {
 		return err
 	}
@@ -476,6 +510,16 @@ func (c *Context) Run(params ...interface{}) (err error) {
 		return nil
 	}
 	return result[0].Interface().(error)
+}
+
+// PrintUsage to Kong's stdout.
+//
+// If summary is true, a summarised version of the help will be output.
+func (c *Context) PrintUsage(summary bool) error {
+	options := c.helpOptions
+	options.Summary = summary
+	_ = c.help(options, c)
+	return nil
 }
 
 // Validate that all commands have Run() methods and that their signatures are the same.
@@ -554,12 +598,12 @@ func checkMissingChildren(node *Node) error {
 	}
 
 	if len(missing) == 1 {
-		return fmt.Errorf("%q should be followed by %s", node.Path(), missing[0])
+		return fmt.Errorf("expected %s", missing[0])
 	}
 	if len(missing) > 5 {
 		missing = append(missing[:5], "...")
 	}
-	return fmt.Errorf("%q should be followed by one of %s", node.Path(), strings.Join(missing, ", "))
+	return fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
 }
 
 // If we're missing any positionals and they're required, return an error.

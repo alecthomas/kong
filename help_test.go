@@ -49,13 +49,13 @@ func TestHelp(t *testing.T) {
 	)
 
 	t.Run("Full", func(t *testing.T) {
-		require.Panics(t, func() {
+		require.PanicsWithValue(t, true, func() {
 			_, err := app.Parse([]string{"--help"})
 			require.NoError(t, err)
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `Usage:  test-app --required <command>
+		require.Equal(t, `Usage: test-app --required <command>
 
 A test app.
 
@@ -85,17 +85,18 @@ Run "test-app <command> --help" for more information on a command.
 	t.Run("Selected", func(t *testing.T) {
 		exited = false
 		w.Truncate(0)
-		require.Panics(t, func() {
+		require.PanicsWithValue(t, true, func() {
 			_, err := app.Parse([]string{"two", "hello", "--help"})
 			require.NoError(t, err)
 		})
 		require.True(t, exited)
 		t.Log(w.String())
-		require.Equal(t, `Usage:  test-app two <three> --required --required-two --required-three
+		require.Equal(t, `Usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
 
 Flags:
+  --help              Show context-sensitive help.
   --string=STRING     A string flag.
   --bool              A bool flag with very long help that wraps a lot and is
                       verbose and is really verbose.

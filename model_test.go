@@ -20,7 +20,7 @@ func TestModelApplicationCommands(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	actual := []string{}
-	for _, cmd := range p.Model.Leaves() {
+	for _, cmd := range p.Model.Leaves(false) {
 		actual = append(actual, cmd.Path())
 	}
 	require.Equal(t, []string{"one two", "one three <four>"}, actual)

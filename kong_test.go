@@ -207,6 +207,28 @@ func TestOptionalArg(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestOptionalArgWithDefault(t *testing.T) {
+	var cli struct {
+		Arg string `kong:"arg,optional,default='moo'"`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "moo", cli.Arg)
+}
+
+func TestArgWithDefaultIsOptional(t *testing.T) {
+	var cli struct {
+		Arg string `kong:"arg,default='moo'"`
+	}
+
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "moo", cli.Arg)
+}
+
 func TestRequiredArg(t *testing.T) {
 	var cli struct {
 		Arg string `kong:"arg"`

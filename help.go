@@ -13,38 +13,43 @@ const (
 	defaultColumnPadding = 4
 )
 
-// HelpPrinterOptions for HelpPrinters.
-type HelpPrinterOptions struct {
+// HelpOptions for HelpPrinters.
+type HelpOptions struct {
+	// Don't print top-level usage summary.
+	NoAppSummary bool
+
 	// Write a one-line summary of the context.
 	Summary bool
 
-	// Write help in a more compact form, but still fully-specified.
+	// Write help in a more compact, but still fully-specified, form.
 	Compact bool
 }
 
 // HelpPrinter is used to print context-sensitive help.
-type HelpPrinter func(options HelpPrinterOptions, ctx *Context) error
+type HelpPrinter func(options HelpOptions, ctx *Context) error
 
 // DefaultHelpPrinter is the default HelpPrinter.
-func DefaultHelpPrinter(options HelpPrinterOptions, ctx *Context) error {
+func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 	if ctx.Empty() {
 		options.Summary = false
 	}
 	w := newHelpWriter(ctx, options)
 	selected := ctx.Selected()
 	if selected == nil {
-		printApp(w, ctx.App.Model)
+		printApp(w, ctx.Model)
 	} else {
-		printCommand(w, ctx.App.Model, selected)
+		printCommand(w, ctx.Model, selected)
 	}
-	return w.Write(ctx.App.Stdout)
+	return w.Write(ctx.Stdout)
 }
 
 func printApp(w *helpWriter, app *Application) {
-	w.Printf("Usage:  %s", app.Summary())
-	printNodeDetail(w, &app.Node)
-	cmds := app.Leaves()
-	if len(cmds) > 0 {
+	if !w.NoAppSummary {
+		w.Printf("Usage: %s%s", app.Name, app.Summary())
+	}
+	printNodeDetail(w, app.Node)
+	cmds := app.Leaves(true)
+	if len(cmds) > 0 && app.HelpFlag != nil {
 		w.Print("")
 		if w.Summary {
 			w.Printf(`Run "%s --help" for more information.`, app.Name)
@@ -55,11 +60,12 @@ func printApp(w *helpWriter, app *Application) {
 }
 
 func printCommand(w *helpWriter, app *Application, cmd *Command) {
-	w.Printf("Usage:  %s %s", app.Name, cmd.Summary())
+	if !w.NoAppSummary {
+		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
+	}
 	printNodeDetail(w, cmd)
-	if w.Summary {
-		w.Print("")
-		w.Printf(`Run "%s %s --help" for more information.`, app.Name, cmd.Path())
+	if w.Summary && app.HelpFlag != nil {
+		w.Printf(`Run "%s %s --help" for more information.`, app.Name, cmd.FullPath())
 	}
 }
 
@@ -76,12 +82,12 @@ func printNodeDetail(w *helpWriter, node *Node) {
 		w.Print("Arguments:")
 		writePositionals(w.Indent(), node.Positional)
 	}
-	if flags := node.AllFlags(); len(flags) > 0 {
+	if flags := node.AllFlags(true); len(flags) > 0 {
 		w.Print("")
 		w.Print("Flags:")
 		writeFlags(w.Indent(), flags)
 	}
-	cmds := node.Leaves()
+	cmds := node.Leaves(true)
 	if len(cmds) > 0 {
 		w.Print("")
 		w.Print("Commands:")
@@ -114,16 +120,16 @@ type helpWriter struct {
 	indent string
 	width  int
 	lines  *[]string
-	HelpPrinterOptions
+	HelpOptions
 }
 
-func newHelpWriter(ctx *Context, options HelpPrinterOptions) *helpWriter {
+func newHelpWriter(ctx *Context, options HelpOptions) *helpWriter {
 	lines := []string{}
 	w := &helpWriter{
-		indent:             "",
-		width:              guessWidth(ctx.App.Stdout),
-		lines:              &lines,
-		HelpPrinterOptions: options,
+		indent:      "",
+		width:       guessWidth(ctx.Stdout),
+		lines:       &lines,
+		HelpOptions: options,
 	}
 	return w
 }
@@ -137,7 +143,7 @@ func (h *helpWriter) Print(text string) {
 }
 
 func (h *helpWriter) Indent() *helpWriter {
-	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, HelpPrinterOptions: h.HelpPrinterOptions}
+	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, HelpOptions: h.HelpOptions}
 }
 
 func (h *helpWriter) String() string {
