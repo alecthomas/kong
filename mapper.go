@@ -383,16 +383,17 @@ func SplitEscaped(s string, sep rune) (out []string) {
 	escaped := false
 	token := ""
 	for _, ch := range s {
-		if escaped {
+		switch {
+		case escaped:
 			token += string(ch)
 			escaped = false
-		} else if ch == '\\' {
+		case ch == '\\':
 			escaped = true
-		} else if ch == sep && !escaped {
+		case ch == sep && !escaped:
 			out = append(out, token)
 			token = ""
 			escaped = false
-		} else {
+		default:
 			token += string(ch)
 		}
 	}

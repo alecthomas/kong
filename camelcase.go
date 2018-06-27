@@ -55,7 +55,7 @@ func camelCase(src string) (entries []string) {
 	// split into fields based on class of unicode character
 	for _, r := range src {
 		var class int
-		switch true {
+		switch {
 		case unicode.IsLower(r):
 			class = 1
 		case unicode.IsUpper(r):
