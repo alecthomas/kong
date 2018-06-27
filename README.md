@@ -18,6 +18,7 @@
 1. [Maps](#maps)
 1. [Custom named types](#custom-named-types)
 1. [Supported tags](#supported-tags)
+1. [Variable interpolation](#variable-interpolation)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
     1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
     1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
@@ -313,8 +314,8 @@ function `NamedMapper(name, mapper)`.
 
 | Name              | Description                                       |
 |-------------------|---------------------------------------------------|
-| `file`            | A path. ~ expansion is applied.                   |
-| `existingfile`    | An existing path. ~ expansion is applied.         |
+| `path`            | A path. ~ expansion is applied.                   |
+| `existingfile`    | An existing file. ~ expansion is applied.         |
 | `existingdir`     | An existing directory. ~ expansion is applied.    |
 
 
@@ -348,6 +349,41 @@ Both can coexist with standard Tag parsing.
 | `hidden`               | If present, command or flag is hidden.      |
 | `format:"X"`           | Format for parsing input, if supported.     |
 | `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting. |
+| `enum:"X,Y,..."`       |
+
+## Variable interpolation
+
+Kong supports limited variable interpolation into help strings, enum lists and
+default values.
+
+Variables are in the form:
+
+    ${<name>}
+
+Variables are set with the `Vars(map[string]string)` option. Undefined
+variable references in the grammar will result in an error at construction
+time.
+
+When interpolating into flag or argument help strings, some extra variables
+are defined from the value itself:
+
+    ${default}
+    ${enum}
+
+eg.
+
+```go
+type cli struct {
+  Config string `type:"path" default:"${config_file}"`
+}
+
+func main() {
+  kong.Parse(&cli,
+    kong.Vars(map[string]string{
+      "config_file": "~/.app.conf",
+    }))
+}
+```
 
 ## Modifying Kong's behaviour
 

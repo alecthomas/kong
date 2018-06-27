@@ -512,3 +512,24 @@ func TestRun(t *testing.T) {
 	err = ctx.Run("ERROR")
 	require.Error(t, err)
 }
+
+func TestInterpolationIntoModel(t *testing.T) {
+	var cli struct {
+		Flag    string `default:"${default}" help:"Help, I need ${somebody}" enum:"${enum}"`
+		EnumRef string `enum:"a,b" help:"One of ${enum}"`
+	}
+	_, err := kong.New(&cli)
+	require.Error(t, err)
+	p, err := kong.New(&cli, kong.Vars(map[string]string{
+		"default":  "Some default value.",
+		"somebody": "chickens!",
+		"enum":     "a,b,c,d",
+	}))
+	require.NoError(t, err)
+	flag := p.Model.Flags[1]
+	flag2 := p.Model.Flags[2]
+	require.Equal(t, "Some default value.", flag.Default)
+	require.Equal(t, "Help, I need chickens!", flag.Help)
+	require.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
+	require.Equal(t, "One of a,b", flag2.Help)
+}

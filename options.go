@@ -12,6 +12,16 @@ import (
 // An Option applies optional changes to the Kong application.
 type Option func(k *Kong) error
 
+// Vars sets the variables to use for interpolation into help strings and default values.
+//
+// See README for details.
+func Vars(vars map[string]string) Option {
+	return func(k *Kong) error {
+		k.vars = vars
+		return nil
+	}
+}
+
 // Exit overrides the function used to terminate. This is useful for testing or interactive use.
 func Exit(exit func(int)) Option {
 	return func(k *Kong) error {

@@ -51,6 +51,7 @@ type Kong struct {
 	help          HelpPrinter
 	helpOptions   HelpOptions
 	helpFlag      *Flag
+	vars          map[string]string
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -67,6 +68,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		before:    map[reflect.Value]HookFunc{},
 		registry:  NewRegistry().RegisterDefaults(),
 		resolvers: []ResolverFunc{Envars()},
+		vars:      map[string]string{},
 	}
 
 	for _, option := range options {
@@ -88,13 +90,69 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k.Model.HelpFlag = k.helpFlag
 
 	for _, option := range k.postBuildOptions {
-		if err := option(k); err != nil {
+		if err = option(k); err != nil {
 			return nil, err
 		}
 	}
 	k.postBuildOptions = nil
 
+	if err = k.interpolate(k.Model.Node); err != nil {
+		return nil, err
+	}
+
 	return k, nil
+}
+
+// Interpolate variables into model.
+func (k *Kong) interpolate(node *Node) (err error) {
+	node.Help, err = interpolate(node.Help, k.vars)
+	if err != nil {
+		return fmt.Errorf("help for %s: %s", node.Path(), err)
+	}
+	for _, flag := range node.Flags {
+		if err = k.interpolateValue(flag.Value); err != nil {
+			return err
+		}
+	}
+	for _, pos := range node.Positional {
+		if err = k.interpolateValue(pos); err != nil {
+			return err
+		}
+	}
+	for _, child := range node.Children {
+		if err = k.interpolate(child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (k *Kong) interpolateValue(value *Value) (err error) {
+	if value.Default, err = interpolate(value.Default, k.vars); err != nil {
+		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
+	}
+	if value.Enum, err = interpolate(value.Enum, k.vars); err != nil {
+		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
+	}
+	vars := mergeVars(k.vars, map[string]string{
+		"default": value.Default,
+		"enum":    value.Enum,
+	})
+	if value.Help, err = interpolate(value.Help, vars); err != nil {
+		return fmt.Errorf("help for %s: %s", value.Summary(), err)
+	}
+	return nil
+}
+
+func mergeVars(base, extra map[string]string) map[string]string {
+	out := make(map[string]string, len(base)+len(extra))
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range extra {
+		out[k] = v
+	}
+	return out
 }
 
 // Provide additional builtin flags, if any.
