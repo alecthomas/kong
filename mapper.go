@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+var (
+	mapperValueType = reflect.TypeOf((*MapperValue)(nil)).Elem()
+	boolMapperType  = reflect.TypeOf((*BoolMapper)(nil)).Elem()
+)
+
 // DecodeContext is passed to a Mapper's Decode().
 //
 // It contains the Value being decoded into and the Scanner to parse from.
@@ -29,17 +34,40 @@ func (r *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
 	}
 }
 
+// MapperValue may be implemented by fields in order to provide custom mapping.
+type MapperValue interface {
+	Decode(ctx *DecodeContext) error
+}
+
+type mapperValueAdapter struct {
+	isBool bool
+}
+
+func (m *mapperValueAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
+	if target.Type().Implements(mapperValueType) {
+		return target.Interface().(MapperValue).Decode(ctx)
+	}
+	return target.Addr().Interface().(MapperValue).Decode(ctx)
+}
+
+func (m *mapperValueAdapter) IsBool() bool {
+	return m.isBool
+}
+
 // A Mapper represents how a field is mapped from command-line values to Go.
 //
 // Mappers can be associated with concrete fields via pointer, reflect.Type, reflect.Kind, or via a "type" tag.
+//
+// Additionally, if a type implements this interface, it will be used.
 type Mapper interface {
 	// Decode ctx.Value with ctx.Scanner into target.
 	Decode(ctx *DecodeContext, target reflect.Value) error
 }
 
 // A BoolMapper is a Mapper to a value that is a boolean.
+//
+// This is used solely for formatting help.
 type BoolMapper interface {
-	Mapper
 	IsBool() bool
 }
 
@@ -78,6 +106,14 @@ func (r *Registry) ForNamedValue(name string, value reflect.Value) Mapper {
 	return r.ForValue(value)
 }
 
+// ForValue looks up the Mapper for a reflect.Value.
+func (r *Registry) ForValue(value reflect.Value) Mapper {
+	if mapper, ok := r.values[value]; ok {
+		return mapper
+	}
+	return r.ForType(value.Type())
+}
+
 // ForNamedType finds a mapper for a type with a user-specified name.
 //
 // Will return nil if a mapper can not be determined.
@@ -88,18 +124,16 @@ func (r *Registry) ForNamedType(name string, typ reflect.Type) Mapper {
 	return r.ForType(typ)
 }
 
-// ForValue looks up the Mapper for a reflect.Value.
-func (r *Registry) ForValue(value reflect.Value) Mapper {
-	if mapper, ok := r.values[value]; ok {
-		return mapper
-	}
-	return r.ForType(value.Type())
-}
-
 // ForType finds a mapper from a type, by type, then kind.
 //
 // Will return nil if a mapper can not be determined.
 func (r *Registry) ForType(typ reflect.Type) Mapper {
+	// Check if the type implements MapperValue.
+	for _, impl := range []reflect.Type{typ, reflect.PtrTo(typ)} {
+		if impl.Implements(mapperValueType) {
+			return &mapperValueAdapter{impl.Implements(boolMapperType)}
+		}
+	}
 	var mapper Mapper
 	var ok bool
 	if mapper, ok = r.types[typ]; ok {

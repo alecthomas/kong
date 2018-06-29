@@ -120,3 +120,22 @@ func TestSliceConsumesRemainingPositionalArgs(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"ls", "-lart"}, cli.Remainder)
 }
+
+type mappedValue struct {
+	decoded string
+}
+
+func (m *mappedValue) Decode(ctx *kong.DecodeContext) error {
+	m.decoded = ctx.Scan.PopValue("mapped")
+	return nil
+}
+
+func TestMapperValue(t *testing.T) {
+	var cli struct {
+		Value mappedValue `arg:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"foo"})
+	require.NoError(t, err)
+	require.Equal(t, "foo", cli.Value.decoded)
+}

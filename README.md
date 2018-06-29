@@ -16,7 +16,8 @@
 1. [Terminating positional arguments](#terminating-positional-arguments)
 1. [Slices](#slices)
 1. [Maps](#maps)
-1. [Custom named types](#custom-named-types)
+1. [Custom named decoders](#custom-named-decoders)
+1. [Custom decoders](#custom-decoders)
 1. [Supported tags](#supported-tags)
 1. [Variable interpolation](#variable-interpolation)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
@@ -306,7 +307,7 @@ var CLI struct {
 }
 ```
 
-## Custom named types
+## Custom named decoders
 
 Kong includes a number of builtin custom type mappers. These can be used by
 specifying the tag `type:"<type>"`. They are registered with the option
@@ -323,6 +324,11 @@ Slices and maps treat type tags specially. For slices, the `type:""` tag
 specifies the element type. For maps, the tag has the format
 `tag:"[<key>]:[<value>]"` where either may be omitted.
 
+
+## Custom decoders
+
+If a field implements the [MapperValue](https://godoc.org/github.com/alecthomas/kong#MapperValue)
+interface it will be used to decode arguments into the field.
 
 ## Supported tags
 

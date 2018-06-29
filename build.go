@@ -70,8 +70,8 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 			name = strings.ToLower(dashedString(ft.Name))
 		}
 
-		// Nested structs are either commands or args.
-		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) {
+		// Nested structs are either commands or args, unless they implement the Mapper interface.
+		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) && k.registry.ForValue(fv) == nil {
 			typ := CommandNode
 			if tag.Arg {
 				typ = ArgumentNode
