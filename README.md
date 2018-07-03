@@ -366,7 +366,7 @@ Variables are in the form:
 
     ${<name>}
 
-Variables are set with the `Vars(map[string]string)` option. Undefined
+Variables are set with the `Vars{"key": "value", ...}` option. Undefined
 variable references in the grammar will result in an error at construction
 time.
 
@@ -385,9 +385,9 @@ type cli struct {
 
 func main() {
   kong.Parse(&cli,
-    kong.Vars(map[string]string{
+    kong.Vars{
       "config_file": "~/.app.conf",
-    }))
+    })
 }
 ```
 

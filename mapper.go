@@ -150,7 +150,7 @@ func (r *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
 	return r
 }
 
-// RegisterName registeres a mapper to be used if the value mapper has a "type" tag matching name.
+// RegisterName registers a mapper to be used if the value mapper has a "type" tag matching name.
 //
 // eg.
 //

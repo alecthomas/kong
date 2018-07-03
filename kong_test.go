@@ -520,11 +520,11 @@ func TestInterpolationIntoModel(t *testing.T) {
 	}
 	_, err := kong.New(&cli)
 	require.Error(t, err)
-	p, err := kong.New(&cli, kong.Vars(map[string]string{
+	p, err := kong.New(&cli, kong.Vars{
 		"default":  "Some default value.",
 		"somebody": "chickens!",
 		"enum":     "a,b,c,d",
-	}))
+	})
 	require.NoError(t, err)
 	flag := p.Model.Flags[1]
 	flag2 := p.Model.Flags[2]

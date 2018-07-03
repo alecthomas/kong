@@ -10,20 +10,28 @@ import (
 )
 
 // An Option applies optional changes to the Kong application.
-type Option func(k *Kong) error
+type Option interface {
+	Apply(k *Kong) error
+}
+
+// OptionFunc is function that adheres to the Option interface.
+type OptionFunc func(k *Kong) error
+
+func (o OptionFunc) Apply(k *Kong) error { return o(k) } // nolint: golint
 
 // Vars sets the variables to use for interpolation into help strings and default values.
 //
 // See README for details.
-func Vars(vars map[string]string) Option {
-	return func(k *Kong) error {
-		k.vars = vars
-		return nil
-	}
+type Vars map[string]string
+
+// Apply lets Vars act as an Option.
+func (v Vars) Apply(k *Kong) error {
+	k.vars = v
+	return nil
 }
 
 // Exit overrides the function used to terminate. This is useful for testing or interactive use.
-func Exit(exit func(int)) Option {
+func Exit(exit func(int)) OptionFunc {
 	return func(k *Kong) error {
 		k.Exit = exit
 		return nil
@@ -31,7 +39,7 @@ func Exit(exit func(int)) Option {
 }
 
 // NoDefaultHelp disables the default help flags.
-func NoDefaultHelp() Option {
+func NoDefaultHelp() OptionFunc {
 	return func(k *Kong) error {
 		k.noDefaultHelp = true
 		return nil
@@ -39,29 +47,29 @@ func NoDefaultHelp() Option {
 }
 
 // Name overrides the application name.
-func Name(name string) Option {
+func Name(name string) OptionFunc {
 	return func(k *Kong) error {
-		k.postBuildOptions = append(k.postBuildOptions, func(k *Kong) error {
+		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(func(k *Kong) error {
 			k.Model.Name = name
 			return nil
-		})
+		}))
 		return nil
 	}
 }
 
 // Description sets the application description.
-func Description(description string) Option {
+func Description(description string) OptionFunc {
 	return func(k *Kong) error {
-		k.postBuildOptions = append(k.postBuildOptions, func(k *Kong) error {
+		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(func(k *Kong) error {
 			k.Model.Help = description
 			return nil
-		})
+		}))
 		return nil
 	}
 }
 
 // TypeMapper registers a mapper to a type.
-func TypeMapper(typ reflect.Type, mapper Mapper) Option {
+func TypeMapper(typ reflect.Type, mapper Mapper) OptionFunc {
 	return func(k *Kong) error {
 		k.registry.RegisterType(typ, mapper)
 		return nil
@@ -69,7 +77,7 @@ func TypeMapper(typ reflect.Type, mapper Mapper) Option {
 }
 
 // KindMapper registers a mapper to a kind.
-func KindMapper(kind reflect.Kind, mapper Mapper) Option {
+func KindMapper(kind reflect.Kind, mapper Mapper) OptionFunc {
 	return func(k *Kong) error {
 		k.registry.RegisterKind(kind, mapper)
 		return nil
@@ -77,7 +85,7 @@ func KindMapper(kind reflect.Kind, mapper Mapper) Option {
 }
 
 // ValueMapper registers a mapper to a field value.
-func ValueMapper(ptr interface{}, mapper Mapper) Option {
+func ValueMapper(ptr interface{}, mapper Mapper) OptionFunc {
 	return func(k *Kong) error {
 		k.registry.RegisterValue(ptr, mapper)
 		return nil
@@ -85,7 +93,7 @@ func ValueMapper(ptr interface{}, mapper Mapper) Option {
 }
 
 // NamedMapper registers a mapper to a name.
-func NamedMapper(name string, mapper Mapper) Option {
+func NamedMapper(name string, mapper Mapper) OptionFunc {
 	return func(k *Kong) error {
 		k.registry.RegisterName(name, mapper)
 		return nil
@@ -93,7 +101,7 @@ func NamedMapper(name string, mapper Mapper) Option {
 }
 
 // Writers overrides the default writers. Useful for testing or interactive use.
-func Writers(stdout, stderr io.Writer) Option {
+func Writers(stdout, stderr io.Writer) OptionFunc {
 	return func(k *Kong) error {
 		k.Stdout = stdout
 		k.Stderr = stderr
@@ -112,7 +120,7 @@ type HookFunc func(ctx *Context, path *Path) error
 //
 // Note that the hook will be called once for each time the corresponding node is encountered. This means that if a flag
 // is passed twice, its hook will be called twice.
-func Hook(ptr interface{}, hook HookFunc) Option {
+func Hook(ptr interface{}, hook HookFunc) OptionFunc {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
 		panic("expected a pointer")
@@ -124,7 +132,7 @@ func Hook(ptr interface{}, hook HookFunc) Option {
 }
 
 // Help printer to use.
-func Help(help HelpPrinter) Option {
+func Help(help HelpPrinter) OptionFunc {
 	return func(k *Kong) error {
 		k.help = help
 		return nil
@@ -132,7 +140,7 @@ func Help(help HelpPrinter) Option {
 }
 
 // ConfigureHelp sets the HelpOptions to use for printing help.
-func ConfigureHelp(options HelpOptions) Option {
+func ConfigureHelp(options HelpOptions) OptionFunc {
 	return func(k *Kong) error {
 		k.helpOptions = options
 		return nil
@@ -140,7 +148,7 @@ func ConfigureHelp(options HelpOptions) Option {
 }
 
 // UsageOnError configures Kong to display context-sensitive usage if FatalIfErrorf is called with an error.
-func UsageOnError() Option {
+func UsageOnError() OptionFunc {
 	return func(k *Kong) error {
 		k.usageOnError = true
 		return nil
@@ -148,7 +156,7 @@ func UsageOnError() Option {
 }
 
 // ClearResolvers clears all existing resolvers.
-func ClearResolvers() Option {
+func ClearResolvers() OptionFunc {
 	return func(k *Kong) error {
 		k.resolvers = nil
 		return nil
@@ -156,7 +164,7 @@ func ClearResolvers() Option {
 }
 
 // Resolver registers flag resolvers.
-func Resolver(resolvers ...ResolverFunc) Option {
+func Resolver(resolvers ...ResolverFunc) OptionFunc {
 	return func(k *Kong) error {
 		k.resolvers = append(k.resolvers, resolvers...)
 		return nil
@@ -173,7 +181,7 @@ type ConfigurationFunc func(r io.Reader) (ResolverFunc, error)
 // Note: The JSON function is a ConfigurationFunc.
 //
 // ~ expansion will occur on the provided paths.
-func Configuration(loader ConfigurationFunc, paths ...string) Option {
+func Configuration(loader ConfigurationFunc, paths ...string) OptionFunc {
 	return func(k *Kong) error {
 		for _, path := range paths {
 			path = expandPath(path)

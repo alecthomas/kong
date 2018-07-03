@@ -72,7 +72,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	}
 
 	for _, option := range options {
-		if err := option(k); err != nil {
+		if err := option.Apply(k); err != nil {
 			return nil, err
 		}
 	}
@@ -90,7 +90,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k.Model.HelpFlag = k.helpFlag
 
 	for _, option := range k.postBuildOptions {
-		if err = option(k); err != nil {
+		if err = option.Apply(k); err != nil {
 			return nil, err
 		}
 	}
