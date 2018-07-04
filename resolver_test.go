@@ -125,33 +125,6 @@ func TestJSONBasic(t *testing.T) {
 	require.True(t, cli.Bool)
 }
 
-func TestResolvedValueTriggersHooks(t *testing.T) {
-	var cli struct {
-		Int int
-	}
-	resolver := func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
-		if flag.Name == "int" {
-			return "1", nil
-		}
-		return "", nil
-	}
-	hooked := 0
-	p := mustNew(t, &cli, kong.Resolver(resolver), kong.Hook(&cli.Int, func(ctx *kong.Context, path *kong.Path) error {
-		hooked++
-		return nil
-	}))
-	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, 1, cli.Int)
-	require.Equal(t, 1, hooked)
-
-	hooked = 0
-	_, err = p.Parse([]string{"--int=2"})
-	require.NoError(t, err)
-	require.Equal(t, 2, cli.Int)
-	require.Equal(t, 1, hooked)
-}
-
 type testUppercaseMapper struct{}
 
 func (testUppercaseMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {

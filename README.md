@@ -10,6 +10,7 @@
 1. [Command handling](#command-handling)
     1. [Switch on the command string](#switch-on-the-command-string)
     1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+1. [BeforeHook\(\), AfterHook\(\) and the Bind\(\) option](#beforehook-afterhook-and-the-bind-option)
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Branching positional arguments](#branching-positional-arguments)
@@ -26,7 +27,7 @@
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
     1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-    1. [`Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed](#hookfield-hookfunc---callback-hooks-to-execute-when-the-command-line-is-parsed)
+    1. [`Bindings(...)` - bind values for callback hooks anr Run\(\) methods](#bindings---bind-values-for-callback-hooks-anr-run-methods)
     1. [Other options](#other-options)
 
 <!-- /MarkdownTOC -->
@@ -165,6 +166,8 @@ A more robust approach is to break each command out into their own structs:
 3. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
 4. Call `kong.Context.Run(params...)` to call the selected parsed command.
 
+Note that `Run()` method arguments may also be provided by the `Bind(...)` option (see below).
+
 There's a full example emulating part of the Docker CLI [here](https://github.com/alecthomas/kong/tree/master/_examples/docker).
 
 eg.
@@ -205,6 +208,40 @@ func main() {
   ctx.FatalIfErrorf(err)
 }
 
+```
+
+## BeforeHook(), AfterHook() and the Bind() option
+
+If a node in the grammar has a `BeforeHook(...) error` and/or `AfterHook(...) error` method, those methods will
+be called before validation/assignment and after validation/assignment, respectively.
+
+The `--help` flag is implemented with a `BeforeHook`.
+
+Arguments to hooks are provided via the `Bind(...)` option. `*Kong`, `*Context` and `*Path` are also bound.
+
+eg.
+
+```go
+// A flag with a hook that, if triggered, will set the debug loggers output to stdout.
+var debugFlag bool
+
+func (d debugFlag) BeforeHook(logger *log.Logger) error {
+  logger.SetOutput(os.Stdout)
+  return nil
+}
+
+var cli struct {
+  Debug debugFlag `help:"Enable debug logging."`
+}
+
+func main() {
+  // Debug logger going to discard.
+  logger := log.New(ioutil.Discard, "", log.LstdFlags)
+
+  ctx := kong.Parse(&cli, kong.Bind(logger))
+
+  // ...
+}
 ```
 
 ## Flags
@@ -450,26 +487,8 @@ The default help output is usually sufficient, but if not there are two solution
 1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
 2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
 
-### `Hook(&field, HookFunc)` - callback hooks to execute when the command-line is parsed
+### `Bindings(...)` - bind values for callback hooks anr Run() methods
 
-Hooks are callback functions that are bound to a node in the command-line and executed at parse time, before structural validation and assignment.
-
-eg.
-
-```go
-app := kong.Must(&CLI, kong.Hook(&CLI.Debug, func(ctx *Context, path *Path) error {
-  log.SetLevel(DEBUG)
-  return nil
-}))
-```
-
-Note: it is generally less verbose to use an imperative approach to building command-lines, eg.
-
-```go
-if CLI.Debug {
-  log.SetLevel(DEBUG)
-}
-```
 
 But under some circumstances, hooks can be useful.
 

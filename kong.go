@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	expectedRunReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
+	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
 )
 
 // Error reported by Kong.
@@ -42,7 +42,7 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	before    map[reflect.Value]HookFunc
+	bindings  bindings
 	resolvers []ResolverFunc
 	registry  *Registry
 
@@ -65,11 +65,13 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		Exit:      os.Exit,
 		Stdout:    os.Stdout,
 		Stderr:    os.Stderr,
-		before:    map[reflect.Value]HookFunc{},
 		registry:  NewRegistry().RegisterDefaults(),
 		resolvers: []ResolverFunc{Envars()},
 		vars:      map[string]string{},
+		bindings:  bindings{},
 	}
+
+	options = append(options, Bind(k))
 
 	for _, option := range options {
 		if err := option.Apply(k); err != nil {
@@ -155,13 +157,26 @@ func mergeVars(base, extra map[string]string) map[string]string {
 	return out
 }
 
+type helpValue bool
+
+func (h helpValue) BeforeHook(ctx *Context) error {
+	options := ctx.Kong.helpOptions
+	options.Summary = false
+	err := ctx.Kong.help(options, ctx)
+	if err != nil {
+		return err
+	}
+	ctx.Kong.Exit(1)
+	return nil
+}
+
 // Provide additional builtin flags, if any.
 func (k *Kong) extraFlags() []*Flag {
 	if k.noDefaultHelp {
 		return nil
 	}
-	helpValue := false
-	value := reflect.ValueOf(&helpValue).Elem()
+	var helpTarget helpValue
+	value := reflect.ValueOf(&helpTarget).Elem()
 	helpFlag := &Flag{
 		Value: &Value{
 			Name:   "help",
@@ -172,18 +187,7 @@ func (k *Kong) extraFlags() []*Flag {
 		},
 	}
 	helpFlag.Flag = helpFlag
-	hook := Hook(&helpValue, func(ctx *Context, path *Path) error {
-		options := k.helpOptions
-		options.Summary = false
-		err := k.help(options, ctx)
-		if err != nil {
-			return err
-		}
-		k.Exit(1)
-		return nil
-	})
 	k.helpFlag = helpFlag
-	_ = hook(k)
 	return []*Flag{helpFlag}
 }
 
@@ -200,11 +204,11 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = k.applyHooks(ctx); err != nil {
-		return nil, &ParseError{error: err, Context: ctx}
-	}
 	if ctx.Error != nil {
 		return nil, &ParseError{error: ctx.Error, Context: ctx}
+	}
+	if err = k.applyHook(ctx, "BeforeHook"); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Validate(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
@@ -212,33 +216,36 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if _, err = ctx.Apply(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
+	if err = k.applyHook(ctx, "AfterHook"); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
 	return ctx, nil
 }
 
-func (k *Kong) applyHooks(ctx *Context) error {
+func (k *Kong) applyHook(ctx *Context, name string) error {
 	for _, trace := range ctx.Path {
-		var key reflect.Value
+		var value reflect.Value
 		switch {
 		case trace.App != nil:
-			key = trace.App.Target
+			value = trace.App.Target
 		case trace.Argument != nil:
-			key = trace.Argument.Target
+			value = trace.Argument.Target
 		case trace.Command != nil:
-			key = trace.Command.Target
+			value = trace.Command.Target
 		case trace.Positional != nil:
-			key = trace.Positional.Target
+			value = trace.Positional.Target
 		case trace.Flag != nil:
-			key = trace.Flag.Value.Target
+			value = trace.Flag.Value.Target
 		default:
 			panic("unsupported Path")
 		}
-		if key.IsValid() {
-			key = key.Addr()
+		method := getMethod(value, name)
+		if !method.IsValid() {
+			continue
 		}
-		if hook := k.before[key]; hook != nil {
-			if err := hook(ctx, trace); err != nil {
-				return err
-			}
+		binds := k.bindings.clone().add(ctx, trace)
+		if err := callMethod(name, value, method, binds); err != nil {
+			return err
 		}
 	}
 	return nil

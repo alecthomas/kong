@@ -475,41 +475,20 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 // The target Run() method must exist and have the type signature "Run(params...) error".
 func (c *Context) Run(params ...interface{}) (err error) {
 	defer catch(&err)
-	expectedRunSignature, err := c.validateRun(c.Model.Node, nil)
-	if err != nil {
-		return err
-	}
-	if expectedRunSignature.NumIn() != len(params) {
-		return fmt.Errorf("expected %d params but received %d; does not match target Run() signature of %s",
-			expectedRunSignature.NumIn(), len(params), expectedRunSignature)
-	}
-	for i, param := range params {
-		if reflect.TypeOf(param) != expectedRunSignature.In(i) {
-			return fmt.Errorf("param %d is of type %s but should be of type %s to match target Run() signature of %s",
-				i, reflect.TypeOf(param), expectedRunSignature.In(i), expectedRunSignature)
-		}
-	}
 	node := c.Selected()
 	if node == nil {
 		return fmt.Errorf("no command selected")
 	}
-	method, err := getRunMethod(node.Target)
-	if err != nil {
-		return err
+	method := getMethod(node.Target, "Run")
+	if !method.IsValid() {
+		return fmt.Errorf("no Run() method on %s", node.Target)
 	}
 	_, err = c.Apply()
 	if err != nil {
 		return err
 	}
-	reflectedParams := []reflect.Value{}
-	for _, param := range params {
-		reflectedParams = append(reflectedParams, reflect.ValueOf(param))
-	}
-	result := method.Call(reflectedParams)
-	if result[0].IsNil() {
-		return nil
-	}
-	return result[0].Interface().(error)
+	binds := c.Kong.bindings.clone().add(params...).add(c)
+	return callMethod("Run", node.Target, method, binds)
 }
 
 // PrintUsage to Kong's stdout.
@@ -520,45 +499,6 @@ func (c *Context) PrintUsage(summary bool) error {
 	options.Summary = summary
 	_ = c.help(options, c)
 	return nil
-}
-
-// Validate that all commands have Run() methods and that their signatures are the same.
-func (c *Context) validateRun(node *Node, signature reflect.Type) (reflect.Type, error) {
-	if node.Leaf() {
-		method, err := getRunMethod(node.Target)
-		if err != nil {
-			return nil, err
-		}
-		if signature == nil {
-			signature = method.Type()
-		} else if signature != method.Type() {
-			return nil, fmt.Errorf("Run() methods are not consistent on %s, expected %s but got %s", node.Target.Type(), signature, method.Type())
-		}
-		if signature.NumOut() != 1 || signature.Out(0) != expectedRunReturnSignature {
-			return nil, fmt.Errorf("Run() method on %s should return (error)", node.Target.Type())
-		}
-	}
-	for _, child := range node.Children {
-		if childSignature, err := c.validateRun(child, signature); err != nil {
-			return nil, err
-		} else if signature == nil {
-			signature = childSignature
-		}
-	}
-	return signature, nil
-}
-
-func getRunMethod(value reflect.Value) (reflect.Value, error) {
-	method := value.MethodByName("Run")
-	if !method.IsValid() {
-		if value.CanAddr() {
-			method = value.Addr().MethodByName("Run")
-		}
-		if !method.IsValid() {
-			return method, fmt.Errorf("no Run() method on %s", value.Type())
-		}
-	}
-	return method, nil
 }
 
 func checkMissingFlags(flags []*Flag) error {

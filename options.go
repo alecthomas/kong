@@ -109,24 +109,20 @@ func Writers(stdout, stderr io.Writer) OptionFunc {
 	}
 }
 
-// HookFunc is a callback tied to a field of the grammar, called before a value is applied.
+// Bind binds values for hooks and Run() function arguments.
 //
-// "ctx" is the current parse Context, "path" is the Path entry corresponding to the hooked value.
-type HookFunc func(ctx *Context, path *Path) error
-
-// Hook to apply before a command, flag or positional argument is encountered.
+// Any arguments passed will be available to the receiving hook functions, but may be omitted. Additionally, *Kong and
+// the current *Context will also be made available.
 //
-// "ptr" is a pointer to a field of the grammar.
+// There are two hook points:
 //
-// Note that the hook will be called once for each time the corresponding node is encountered. This means that if a flag
-// is passed twice, its hook will be called twice.
-func Hook(ptr interface{}, hook HookFunc) OptionFunc {
-	key := reflect.ValueOf(ptr)
-	if key.Kind() != reflect.Ptr {
-		panic("expected a pointer")
-	}
+// 		BeforeHook(...) error
+//   	AfterHook(...) error
+//
+// Called before validation/assignment, and immediately after validation/assignment, respectively.
+func Bind(args ...interface{}) OptionFunc {
 	return func(k *Kong) error {
-		k.before[key] = hook
+		k.bindings.add(args...)
 		return nil
 	}
 }

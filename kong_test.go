@@ -355,43 +355,64 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 	require.Equal(t, "one", ctx.Command())
 }
 
+type hookContext struct {
+	cmd    bool
+	values []string
+}
+
+type hookValue string
+
+func (h *hookValue) BeforeHook(ctx *hookContext) error {
+	ctx.values = append(ctx.values, "before:"+string(*h))
+	return nil
+}
+
+func (h *hookValue) AfterHook(ctx *hookContext) error {
+	ctx.values = append(ctx.values, "after:"+string(*h))
+	return nil
+}
+
+type hookCmd struct {
+	Two   hookValue `kong:"arg,optional"`
+	Three hookValue
+}
+
+func (h *hookCmd) BeforeHook(ctx *hookContext) error {
+	ctx.cmd = true
+	return nil
+}
+
+func (h *hookCmd) AfterHook(ctx *hookContext) error {
+	ctx.cmd = true
+	return nil
+}
+
 func TestHooks(t *testing.T) {
-	var cli struct {
-		One struct {
-			Two   string `kong:"arg,optional"`
-			Three string
-		} `kong:"cmd"`
-	}
-	type values struct {
-		one   bool
-		two   string
-		three string
-	}
-	hooked := values{}
 	var tests = []struct {
 		name   string
 		input  string
-		values values
+		values hookContext
 	}{
-		{"Command", "one", values{true, "", ""}},
-		{"Arg", "one two", values{true, "two", ""}},
-		{"Flag", "one --three=three", values{true, "", "three"}},
-		{"ArgAndFlag", "one two --three=three", values{true, "two", "three"}},
+		{"Command", "one", hookContext{true, nil}},
+		{"Arg", "one two", hookContext{true, []string{"before:", "after:two"}}},
+		{"Flag", "one --three=THREE", hookContext{true, []string{"before:", "after:THREE"}}},
+		{"ArgAndFlag", "one two --three=THREE", hookContext{true, []string{"before:", "before:", "after:two", "after:THREE"}}},
 	}
-	setOne := func(ctx *kong.Context, path *kong.Path) error { hooked.one = true; return nil }
-	setTwo := func(ctx *kong.Context, path *kong.Path) error { hooked.two = ctx.Value(path).String(); return nil }
-	setThree := func(ctx *kong.Context, path *kong.Path) error { hooked.three = ctx.Value(path).String(); return nil }
-	p := mustNew(t, &cli,
-		kong.Hook(&cli.One, setOne),
-		kong.Hook(&cli.One.Two, setTwo),
-		kong.Hook(&cli.One.Three, setThree))
+
+	var cli struct {
+		One hookCmd `cmd:""`
+	}
+
+	ctx := &hookContext{}
+	p := mustNew(t, &cli, kong.Bind(ctx))
 
 	for _, test := range tests {
-		hooked = values{}
+		*ctx = hookContext{}
+		cli.One = hookCmd{}
 		t.Run(test.name, func(t *testing.T) {
 			_, err := p.Parse(strings.Split(test.input, " "))
 			require.NoError(t, err)
-			require.Equal(t, test.values, hooked)
+			require.Equal(t, &test.values, ctx)
 		})
 	}
 }
