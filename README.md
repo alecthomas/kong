@@ -27,7 +27,7 @@
     1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
     1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-    1. [`Bindings(...)` - bind values for callback hooks anr Run\(\) methods](#bindings---bind-values-for-callback-hooks-anr-run-methods)
+    1. [`Bind(...)` - bind values for callback hooks and Run\(\) methods](#bind---bind-values-for-callback-hooks-and-run-methods)
     1. [Other options](#other-options)
 
 <!-- /MarkdownTOC -->
@@ -487,10 +487,9 @@ The default help output is usually sufficient, but if not there are two solution
 1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
 2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
 
-### `Bindings(...)` - bind values for callback hooks anr Run() methods
+### `Bind(...)` - bind values for callback hooks and Run() methods
 
-
-But under some circumstances, hooks can be useful.
+See the [section on hooks](#beforehook-afterhook-and-the-bind-option) for details.
 
 ### Other options
 
