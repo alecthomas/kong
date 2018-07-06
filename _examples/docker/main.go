@@ -2,24 +2,36 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/alecthomas/kong"
 )
 
 type Globals struct {
-	Config    string   `help:"Location of client config files" default:"~/.docker" type:"path"`
-	Debug     bool     `short:"D" help:"Enable debug mode"`
-	Host      []string `short:"H" help:"Daemon socket(s) to connect to"`
-	LogLevel  string   `short:"l" help:"Set the logging level (debug|info|warn|error|fatal)" default:"info"`
-	TLS       bool     `help:"Use TLS; implied by --tls-verify"`
-	TLSCACert string   `name:"tls-ca-cert" help:"Trust certs signed only by this CA" default:"~/.docker/ca.pem" type:"path"`
-	TLSCert   string   `help:"Path to TLS certificate file" default:"~/.docker/cert.pem" type:"path"`
-	TLSKey    string   `help:"Path to TLS key file" default:"~/.docker/key.pem" type:"path"`
-	TLSVerify bool     `help:"Use TLS and verify the remote"`
+	Config    string      `help:"Location of client config files" default:"~/.docker" type:"path"`
+	Debug     bool        `short:"D" help:"Enable debug mode"`
+	Host      []string    `short:"H" help:"Daemon socket(s) to connect to"`
+	LogLevel  string      `short:"l" help:"Set the logging level (debug|info|warn|error|fatal)" default:"info"`
+	TLS       bool        `help:"Use TLS; implied by --tls-verify"`
+	TLSCACert string      `name:"tls-ca-cert" help:"Trust certs signed only by this CA" default:"~/.docker/ca.pem" type:"path"`
+	TLSCert   string      `help:"Path to TLS certificate file" default:"~/.docker/cert.pem" type:"path"`
+	TLSKey    string      `help:"Path to TLS key file" default:"~/.docker/key.pem" type:"path"`
+	TLSVerify bool        `help:"Use TLS and verify the remote"`
+	Version   VersionFlag `name:"version" help:"Print version information and quit"`
+}
+
+type VersionFlag string
+
+func (v VersionFlag) Decode(ctx *kong.DecodeContext) error { return nil }
+func (v VersionFlag) IsBool() bool                         { return true }
+func (v VersionFlag) BeforeHook(app *kong.Kong, vars kong.Vars) error {
+	fmt.Println(vars["version"])
+	app.Exit(0)
+	return nil
 }
 
 type CLI struct {
 	Globals
-	VersionFlag bool `name:"version" help:"Print version information and quit"`
 
 	Attach  AttachCmd  `cmd help:"Attach local standard input, output, and error streams to a running container"`
 	Build   BuildCmd   `cmd help:"Build an image from a Dockerfile"`
@@ -65,7 +77,12 @@ type CLI struct {
 }
 
 func main() {
-	cli := CLI{}
+	cli := CLI{
+		Globals: Globals{
+			Version: VersionFlag("0.1.1"),
+		},
+	}
+
 	ctx := kong.Parse(&cli,
 		kong.Name("docker"),
 		kong.Description("A self-sufficient runtime for containers"),
@@ -73,11 +90,9 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 		}),
-		//
-		kong.Hook(&cli.VersionFlag, func(ctx *kong.Context, path *kong.Path) error {
-			ctx.Printf("1.0.0").Exit(0)
-			return nil
-		}))
+		kong.Vars{
+			"version": "0.0.1",
+		})
 	err := ctx.Run(&cli.Globals)
 	ctx.FatalIfErrorf(err)
 }

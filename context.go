@@ -470,10 +470,10 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
 }
 
-// Run executes the corresponding Run(params...) method on the target command selected by the parsed args.
+// Run executes the Run() method on the selected command, which must exist.
 //
-// The target Run() method must exist and have the type signature "Run(params...) error".
-func (c *Context) Run(params ...interface{}) (err error) {
+// Any passed values will be bindable to arguments of the target Run() method.
+func (c *Context) Run(bindings ...interface{}) (err error) {
 	defer catch(&err)
 	node := c.Selected()
 	if node == nil {
@@ -487,7 +487,7 @@ func (c *Context) Run(params ...interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	binds := c.Kong.bindings.clone().add(params...).add(c)
+	binds := c.Kong.bindings.clone().add(bindings...).add(c)
 	return callMethod("Run", node.Target, method, binds)
 }
 

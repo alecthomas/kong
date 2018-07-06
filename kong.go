@@ -51,7 +51,7 @@ type Kong struct {
 	help          HelpPrinter
 	helpOptions   HelpOptions
 	helpFlag      *Flag
-	vars          map[string]string
+	vars          Vars
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -67,7 +67,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		Stderr:    os.Stderr,
 		registry:  NewRegistry().RegisterDefaults(),
 		resolvers: []ResolverFunc{Envars()},
-		vars:      map[string]string{},
+		vars:      Vars{},
 		bindings:  bindings{},
 	}
 
@@ -101,6 +101,8 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	if err = k.interpolate(k.Model.Node); err != nil {
 		return nil, err
 	}
+
+	k.bindings.add(k.vars)
 
 	return k, nil
 }

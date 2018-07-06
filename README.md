@@ -18,7 +18,7 @@
 1. [Slices](#slices)
 1. [Maps](#maps)
 1. [Custom named decoders](#custom-named-decoders)
-1. [Custom decoders](#custom-decoders)
+1. [Custom decoders \(mappers\)](#custom-decoders-mappers)
 1. [Supported tags](#supported-tags)
 1. [Variable interpolation](#variable-interpolation)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
@@ -162,11 +162,13 @@ This has the advantage that it is convenient, but the downside that if you modif
 A more robust approach is to break each command out into their own structs:
 
 1. Break leaf commands out into separate structs.
-2. Attach a `Run(...) error` method to all leaf commands (`Run()` signatures must match).
+2. Attach a `Run(...) error` method to all leaf commands.
 3. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
-4. Call `kong.Context.Run(params...)` to call the selected parsed command.
+4. Call `kong.Context.Run(bindings...)` to call the selected parsed command.
 
-Note that `Run()` method arguments may also be provided by the `Bind(...)` option (see below).
+In addition to values bound with the `kong.Bind(...)` option, any values
+passed through to `kong.Context.Run(...)` are also bindable to the target's
+`Run()` arguments.
 
 There's a full example emulating part of the Docker CLI [here](https://github.com/alecthomas/kong/tree/master/_examples/docker).
 
@@ -362,7 +364,7 @@ specifies the element type. For maps, the tag has the format
 `tag:"[<key>]:[<value>]"` where either may be omitted.
 
 
-## Custom decoders
+## Custom decoders (mappers)
 
 If a field implements the [MapperValue](https://godoc.org/github.com/alecthomas/kong#MapperValue)
 interface it will be used to decode arguments into the field.
