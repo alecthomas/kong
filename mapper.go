@@ -284,37 +284,47 @@ func mapDecoder(r *Registry) MapperFunc {
 			target.Set(reflect.MakeMap(target.Type()))
 		}
 		el := target.Type()
-		token := ctx.Scan.PopValue("map")
-		parts := strings.SplitN(token, "=", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("expected \"<key>=<value>\" but got %q", token)
+		var childScanner *Scanner
+		if ctx.Value.Flag != nil {
+			// If decoding a flag, we need an argument.
+			childScanner = Scan(SplitEscaped(ctx.Scan.PopValue("map"), ';')...)
+		} else {
+			tokens := ctx.Scan.PopWhile(func(t Token) bool { return t.IsValue() })
+			childScanner = ScanFromTokens(tokens...)
 		}
-		key, value := parts[0], parts[1]
-
-		keyTypeName, valueTypeName := "", ""
-		if typ := ctx.Value.Tag.Type; typ != "" {
-			parts := strings.Split(typ, ":")
+		for !childScanner.Peek().IsEOL() {
+			token := childScanner.PopValue("map")
+			parts := strings.SplitN(token, "=", 2)
 			if len(parts) != 2 {
-				return fmt.Errorf("type:\"\" on map field must be in the form \"[<keytype>]:[<valuetype>]\"")
+				return fmt.Errorf("expected \"<key>=<value>\" but got %q", token)
 			}
-			keyTypeName, valueTypeName = parts[0], parts[1]
-		}
+			key, value := parts[0], parts[1]
 
-		keyScanner := Scan(key)
-		keyDecoder := r.ForNamedType(keyTypeName, el.Key())
-		keyValue := reflect.New(el.Key()).Elem()
-		if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
-			return fmt.Errorf("invalid map key %q", key)
-		}
+			keyTypeName, valueTypeName := "", ""
+			if typ := ctx.Value.Tag.Type; typ != "" {
+				parts := strings.Split(typ, ":")
+				if len(parts) != 2 {
+					return fmt.Errorf("type:\"\" on map field must be in the form \"[<keytype>]:[<valuetype>]\"")
+				}
+				keyTypeName, valueTypeName = parts[0], parts[1]
+			}
 
-		valueScanner := Scan(value)
-		valueDecoder := r.ForNamedType(valueTypeName, el.Elem())
-		valueValue := reflect.New(el.Elem()).Elem()
-		if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
-			return fmt.Errorf("invalid map value %q", value)
-		}
+			keyScanner := Scan(key)
+			keyDecoder := r.ForNamedType(keyTypeName, el.Key())
+			keyValue := reflect.New(el.Key()).Elem()
+			if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
+				return fmt.Errorf("invalid map key %q", key)
+			}
 
-		target.SetMapIndex(keyValue, valueValue)
+			valueScanner := Scan(value)
+			valueDecoder := r.ForNamedType(valueTypeName, el.Elem())
+			valueValue := reflect.New(el.Elem()).Elem()
+			if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
+				return fmt.Errorf("invalid map value %q", value)
+			}
+
+			target.SetMapIndex(keyValue, valueValue)
+		}
 		return nil
 	}
 }

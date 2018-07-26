@@ -346,6 +346,8 @@ var CLI struct {
 }
 ```
 
+For flags, multiple key+value pairs should be separated by `;` eg. `--set="key1=value1;key2=value2"`.
+
 ## Custom named decoders
 
 Kong includes a number of builtin custom type mappers. These can be used by

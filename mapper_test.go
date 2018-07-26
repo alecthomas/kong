@@ -99,6 +99,16 @@ func TestMapWithNamedTypes(t *testing.T) {
 	require.Equal(t, map[string]string{"FIRST": "5s", "SECOND": "10s"}, cli.TypedKey)
 }
 
+func TestMapWithMultipleValues(t *testing.T) {
+	var cli struct {
+		Value map[string]string
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--value=a=b;c=d"})
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"a": "b", "c": "d"}, cli.Value)
+}
+
 func TestURLMapper(t *testing.T) {
 	var cli struct {
 		URL *url.URL `arg:""`
