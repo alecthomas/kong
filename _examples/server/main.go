@@ -8,12 +8,11 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/chzyer/readline"
 	"github.com/gliderlabs/ssh"
 	"github.com/google/shlex"
 	"github.com/kr/pty"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/alecthomas/colour"
 	"github.com/alecthomas/kong"
