@@ -524,6 +524,9 @@ func checkMissingChildren(node *Node) error {
 		}
 	}
 	for _, child := range node.Children {
+		if child.Hidden {
+			continue
+		}
 		if child.Argument != nil {
 			if !child.Argument.Required {
 				continue
