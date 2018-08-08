@@ -307,7 +307,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 
 			// After positional arguments have been consumed, check commands next...
 			for _, branch := range node.Children {
-				if branch.Type == CommandNode {
+				if branch.Type == CommandNode && !branch.Hidden {
 					candidates = append(candidates, branch.Name)
 				}
 				if branch.Type == CommandNode && branch.Name == token.Value {
