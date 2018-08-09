@@ -201,10 +201,14 @@ func writeFlags(w *helpWriter, groups [][]*Flag) {
 }
 
 func writeTwoColumns(w *helpWriter, padding int, rows [][2]string) {
+	maxLeft := 375 * w.width / 1000
+	if maxLeft < 30 {
+		maxLeft = 30
+	}
 	// Find size of first column.
 	leftSize := 0
 	for _, row := range rows {
-		if c := len(row[0]); c > leftSize && c < 30 {
+		if c := len(row[0]); c > leftSize && c < maxLeft {
 			leftSize = c
 		}
 	}
@@ -217,7 +221,7 @@ func writeTwoColumns(w *helpWriter, padding int, rows [][2]string) {
 		lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
 
 		line := fmt.Sprintf("%-*s", leftSize, row[0])
-		if len(row[0]) < 30 {
+		if len(row[0]) < maxLeft {
 			line += fmt.Sprintf("%*s%s", padding, "", lines[0])
 			lines = lines[1:]
 		}
