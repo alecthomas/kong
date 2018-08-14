@@ -554,3 +554,15 @@ func TestInterpolationIntoModel(t *testing.T) {
 	require.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
 	require.Equal(t, "One of a,b", flag2.Help)
 }
+
+func TestErrorMissingArgs(t *testing.T) {
+	var cli struct {
+		One string `arg:""`
+		Two string `arg:""`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.Error(t, err)
+	require.Equal(t, "expected \"<one> <two>\"", err.Error())
+}

@@ -518,11 +518,17 @@ func checkMissingFlags(flags []*Flag) error {
 
 func checkMissingChildren(node *Node) error {
 	missing := []string{}
+
+	missingArgs := []string{}
 	for _, arg := range node.Positional {
 		if arg.Required && !arg.Set {
-			missing = append(missing, strconv.Quote(arg.Summary()))
+			missingArgs = append(missingArgs, arg.Summary())
 		}
 	}
+	if len(missingArgs) > 0 {
+		missing = append(missing, strconv.Quote(strings.Join(missingArgs, " ")))
+	}
+
 	for _, child := range node.Children {
 		if child.Hidden {
 			continue

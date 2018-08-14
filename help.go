@@ -71,7 +71,8 @@ func printCommand(w *helpWriter, app *Application, cmd *Command) {
 	}
 	printNodeDetail(w, cmd)
 	if w.Summary && app.HelpFlag != nil {
-		w.Printf(`Run "%s %s --help" for more information.`, app.Name, cmd.FullPath())
+		w.Print("")
+		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
 	}
 }
 
