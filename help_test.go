@@ -9,6 +9,16 @@ import (
 	"github.com/alecthomas/kong"
 )
 
+// nolint: govet
+type threeArg struct {
+	RequiredThree bool   `required`
+	Three         string `arg`
+}
+
+func (threeArg) Help() string {
+	return `Detailed help provided through the HelpProvider interface.`
+}
+
 func TestHelp(t *testing.T) {
 	// nolint: govet
 	var cli struct {
@@ -26,10 +36,7 @@ func TestHelp(t *testing.T) {
 			Flag        string `help:"Nested flag under two."`
 			RequiredTwo bool   `required`
 
-			Three struct {
-				RequiredThree bool   `required`
-				Three         string `arg`
-			} `arg help:"Sub-sub-arg."`
+			Three threeArg `arg help:"Sub-sub-arg."`
 
 			Four struct {
 			} `cmd help:"Sub-sub-command."`
@@ -94,6 +101,8 @@ Run "test-app <command> --help" for more information on a command.
 		require.Equal(t, `Usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
+
+Detailed help provided through the HelpProvider interface.
 
 Flags:
   --help              Show context-sensitive help.

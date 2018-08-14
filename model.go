@@ -35,7 +35,8 @@ type Node struct {
 	Type       NodeType
 	Parent     *Node
 	Name       string
-	Help       string
+	Help       string // Short help displayed in summaries.
+	Detail     string // Detailed help displayed when describing command/arg alone.
 	Hidden     bool
 	Flags      []*Flag
 	Positional []*Positional

@@ -25,6 +25,12 @@ type HelpOptions struct {
 	Compact bool
 }
 
+// HelpProvider can be implemented by commands/args to provide detailed help.
+type HelpProvider interface {
+	// This string is formatted by go/doc and thus has the same formatting rules.
+	Help() string
+}
+
 // HelpPrinter is used to print context-sensitive help.
 type HelpPrinter func(options HelpOptions, ctx *Context) error
 
@@ -76,6 +82,10 @@ func printNodeDetail(w *helpWriter, node *Node) {
 	}
 	if w.Summary {
 		return
+	}
+	if node.Detail != "" {
+		w.Print("")
+		w.Wrap(node.Detail)
 	}
 	if len(node.Positional) > 0 {
 		w.Print("")

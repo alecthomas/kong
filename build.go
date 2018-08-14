@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var helpProviderType = reflect.TypeOf((*HelpProvider)(nil)).Elem()
+
 func build(k *Kong, ast interface{}) (app *Application, err error) {
 	defer catch(&err)
 	v := reflect.ValueOf(ast)
@@ -106,6 +108,10 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	child.Parent = node
 	child.Help = tag.Help
 	child.Hidden = tag.Hidden
+
+	if fv.Type().Implements(helpProviderType) {
+		child.Detail = fv.Interface().(HelpProvider).Help()
+	}
 
 	// A branching argument. This is a bit hairy, as we let buildNode() do the parsing, then check that
 	// a positional argument is provided to the child, and move it to the branching argument field.
