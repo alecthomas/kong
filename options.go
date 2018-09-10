@@ -2,7 +2,6 @@ package kong
 
 import (
 	"io"
-	"os"
 	"os/user"
 	"path/filepath"
 	"reflect"
@@ -116,8 +115,8 @@ func Writers(stdout, stderr io.Writer) OptionFunc {
 //
 // There are two hook points:
 //
-// 		BeforeHook(...) error
-//   	AfterHook(...) error
+// 		BeforeApply(...) error
+//   	AfterApply(...) error
 //
 // Called before validation/assignment, and immediately after validation/assignment, respectively.
 func Bind(args ...interface{}) OptionFunc {
@@ -179,17 +178,12 @@ type ConfigurationFunc func(r io.Reader) (ResolverFunc, error)
 // ~ expansion will occur on the provided paths.
 func Configuration(loader ConfigurationFunc, paths ...string) OptionFunc {
 	return func(k *Kong) error {
+		k.loader = loader
 		for _, path := range paths {
-			path = expandPath(path)
-			r, err := os.Open(path) // nolint: gas
-			if err != nil {
-				continue
-			}
-			resolver, err := loader(r)
-			if err == nil {
+			resolver, _ := k.LoadConfig(path)
+			if resolver != nil {
 				k.resolvers = append(k.resolvers, resolver)
 			}
-			_ = r.Close()
 		}
 		return nil
 	}

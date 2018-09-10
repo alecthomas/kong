@@ -43,6 +43,7 @@ type Kong struct {
 	Stderr io.Writer
 
 	bindings  bindings
+	loader    ConfigurationFunc
 	resolvers []ResolverFunc
 	registry  *Registry
 
@@ -161,7 +162,7 @@ func mergeVars(base, extra map[string]string) map[string]string {
 
 type helpValue bool
 
-func (h helpValue) BeforeHook(ctx *Context) error {
+func (h helpValue) BeforeApply(ctx *Context) error {
 	options := ctx.Kong.helpOptions
 	options.Summary = false
 	err := ctx.Kong.help(options, ctx)
@@ -209,7 +210,13 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if ctx.Error != nil {
 		return nil, &ParseError{error: ctx.Error, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "BeforeHook"); err != nil {
+	if err = k.applyHook(ctx, "BeforeResolve"); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
+	if err = ctx.Resolve(); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
+	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Validate(); err != nil {
@@ -218,7 +225,7 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if _, err = ctx.Apply(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "AfterHook"); err != nil {
+	if err = k.applyHook(ctx, "AfterApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	return ctx, nil
@@ -304,6 +311,20 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		_ = k.help(options, err.Context)
 	}
 	k.Exit(1)
+}
+
+// LoadConfig from path using the loader configured via Configuration(loader).
+//
+// "path" will have ~/ expanded.
+func (k *Kong) LoadConfig(path string) (ResolverFunc, error) {
+	path = expandPath(path)
+	r, err := os.Open(path) // nolint: gas
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	return k.loader(r)
 }
 
 func catch(err *error) {

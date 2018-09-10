@@ -10,7 +10,7 @@
 1. [Command handling](#command-handling)
     1. [Switch on the command string](#switch-on-the-command-string)
     1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
-1. [BeforeHook\(\), AfterHook\(\) and the Bind\(\) option](#beforehook-afterhook-and-the-bind-option)
+1. [BeforeApply\(\), AfterApply\(\) and the Bind\(\) option](#BeforeApply-AfterApply-and-the-bind-option)
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
 1. [Branching positional arguments](#branching-positional-arguments)
@@ -212,12 +212,11 @@ func main() {
 
 ```
 
-## BeforeHook(), AfterHook() and the Bind() option
+## Hooks: BeforeResolve(), BeforeSet(), AfterSet() and the Bind() option
 
-If a node in the grammar has a `BeforeHook(...) error` and/or `AfterHook(...) error` method, those methods will
-be called before validation/assignment and after validation/assignment, respectively.
+If a node in the grammar has a `BeforeResolve(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those methods will be called before validation/assignment and after validation/assignment, respectively.
 
-The `--help` flag is implemented with a `BeforeHook`.
+The `--help` flag is implemented with a `BeforeApply` hook.
 
 Arguments to hooks are provided via the `Bind(...)` option. `*Kong`, `*Context` and `*Path` are also bound.
 
@@ -227,7 +226,7 @@ eg.
 // A flag with a hook that, if triggered, will set the debug loggers output to stdout.
 var debugFlag bool
 
-func (d debugFlag) BeforeHook(logger *log.Logger) error {
+func (d debugFlag) BeforeApply(logger *log.Logger) error {
   logger.SetOutput(os.Stdout)
   return nil
 }
@@ -493,7 +492,7 @@ The default help output is usually sufficient, but if not there are two solution
 
 ### `Bind(...)` - bind values for callback hooks and Run() methods
 
-See the [section on hooks](#beforehook-afterhook-and-the-bind-option) for details.
+See the [section on hooks](#BeforeApply-AfterApply-and-the-bind-option) for details.
 
 ### Other options
 

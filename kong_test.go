@@ -362,12 +362,12 @@ type hookContext struct {
 
 type hookValue string
 
-func (h *hookValue) BeforeHook(ctx *hookContext) error {
+func (h *hookValue) BeforeApply(ctx *hookContext) error {
 	ctx.values = append(ctx.values, "before:"+string(*h))
 	return nil
 }
 
-func (h *hookValue) AfterHook(ctx *hookContext) error {
+func (h *hookValue) AfterApply(ctx *hookContext) error {
 	ctx.values = append(ctx.values, "after:"+string(*h))
 	return nil
 }
@@ -377,12 +377,12 @@ type hookCmd struct {
 	Three hookValue
 }
 
-func (h *hookCmd) BeforeHook(ctx *hookContext) error {
+func (h *hookCmd) BeforeApply(ctx *hookContext) error {
 	ctx.cmd = true
 	return nil
 }
 
-func (h *hookCmd) AfterHook(ctx *hookContext) error {
+func (h *hookCmd) AfterApply(ctx *hookContext) error {
 	ctx.cmd = true
 	return nil
 }

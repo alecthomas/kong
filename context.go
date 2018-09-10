@@ -50,15 +50,16 @@ type Context struct {
 	// Error that occurred during trace, if any.
 	Error error
 
-	values map[*Value]reflect.Value // Temporary values during tracing.
-	scan   *Scanner
+	values    map[*Value]reflect.Value // Temporary values during tracing.
+	resolvers []ResolverFunc           // Extra context-specific resolvers.
+	scan      *Scanner
 }
 
-// Trace path of "args" through the gammar tree.
+// Trace path of "args" through the grammar tree.
 //
 // The returned Context will include a Path of all commands, arguments, positionals and flags.
 //
-// Note that this will not modify the target grammar. Call Apply() to do so.
+// Call Resolve() after this, then finally Apply() to write parsed values into the target grammar.
 func Trace(k *Kong, args []string) (*Context, error) {
 	c := &Context{
 		Kong: k,
@@ -70,7 +71,7 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		scan:   Scan(args...),
 	}
 	c.Error = c.trace(c.Model.Node)
-	return c, c.traceResolvers()
+	return c, nil
 }
 
 // Value returns the value for a particular path element.
@@ -173,14 +174,25 @@ func (c *Context) Command() string {
 	return strings.Join(command, " ")
 }
 
-// FlagValue returns the set value of a flag, if it was encountered and exists.
-func (c *Context) FlagValue(flag *Flag) reflect.Value {
+// AddResolver adds a context-specific resolver.
+//
+// This is most useful in the BeforeResolve() hook.
+func (c *Context) AddResolver(resolver ResolverFunc) {
+	c.resolvers = append(c.resolvers, resolver)
+}
+
+// FlagValue returns the set value of a flag if it was encountered and exists.
+func (c *Context) FlagValue(flag *Flag) interface{} {
 	for _, trace := range c.Path {
 		if trace.Flag == flag {
-			return c.values[trace.Flag.Value]
+			v, ok := c.values[trace.Flag.Value]
+			if !ok {
+				return nil
+			}
+			return v.Interface()
 		}
 	}
-	return reflect.Value{}
+	return nil
 }
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
@@ -363,9 +375,13 @@ func findPotentialCandidates(needle string, haystack []string, format string, ar
 	return fmt.Errorf("%s", prefix)
 }
 
-// Walk through flags from existing nodes in the path.
-func (c *Context) traceResolvers() error {
-	if len(c.resolvers) == 0 {
+// Resolve walks through the traced path, applying resolvers to any unset flags.
+func (c *Context) Resolve() error {
+	// Combine application-level resolvers and context resolvers.
+	resolvers := []ResolverFunc{}
+	resolvers = append(resolvers, c.Kong.resolvers...)
+	resolvers = append(resolvers, c.resolvers...)
+	if len(resolvers) == 0 {
 		return nil
 	}
 
@@ -376,7 +392,7 @@ func (c *Context) traceResolvers() error {
 			if _, ok := c.values[flag.Value]; ok {
 				continue
 			}
-			for _, resolver := range c.resolvers {
+			for _, resolver := range resolvers {
 				s, err := resolver(c, path, flag)
 				if err != nil {
 					return err
