@@ -86,5 +86,5 @@ func camelCase(src string) (entries []string) {
 			entries = append(entries, string(s))
 		}
 	}
-	return
+	return entries
 }
