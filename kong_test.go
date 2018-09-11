@@ -566,3 +566,14 @@ func TestErrorMissingArgs(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, "expected \"<one> <two>\"", err.Error())
 }
+
+func TestBoolOverride(t *testing.T) {
+	var cli struct {
+		Flag bool `default:"true"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag=false"})
+	require.NoError(t, err)
+	_, err = p.Parse([]string{"--flag", "false"})
+	require.Error(t, err)
+}

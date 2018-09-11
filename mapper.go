@@ -211,7 +211,12 @@ func (r *Registry) RegisterDefaults() *Registry {
 type boolMapper struct{}
 
 func (boolMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
-	target.SetBool(true)
+	if ctx.Scan.Peek().Type == FlagValueToken {
+		token := ctx.Scan.Pop()
+		target.SetBool(token.Value == "true")
+	} else {
+		target.SetBool(true)
+	}
 	return nil
 }
 func (boolMapper) IsBool() bool { return true }
