@@ -33,3 +33,5 @@ issues:
     - 'Error return value of .(.*\.Help|.*\.MarkFlagRequired|(os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked'
     - 'exported method (.*\.MarshalJSON|.*\.UnmarshalJSON) should have comment or be unexported'
     - 'composite literal uses unkeyed fields'
+    - 'bad syntax for struct tag key'
+    - 'bad syntax for struct tag pair'

@@ -590,3 +590,26 @@ func TestAnonymousPrefix(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "moo", cli.Flag)
 }
+
+type TestInterface interface {
+	SomeMethod()
+}
+
+type TestImpl struct {
+	Flag string
+}
+
+func (t *TestImpl) SomeMethod() {}
+
+func TestEmbedInterface(t *testing.T) {
+	type CLI struct {
+		SomeFlag string
+		TestInterface
+	}
+	cli := &CLI{TestInterface: &TestImpl{}}
+	p := mustNew(t, cli)
+	_, err := p.Parse([]string{"--some-flag=foo", "--flag=yes"})
+	require.NoError(t, err)
+	require.Equal(t, "foo", cli.SomeFlag)
+	require.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag)
+}

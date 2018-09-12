@@ -42,17 +42,22 @@ type flattenedField struct {
 }
 
 func flattenedFields(v reflect.Value) (out []flattenedField) {
+	v = reflect.Indirect(v)
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
 		fv := v.Field(i)
 		tag := parseTag(fv, ft)
 		if ft.Anonymous {
+			if fv.Kind() == reflect.Interface {
+				fv = fv.Elem()
+			}
 			sub := flattenedFields(fv)
-			// Assign parent group to children, if they're not otherwise set.
 			for _, subf := range sub {
+				// Assign parent if it's not already set.
 				if subf.tag.Group == "" {
 					subf.tag.Group = tag.Group
 				}
+				// Accumulate prefixes.
 				subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
 			}
 			out = append(out, sub...)
