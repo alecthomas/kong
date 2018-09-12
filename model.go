@@ -37,6 +37,7 @@ type Node struct {
 	Name       string
 	Help       string // Short help displayed in summaries.
 	Detail     string // Detailed help displayed when describing command/arg alone.
+	Group      string
 	Hidden     bool
 	Flags      []*Flag
 	Positional []*Positional
@@ -284,6 +285,7 @@ type Positional = Value
 // A Flag represents a command-line flag.
 type Flag struct {
 	*Value
+	Group       string // Logical grouping when displaying. May also be used by configuration loaders to group options logically.
 	PlaceHolder string
 	Env         string
 	Short       rune

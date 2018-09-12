@@ -395,7 +395,9 @@ Both can coexist with standard Tag parsing.
 | `hidden`               | If present, command or flag is hidden.      |
 | `format:"X"`           | Format for parsing input, if supported.     |
 | `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting. |
-| `enum:"X,Y,..."`       |
+| `enum:"X,Y,..."`       | Set of valid values allowed for this flag.  |
+| `group:"X"`            | Logical group for a flag or command.        |
+| `prefix:"X"`           | Prefix for all sub-flags.                   |
 
 ## Variable interpolation
 

@@ -25,6 +25,8 @@ type Tag struct {
 	Hidden      bool
 	Sep         rune
 	Enum        string
+	Group       string
+	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string]string
@@ -137,6 +139,8 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetRune("sep")
+	t.Group = t.Get("group")
+	t.Prefix = t.Get("prefix")
 	if t.Sep == 0 {
 		if t.Get("sep") == "none" {
 			t.Sep = -1

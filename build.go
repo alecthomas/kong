@@ -38,20 +38,30 @@ func dashedString(s string) string {
 type flattenedField struct {
 	field reflect.StructField
 	value reflect.Value
+	tag   *Tag
 }
 
 func flattenedFields(v reflect.Value) (out []flattenedField) {
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
 		fv := v.Field(i)
+		tag := parseTag(fv, ft)
 		if ft.Anonymous {
-			out = append(out, flattenedFields(fv)...)
+			sub := flattenedFields(fv)
+			// Assign parent group to children, if they're not otherwise set.
+			for _, subf := range sub {
+				if subf.tag.Group == "" {
+					subf.tag.Group = tag.Group
+				}
+				subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
+			}
+			out = append(out, sub...)
 			continue
 		}
 		if !fv.CanSet() {
 			continue
 		}
-		out = append(out, flattenedField{field: ft, value: fv})
+		out = append(out, flattenedField{field: ft, value: fv, tag: tag})
 	}
 	return
 }
@@ -65,11 +75,12 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 		ft := field.field
 		fv := field.value
 
-		tag := parseTag(fv, ft)
-
+		tag := field.tag
 		name := tag.Name
 		if name == "" {
-			name = strings.ToLower(dashedString(ft.Name))
+			name = tag.Prefix + strings.ToLower(dashedString(ft.Name))
+		} else {
+			name = tag.Prefix + name
 		}
 
 		// Nested structs are either commands or args, unless they implement the Mapper interface.
@@ -108,6 +119,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	child.Parent = node
 	child.Help = tag.Help
 	child.Hidden = tag.Hidden
+	child.Group = tag.Group
 
 	if fv.Type().Implements(helpProviderType) {
 		child.Detail = fv.Interface().(HelpProvider).Help()
@@ -176,6 +188,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			Short:       tag.Short,
 			PlaceHolder: tag.PlaceHolder,
 			Env:         tag.Env,
+			Group:       tag.Group,
 		}
 		value.Flag = flag
 		node.Flags = append(node.Flags, flag)

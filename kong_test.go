@@ -577,3 +577,16 @@ func TestBoolOverride(t *testing.T) {
 	_, err = p.Parse([]string{"--flag", "false"})
 	require.Error(t, err)
 }
+
+func TestAnonymousPrefix(t *testing.T) {
+	type Anonymous struct {
+		Flag string
+	}
+	var cli struct {
+		Anonymous `prefix:"anon-"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--anon-flag=moo"})
+	require.NoError(t, err)
+	require.Equal(t, "moo", cli.Flag)
+}
