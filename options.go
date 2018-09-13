@@ -126,6 +126,16 @@ func Bind(args ...interface{}) OptionFunc {
 	}
 }
 
+// BindTo allows binding of implementations to interfaces.
+//
+// 		BindTo(impl, (*iface)(nil))
+func BindTo(impl, iface interface{}) OptionFunc {
+	return func(k *Kong) error {
+		k.bindings[reflect.TypeOf(iface).Elem()] = reflect.ValueOf(impl)
+		return nil
+	}
+}
+
 // Help printer to use.
 func Help(help HelpPrinter) OptionFunc {
 	return func(k *Kong) error {
