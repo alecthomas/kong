@@ -199,6 +199,16 @@ func Configuration(loader ConfigurationFunc, paths ...string) OptionFunc {
 	}
 }
 
+// ShowErrorStack configures FatalIfErrorf to print errors with %+v.
+//
+// See https://godoc.org/github.com/pkg/errors#hdr-Formatted_printing_of_errors
+func ShowErrorStack() OptionFunc {
+	return func(k *Kong) error {
+		k.showErrorStack = true
+		return nil
+	}
+}
+
 func expandPath(path string) string {
 	if filepath.IsAbs(path) {
 		return path

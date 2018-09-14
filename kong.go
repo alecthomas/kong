@@ -47,12 +47,13 @@ type Kong struct {
 	resolvers []ResolverFunc
 	registry  *Registry
 
-	noDefaultHelp bool
-	usageOnError  bool
-	help          HelpPrinter
-	helpOptions   HelpOptions
-	helpFlag      *Flag
-	vars          Vars
+	noDefaultHelp  bool
+	usageOnError   bool
+	showErrorStack bool
+	help           HelpPrinter
+	helpOptions    HelpOptions
+	helpFlag       *Flag
+	vars           Vars
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -298,9 +299,14 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	if err == nil {
 		return
 	}
-	msg := err.Error()
+	msg := ""
 	if len(args) > 0 {
-		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error()
+		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": "
+	}
+	if k.showErrorStack {
+		msg += fmt.Sprintf("%+v", err)
+	} else {
+		msg += err.Error()
 	}
 	k.Errorf("%s", msg)
 	// Maybe display usage information.
