@@ -613,3 +613,16 @@ func TestEmbedInterface(t *testing.T) {
 	require.Equal(t, "foo", cli.SomeFlag)
 	require.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag)
 }
+
+func TestExcludedField(t *testing.T) {
+	var cli struct {
+		Flag     string
+		Excluded string `kong:"-"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag=foo"})
+	require.NoError(t, err)
+	_, err = p.Parse([]string{"--excluded=foo"})
+	require.Error(t, err)
+}

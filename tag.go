@@ -10,6 +10,7 @@ import (
 
 // Tag represents the parsed state of Kong tags in a struct field tag.
 type Tag struct {
+	Ignored     bool // Field is ignored by Kong. ie. kong:"-"
 	Cmd         bool
 	Arg         bool
 	Required    bool
@@ -39,7 +40,7 @@ type tagChars struct {
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
 var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
 
-func parseTagItems(s string, chr tagChars) map[string]string {
+func parseTagItems(tagString string, chr tagChars) map[string]string {
 	d := map[string]string{}
 	key := []rune{}
 	value := []rune{}
@@ -53,7 +54,7 @@ func parseTagItems(s string, chr tagChars) map[string]string {
 		inKey = true
 	}
 
-	runes := []rune(s)
+	runes := []rune(tagString)
 	for idx := 0; idx < len(runes); idx++ {
 		r := runes[idx]
 		next := rune(0)
@@ -82,7 +83,7 @@ func parseTagItems(s string, chr tagChars) map[string]string {
 				if next == chr.sep || eof {
 					continue
 				}
-				fail("%v has an unexpected char at pos %v", s, idx)
+				fail("%v has an unexpected char at pos %v", tagString, idx)
 			} else {
 				quotes = true
 				continue
@@ -95,7 +96,7 @@ func parseTagItems(s string, chr tagChars) map[string]string {
 		}
 	}
 	if quotes {
-		fail("%v is not quoted properly", s)
+		fail("%v is not quoted properly", tagString)
 	}
 
 	add()
@@ -113,6 +114,9 @@ func getTagInfo(ft reflect.StructField) (string, tagChars) {
 }
 
 func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
+	if ft.Tag.Get("kong") == "-" {
+		return &Tag{Ignored: true, items: map[string]string{}}
+	}
 	s, chars := getTagInfo(ft)
 	t := &Tag{
 		items: parseTagItems(s, chars),

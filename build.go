@@ -47,6 +47,9 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 		ft := v.Type().Field(i)
 		fv := v.Field(i)
 		tag := parseTag(fv, ft)
+		if tag.Ignored {
+			continue
+		}
 		if ft.Anonymous {
 			if fv.Kind() == reflect.Interface {
 				fv = fv.Elem()
@@ -68,7 +71,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 		}
 		out = append(out, flattenedField{field: ft, value: fv, tag: tag})
 	}
-	return
+	return out
 }
 
 func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool) *Node {
