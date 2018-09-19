@@ -138,3 +138,14 @@ func TestTagSetOnCommand(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), `A key from somewhere.`)
 }
+
+func TestTagSetOnFlag(t *testing.T) {
+	var cli struct {
+		Flag string `set:"where=somewhere" help:"A key from ${where}."`
+	}
+	buf := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), `A key from somewhere.`)
+}

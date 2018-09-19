@@ -626,3 +626,19 @@ func TestExcludedField(t *testing.T) {
 	_, err = p.Parse([]string{"--excluded=foo"})
 	require.Error(t, err)
 }
+
+func TestUnnamedFieldEmbeds(t *testing.T) {
+	type Embed struct {
+		Flag string
+	}
+	var cli struct {
+		One Embed `prefix:"one-" embed:""`
+		Two Embed `prefix:"two-" embed:""`
+	}
+	buf := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), `--one-flag=STRING`)
+	require.Contains(t, buf.String(), `--two-flag=STRING`)
+}

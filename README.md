@@ -414,6 +414,7 @@ Tag                    | Description
 `group:"X"`            | Logical group for a flag or command.
 `prefix:"X"`           | Prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
+`embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
 
 <a id="markdown-variable-interpolation" name="variable-interpolation"></a>
 ## Variable interpolation

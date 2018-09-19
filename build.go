@@ -52,7 +52,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 		if tag.Ignored {
 			continue
 		}
-		if ft.Anonymous {
+		if ft.Anonymous || tag.Embed {
 			if fv.Kind() == reflect.Interface {
 				fv = fv.Elem()
 			}

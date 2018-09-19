@@ -29,6 +29,7 @@ type Tag struct {
 	Group       string
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
+	Embed       bool
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string][]string
@@ -151,6 +152,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Sep, _ = t.GetRune("sep")
 	t.Group = t.Get("group")
 	t.Prefix = t.Get("prefix")
+	t.Embed = t.Has("embed")
 	if t.Sep == 0 {
 		if t.Get("sep") == "none" {
 			t.Sep = -1
