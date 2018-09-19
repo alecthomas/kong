@@ -43,6 +43,7 @@ type Node struct {
 	Positional []*Positional
 	Children   []*Node
 	Target     reflect.Value // Pointer to the value in the grammar that this Node is associated with.
+	Tag        *Tag
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
@@ -169,6 +170,14 @@ func (n *Node) FullPath() string {
 		root = root.Parent
 	}
 	return strings.TrimSpace(root.Name + " " + n.Path())
+}
+
+// Vars returns the combined Vars defined by all ancestors of this Node.
+func (n *Node) Vars() Vars {
+	if n == nil {
+		return Vars{}
+	}
+	return n.Parent.Vars().CloneWith(n.Tag.Vars)
 }
 
 // Path through ancestors to this Node.

@@ -110,17 +110,18 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 // Interpolate variables into model.
 func (k *Kong) interpolate(node *Node) (err error) {
-	node.Help, err = interpolate(node.Help, k.vars)
+	vars := node.Vars()
+	node.Help, err = interpolate(node.Help, vars)
 	if err != nil {
 		return fmt.Errorf("help for %s: %s", node.Path(), err)
 	}
 	for _, flag := range node.Flags {
-		if err = k.interpolateValue(flag.Value); err != nil {
+		if err = k.interpolateValue(flag.Value, vars); err != nil {
 			return err
 		}
 	}
 	for _, pos := range node.Positional {
-		if err = k.interpolateValue(pos); err != nil {
+		if err = k.interpolateValue(pos, vars); err != nil {
 			return err
 		}
 	}
@@ -132,14 +133,15 @@ func (k *Kong) interpolate(node *Node) (err error) {
 	return nil
 }
 
-func (k *Kong) interpolateValue(value *Value) (err error) {
-	if value.Default, err = interpolate(value.Default, k.vars); err != nil {
+func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
+	vars = vars.CloneWith(value.Tag.Vars)
+	if value.Default, err = interpolate(value.Default, vars); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}
-	if value.Enum, err = interpolate(value.Enum, k.vars); err != nil {
+	if value.Enum, err = interpolate(value.Enum, vars); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
-	vars := mergeVars(k.vars, map[string]string{
+	vars = vars.CloneWith(map[string]string{
 		"default": value.Default,
 		"enum":    value.Enum,
 	})
@@ -147,17 +149,6 @@ func (k *Kong) interpolateValue(value *Value) (err error) {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}
 	return nil
-}
-
-func mergeVars(base, extra map[string]string) map[string]string {
-	out := make(map[string]string, len(base)+len(extra))
-	for k, v := range base {
-		out[k] = v
-	}
-	for k, v := range extra {
-		out[k] = v
-	}
-	return out
 }
 
 type helpValue bool
@@ -252,7 +243,7 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		if !method.IsValid() {
 			continue
 		}
-		binds := k.bindings.clone().add(ctx, trace)
+		binds := k.bindings.clone().add(ctx, trace).add(trace.Node().Vars().CloneWith(k.vars))
 		if err := callMethod(name, value, method, binds); err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package kong_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -108,4 +109,32 @@ func TestManySeps(t *testing.T) {
 	_, err := p.Parse([]string{})
 	require.NoError(t, err)
 	require.Equal(t, "hi", cli.Arg)
+}
+
+func TestTagSetOnEmbeddedStruct(t *testing.T) {
+	type Embedded struct {
+		Key string `help:"A key from ${where}."`
+	}
+	var cli struct {
+		Embedded `set:"where=somewhere"`
+	}
+	buf := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), `A key from somewhere.`)
+}
+
+func TestTagSetOnCommand(t *testing.T) {
+	type Command struct {
+		Key string `help:"A key from ${where}."`
+	}
+	var cli struct {
+		Command Command `set:"where=somewhere" cmd:""`
+	}
+	buf := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"command", "--help"})
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), `A key from somewhere.`)
 }

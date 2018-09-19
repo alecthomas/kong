@@ -29,6 +29,18 @@ func (v Vars) Apply(k *Kong) error {
 	return nil
 }
 
+// CloneWith clones the current Vars and merges "vars" onto the clone.
+func (v Vars) CloneWith(vars Vars) Vars {
+	out := Vars{}
+	for key, value := range v {
+		out[key] = value
+	}
+	for key, value := range vars {
+		out[key] = value
+	}
+	return out
+}
+
 // Exit overrides the function used to terminate. This is useful for testing or interactive use.
 func Exit(exit func(int)) OptionFunc {
 	return func(k *Kong) error {

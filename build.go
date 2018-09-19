@@ -28,6 +28,8 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 	}
 	app.Node = node
 	app.Node.Flags = append(extraFlags, app.Node.Flags...)
+	app.Tag = newEmptyTag()
+	app.Tag.Vars = k.vars
 	return app, nil
 }
 
@@ -62,6 +64,8 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 				}
 				// Accumulate prefixes.
 				subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
+				// Combine parent vars.
+				subf.tag.Vars = tag.Vars.CloneWith(subf.tag.Vars)
 			}
 			out = append(out, sub...)
 			continue
@@ -78,6 +82,7 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 	node := &Node{
 		Type:   typ,
 		Target: v,
+		Tag:    newEmptyTag(),
 	}
 	for _, field := range flattenedFields(v) {
 		ft := field.field
@@ -124,6 +129,7 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
 	child := buildNode(k, fv, typ, seenFlags)
+	child.Tag = tag
 	child.Parent = node
 	child.Help = tag.Help
 	child.Hidden = tag.Hidden

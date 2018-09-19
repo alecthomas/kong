@@ -27,10 +27,11 @@ type Tag struct {
 	Sep         rune
 	Enum        string
 	Group       string
+	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 
 	// Storage for all tag keys for arbitrary lookups.
-	items map[string]string
+	items map[string][]string
 }
 
 type tagChars struct {
@@ -40,15 +41,15 @@ type tagChars struct {
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
 var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
 
-func parseTagItems(tagString string, chr tagChars) map[string]string {
-	d := map[string]string{}
+func parseTagItems(tagString string, chr tagChars) map[string][]string {
+	d := map[string][]string{}
 	key := []rune{}
 	value := []rune{}
 	quotes := false
 	inKey := true
 
 	add := func() {
-		d[string(key)] = string(value)
+		d[string(key)] = append(d[string(key)], string(value))
 		key = []rune{}
 		value = []rune{}
 		inKey = true
@@ -113,13 +114,18 @@ func getTagInfo(ft reflect.StructField) (string, tagChars) {
 	return string(ft.Tag), bareChars
 }
 
+func newEmptyTag() *Tag {
+	return &Tag{items: map[string][]string{}}
+}
+
 func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	if ft.Tag.Get("kong") == "-" {
-		return &Tag{Ignored: true, items: map[string]string{}}
+		t := newEmptyTag()
+		t.Ignored = true
+		return t
 	}
-	s, chars := getTagInfo(ft)
 	t := &Tag{
-		items: parseTagItems(s, chars),
+		items: parseTagItems(getTagInfo(ft)),
 	}
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
@@ -152,6 +158,14 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 			t.Sep = ','
 		}
 	}
+	t.Vars = Vars{}
+	for _, set := range t.GetAll("set") {
+		parts := strings.SplitN(set, "=", 2)
+		if len(parts) == 0 {
+			fail("set should be in the form key=value but got %q", set)
+		}
+		t.Vars[parts[0]] = parts[1]
+	}
 	t.PlaceHolder = t.Get("placeholder")
 	if t.PlaceHolder == "" {
 		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
@@ -170,29 +184,38 @@ func (t *Tag) Has(k string) bool {
 //
 // Note that this will return the empty string if the tag is missing.
 func (t *Tag) Get(k string) string {
+	values := t.items[k]
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+// GetAll returns all encountered values for a tag, in the case of multiple occurrences.
+func (t *Tag) GetAll(k string) []string {
 	return t.items[k]
 }
 
 // GetBool returns true if the given tag looks like a boolean truth string.
 func (t *Tag) GetBool(k string) (bool, error) {
-	return strconv.ParseBool(t.items[k])
+	return strconv.ParseBool(t.Get(k))
 }
 
 // GetFloat parses the given tag as a float64.
 func (t *Tag) GetFloat(k string) (float64, error) {
-	return strconv.ParseFloat(t.items[k], 64)
+	return strconv.ParseFloat(t.Get(k), 64)
 }
 
 // GetInt parses the given tag as an int64.
 func (t *Tag) GetInt(k string) (int64, error) {
-	return strconv.ParseInt(t.items[k], 10, 64)
+	return strconv.ParseInt(t.Get(k), 10, 64)
 }
 
 // GetRune parses the given tag as a rune.
 func (t *Tag) GetRune(k string) (rune, error) {
-	r, _ := utf8.DecodeRuneInString(t.items[k])
+	r, _ := utf8.DecodeRuneInString(t.Get(k))
 	if r == utf8.RuneError {
-		return 0, fmt.Errorf("%v has a rune error", t.items[k])
+		return 0, fmt.Errorf("%v has a rune error", t.Get(k))
 	}
 	return r, nil
 }

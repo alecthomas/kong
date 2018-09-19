@@ -394,25 +394,26 @@ Tags can be in two forms:
 
 Both can coexist with standard Tag parsing.
 
-| Tag                    | Description                                 |
-| -----------------------| ------------------------------------------- |
-| `cmd`                  | If present, struct is a command.            |
-| `arg`                  | If present, field is an argument.           |
-| `env:"X"`              | Specify envar to use for default value.
-| `name:"X"`             | Long name, for overriding field name.       |
-| `help:"X"`             | Help text.                                  |
-| `type:"X"`             | Specify [named types](#custom-named-types) to use.                |
-| `placeholder:"X"`      | Placeholder text.                           |
-| `default:"X"`          | Default value.                              |
-| `short:"X"`            | Short name, if flag.                        |
-| `required`             | If present, flag/arg is required.           |
-| `optional`             | If present, flag/arg is optional.           |
-| `hidden`               | If present, command or flag is hidden.      |
-| `format:"X"`           | Format for parsing input, if supported.     |
-| `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting. |
-| `enum:"X,Y,..."`       | Set of valid values allowed for this flag.  |
-| `group:"X"`            | Logical group for a flag or command.        |
-| `prefix:"X"`           | Prefix for all sub-flags.                   |
+Tag                    | Description
+-----------------------| -------------------------------------------
+`cmd`                  | If present, struct is a command.
+`arg`                  | If present, field is an argument.
+`env:"X"`              | Specify envar to use for default value.
+`name:"X"`             | Long name, for overriding field name.
+`help:"X"`             | Help text.
+`type:"X"`             | Specify [named types](#custom-named-types) to use.
+`placeholder:"X"`      | Placeholder text.
+`default:"X"`          | Default value.
+`short:"X"`            | Short name, if flag.
+`required`             | If present, flag/arg is required.
+`optional`             | If present, flag/arg is optional.
+`hidden`               | If present, command or flag is hidden.
+`format:"X"`           | Format for parsing input, if supported.
+`sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
+`enum:"X,Y,..."`       | Set of valid values allowed for this flag.
+`group:"X"`            | Logical group for a flag or command.
+`prefix:"X"`           | Prefix for all sub-flags.
+`set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 
 <a id="markdown-variable-interpolation" name="variable-interpolation"></a>
 ## Variable interpolation
