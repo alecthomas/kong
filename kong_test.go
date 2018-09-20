@@ -642,3 +642,15 @@ func TestUnnamedFieldEmbeds(t *testing.T) {
 	require.Contains(t, buf.String(), `--one-flag=STRING`)
 	require.Contains(t, buf.String(), `--two-flag=STRING`)
 }
+
+func TestHooksCalledForDefault(t *testing.T) {
+	var cli struct {
+		Flag hookValue `default:"default"`
+	}
+
+	ctx := &hookContext{}
+	_, err := mustNew(t, &cli, kong.Bind(ctx)).Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "default", string(cli.Flag))
+	require.Equal(t, []string{"before:", "after:default"}, ctx.values)
+}

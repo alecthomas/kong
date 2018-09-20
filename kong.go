@@ -248,6 +248,35 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 			return err
 		}
 	}
+	// Path[0] will always be the app root.
+	return k.applyHookToDefaultFlags(ctx, ctx.Path[0].Node(), name)
+}
+
+// Call hook on any unset flags with default values.
+func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) error {
+	if node == nil {
+		return nil
+	}
+	bindings := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
+	for _, flag := range node.Flags {
+		if flag.Default == "" || ctx.values[flag.Value].IsValid() {
+			continue
+		}
+		method := getMethod(flag.Target, name)
+		if !method.IsValid() {
+			continue
+		}
+		path := &Path{Flag: flag}
+		if err := callMethod(name, flag.Target, method, bindings.clone().add(path)); err != nil {
+			return err
+		}
+	}
+	for _, branch := range node.Children {
+		err := k.applyHookToDefaultFlags(ctx, branch, name)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

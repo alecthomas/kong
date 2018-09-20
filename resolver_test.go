@@ -208,3 +208,24 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, cli.Int)
 }
+
+func TestResolverTriggersHooks(t *testing.T) {
+	ctx := &hookContext{}
+
+	var cli struct {
+		Flag hookValue
+	}
+
+	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+		if flag.Name == "flag" {
+			return "1", nil
+		}
+		return "", nil
+	}
+
+	_, err := mustNew(t, &cli, kong.Bind(ctx), kong.Resolver(first)).Parse(nil)
+	require.NoError(t, err)
+
+	require.Equal(t, "1", string(cli.Flag))
+	require.Equal(t, []string{"before:", "after:1"}, ctx.values)
+}
