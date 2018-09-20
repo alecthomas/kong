@@ -61,8 +61,7 @@ func TestHelp(t *testing.T) {
 			require.NoError(t, err)
 		})
 		require.True(t, exited)
-		t.Log(w.String())
-		require.Equal(t, `Usage: test-app --required <command>
+		expected := `Usage: test-app --required <command>
 
 A test app.
 
@@ -86,7 +85,10 @@ Commands:
     Sub-sub-command.
 
 Run "test-app <command> --help" for more information on a command.
-`, w.String())
+`
+		t.Log(w.String())
+		t.Log(expected)
+		require.Equal(t, expected, w.String())
 	})
 
 	t.Run("Selected", func(t *testing.T) {
@@ -97,8 +99,7 @@ Run "test-app <command> --help" for more information on a command.
 			require.NoError(t, err)
 		})
 		require.True(t, exited)
-		t.Log(w.String())
-		require.Equal(t, `Usage: test-app two <three> --required --required-two --required-three
+		expected := `Usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
 
@@ -117,6 +118,9 @@ Flags:
   --required-two
 
   --required-three
-`, w.String())
+`
+		t.Log(expected)
+		t.Log(w.String())
+		require.Equal(t, expected, w.String())
 	})
 }

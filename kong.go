@@ -108,29 +108,38 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	return k, nil
 }
 
+type varStack []Vars
+
+func (v *varStack) head() Vars { return (*v)[len(*v)-1] }
+func (v *varStack) pop()       { *v = (*v)[:len(*v)-1] }
+func (v *varStack) push(vars Vars) Vars {
+	if len(*v) != 0 {
+		vars = (*v)[len(*v)-1].CloneWith(vars)
+	}
+	*v = append(*v, vars)
+	return vars
+}
+
 // Interpolate variables into model.
 func (k *Kong) interpolate(node *Node) (err error) {
-	vars := node.Vars()
-	node.Help, err = interpolate(node.Help, vars)
-	if err != nil {
-		return fmt.Errorf("help for %s: %s", node.Path(), err)
-	}
-	for _, flag := range node.Flags {
-		if err = k.interpolateValue(flag.Value, vars); err != nil {
+	stack := varStack{}
+	return Visit(node, func(node Visitable, next Next) error {
+		switch node := node.(type) {
+		case *Node:
+			vars := stack.push(node.Vars())
+			node.Help, err = interpolate(node.Help, vars)
+			if err != nil {
+				return fmt.Errorf("help for %s: %s", node.Path(), err)
+			}
+			err = next(nil)
+			stack.pop()
 			return err
+
+		case *Value:
+			return next(k.interpolateValue(node, stack.head()))
 		}
-	}
-	for _, pos := range node.Positional {
-		if err = k.interpolateValue(pos, vars); err != nil {
-			return err
-		}
-	}
-	for _, child := range node.Children {
-		if err = k.interpolate(child); err != nil {
-			return err
-		}
-	}
-	return nil
+		return next(nil)
+	})
 }
 
 func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
@@ -244,27 +253,27 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 	if node == nil {
 		return nil
 	}
-	bindings := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
-	for _, flag := range node.Flags {
-		if flag.Default == "" || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
-			continue
+	return Visit(node, func(n Visitable, next Next) error {
+		node, ok := n.(*Node)
+		if !ok {
+			return next(nil)
 		}
-		method := getMethod(flag.Target, name)
-		if !method.IsValid() {
-			continue
+		binds := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
+		for _, flag := range node.Flags {
+			if flag.Default == "" || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
+				continue
+			}
+			method := getMethod(flag.Target, name)
+			if !method.IsValid() {
+				continue
+			}
+			path := &Path{Flag: flag}
+			if err := callMethod(name, flag.Target, method, binds.clone().add(path)); err != nil {
+				return next(err)
+			}
 		}
-		path := &Path{Flag: flag}
-		if err := callMethod(name, flag.Target, method, bindings.clone().add(path)); err != nil {
-			return err
-		}
-	}
-	for _, branch := range node.Children {
-		err := k.applyHookToDefaultFlags(ctx, branch, name)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+		return next(nil)
+	})
 }
 
 func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...interface{}) {

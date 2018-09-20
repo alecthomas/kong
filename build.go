@@ -191,13 +191,6 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 		Format:   tag.Format,
 	}
 
-	if value.Default != "" {
-		err := value.Parse(Scan(tag.Default), value.DefaultValue)
-		if err != nil {
-			fail("invalid default value %q for field type %s.%s (of type %s)", value.Default, v.Type(), ft.Name, ft.Type)
-		}
-	}
-
 	if tag.Arg {
 		node.Positional = append(node.Positional, value)
 	} else {

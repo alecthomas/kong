@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// A Visitable component in the model.
+type Visitable interface {
+	node()
+}
+
 // Application is the root of the Kong model.
 type Application struct {
 	*Node
@@ -47,6 +52,8 @@ type Node struct {
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
+
+func (*Node) node() {}
 
 // Leaf returns true if this Node is a leaf node.
 func (n *Node) Leaf() bool {
@@ -99,23 +106,20 @@ func (n *Node) AllFlags(hide bool) (out [][]*Flag) {
 //
 // If "hidden" is true hidden leaves will be omitted.
 func (n *Node) Leaves(hide bool) (out []*Node) {
-	var walk func(n *Node)
-	walk = func(n *Node) {
-		if hide && n.Hidden {
-			return
+	_ = Visit(n, func(nd Visitable, next Next) error {
+		if nd == n {
+			return next(nil)
 		}
-		if len(n.Children) == 0 && n.Type != ApplicationNode {
-			out = append(out, n)
-		}
-		for _, child := range n.Children {
-			if child.Type == CommandNode || child.Type == ArgumentNode {
-				walk(child)
+		if node, ok := nd.(*Node); ok {
+			if hide && node.Hidden {
+				return next(nil)
+			}
+			if len(node.Children) == 0 && node.Type != ApplicationNode {
+				out = append(out, node)
 			}
 		}
-	}
-	for _, child := range n.Children {
-		walk(child)
-	}
+		return next(nil)
+	})
 	return
 }
 
@@ -288,6 +292,8 @@ func (v *Value) Reset() error {
 	}
 	return nil
 }
+
+func (*Value) node() {}
 
 // A Positional represents a non-branching command-line positional argument.
 type Positional = Value

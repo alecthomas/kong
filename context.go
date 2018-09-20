@@ -197,32 +197,12 @@ func (c *Context) FlagValue(flag *Flag) interface{} {
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) reset(node *Node) error {
-	for _, flag := range node.Flags {
-		err := flag.Value.Reset()
-		if err != nil {
-			return err
+	return Visit(node, func(node Visitable, next Next) error {
+		if value, ok := node.(*Value); ok {
+			return next(value.Reset())
 		}
-	}
-	for _, pos := range node.Positional {
-		err := pos.Reset()
-		if err != nil {
-			return err
-		}
-	}
-	for _, branch := range node.Children {
-		if branch.Argument != nil {
-			arg := branch.Argument
-			err := arg.Reset()
-			if err != nil {
-				return err
-			}
-		}
-		err := c.reset(branch)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+		return next(nil)
+	})
 }
 
 func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
@@ -562,13 +542,13 @@ func checkMissingChildren(node *Node) error {
 		return nil
 	}
 
-	if len(missing) == 1 {
-		return fmt.Errorf("expected %s", missing[0])
-	}
 	if len(missing) > 5 {
 		missing = append(missing[:5], "...")
 	}
-	return fmt.Errorf("expected one of %s", strings.Join(missing, ", "))
+	if len(missing) == 1 {
+		return fmt.Errorf("expected %s", missing[0])
+	}
+	return fmt.Errorf("expected %s", strings.Join(missing, "  "))
 }
 
 // If we're missing any positionals and they're required, return an error.
