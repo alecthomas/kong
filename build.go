@@ -177,17 +177,25 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 	}
 
 	value := &Value{
-		Name:    name,
-		Help:    tag.Help,
-		Default: tag.Default,
-		Mapper:  mapper,
-		Tag:     tag,
-		Target:  fv,
-		Enum:    tag.Enum,
+		Name:         name,
+		Help:         tag.Help,
+		Default:      tag.Default,
+		DefaultValue: reflect.New(fv.Type()).Elem(),
+		Mapper:       mapper,
+		Tag:          tag,
+		Target:       fv,
+		Enum:         tag.Enum,
 
 		// Flags are optional by default, and args are required by default.
 		Required: (!tag.Arg && tag.Required) || (tag.Arg && !tag.Optional),
 		Format:   tag.Format,
+	}
+
+	if value.Default != "" {
+		err := value.Parse(Scan(tag.Default), value.DefaultValue)
+		if err != nil {
+			fail("invalid default value %q for field type %s.%s (of type %s)", value.Default, v.Type(), ft.Name, ft.Type)
+		}
 	}
 
 	if tag.Arg {

@@ -13,6 +13,20 @@ const (
 	defaultColumnPadding = 4
 )
 
+// Help flag.
+type helpValue bool
+
+func (h helpValue) BeforeApply(ctx *Context) error {
+	options := ctx.Kong.helpOptions
+	options.Summary = false
+	err := ctx.Kong.help(options, ctx)
+	if err != nil {
+		return err
+	}
+	ctx.Kong.Exit(1)
+	return nil
+}
+
 // HelpOptions for HelpPrinters.
 type HelpOptions struct {
 	// Don't print top-level usage summary.

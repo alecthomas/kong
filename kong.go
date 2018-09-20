@@ -151,19 +151,6 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	return nil
 }
 
-type helpValue bool
-
-func (h helpValue) BeforeApply(ctx *Context) error {
-	options := ctx.Kong.helpOptions
-	options.Summary = false
-	err := ctx.Kong.help(options, ctx)
-	if err != nil {
-		return err
-	}
-	ctx.Kong.Exit(1)
-	return nil
-}
-
 // Provide additional builtin flags, if any.
 func (k *Kong) extraFlags() []*Flag {
 	if k.noDefaultHelp {
@@ -245,6 +232,35 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		}
 		binds := k.bindings.clone().add(ctx, trace).add(trace.Node().Vars().CloneWith(k.vars))
 		if err := callMethod(name, value, method, binds); err != nil {
+			return err
+		}
+	}
+	// Path[0] will always be the app root.
+	return k.applyHookToDefaultFlags(ctx, ctx.Path[0].Node(), name)
+}
+
+// Call hook on any unset flags with default values.
+func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) error {
+	if node == nil {
+		return nil
+	}
+	bindings := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
+	for _, flag := range node.Flags {
+		if flag.Default == "" || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
+			continue
+		}
+		method := getMethod(flag.Target, name)
+		if !method.IsValid() {
+			continue
+		}
+		path := &Path{Flag: flag}
+		if err := callMethod(name, flag.Target, method, bindings.clone().add(path)); err != nil {
+			return err
+		}
+	}
+	for _, branch := range node.Children {
+		err := k.applyHookToDefaultFlags(ctx, branch, name)
+		if err != nil {
 			return err
 		}
 	}

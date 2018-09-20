@@ -196,18 +196,19 @@ func (n *Node) Path() (out string) {
 
 // A Value is either a flag or a variable positional argument.
 type Value struct {
-	Flag     *Flag // Nil if positional argument.
-	Name     string
-	Help     string
-	Default  string
-	Enum     string
-	Mapper   Mapper
-	Tag      *Tag
-	Target   reflect.Value
-	Required bool
-	Set      bool   // Set to true when this value is set through some mechanism.
-	Format   string // Formatting directive, if applicable.
-	Position int    // Position (for positional arguments).
+	Flag         *Flag // Nil if positional argument.
+	Name         string
+	Help         string
+	Default      string
+	DefaultValue reflect.Value
+	Enum         string
+	Mapper       Mapper
+	Tag          *Tag
+	Target       reflect.Value
+	Required     bool
+	Set          bool   // Set to true when this value is set through some mechanism.
+	Format       string // Formatting directive, if applicable.
+	Position     int    // Position (for positional arguments).
 }
 
 // EnumMap returns a map of the enums in this value.

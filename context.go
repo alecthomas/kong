@@ -181,18 +181,18 @@ func (c *Context) AddResolver(resolver ResolverFunc) {
 	c.resolvers = append(c.resolvers, resolver)
 }
 
-// FlagValue returns the set value of a flag if it was encountered and exists.
+// FlagValue returns the set value of a flag if it was encountered and exists, or its default value.
 func (c *Context) FlagValue(flag *Flag) interface{} {
 	for _, trace := range c.Path {
 		if trace.Flag == flag {
 			v, ok := c.values[trace.Flag.Value]
 			if !ok {
-				return nil
+				break
 			}
 			return v.Interface()
 		}
 	}
-	return nil
+	return flag.DefaultValue.Interface()
 }
 
 // Recursively reset values to defaults (as specified in the grammar) or the zero value.
