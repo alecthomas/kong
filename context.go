@@ -552,7 +552,7 @@ func checkMissingChildren(node *Node) error {
 	if len(missing) == 1 {
 		return fmt.Errorf("expected %s", missing[0])
 	}
-	return fmt.Errorf("expected %s", strings.Join(missing, "  "))
+	return fmt.Errorf("expected one of %s", strings.Join(missing, ",  "))
 }
 
 // If we're missing any positionals and they're required, return an error.
