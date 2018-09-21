@@ -59,7 +59,8 @@ type Context struct {
 //
 // The returned Context will include a Path of all commands, arguments, positionals and flags.
 //
-// Call Resolve() after this, then finally Apply() to write parsed values into the target grammar.
+// This just constructs a new trace. To fully apply the trace you must call Resolve(), Validate() and
+// Apply().
 func Trace(k *Kong, args []string) (*Context, error) {
 	c := &Context{
 		Kong: k,
@@ -71,6 +72,11 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		scan:   Scan(args...),
 	}
 	c.Error = c.trace(c.Model.Node)
+	err := c.reset(c.Model.Node)
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -409,11 +415,6 @@ func (c *Context) getValue(value *Value) reflect.Value {
 
 // Apply traced context to the target grammar.
 func (c *Context) Apply() (string, error) {
-	err := c.reset(c.Model.Node)
-	if err != nil {
-		return "", err
-	}
-
 	path := []string{}
 
 	for _, trace := range c.Path {

@@ -652,5 +652,5 @@ func TestHooksCalledForDefault(t *testing.T) {
 	_, err := mustNew(t, &cli, kong.Bind(ctx)).Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "default", string(cli.Flag))
-	require.Equal(t, []string{"before:", "after:default"}, ctx.values)
+	require.Equal(t, []string{"before:default", "after:default"}, ctx.values)
 }
