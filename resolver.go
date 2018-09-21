@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -60,17 +59,4 @@ func jsonDecodeValue(sep rune, value interface{}) (string, error) {
 		return "false", nil
 	}
 	return "", fmt.Errorf("unsupported JSON value %v (of type %T)", value, value)
-}
-
-// Envars resolves flag values using the `env:"<name>"` tag. It ignores flags without this tag.
-//
-// This resolver is installed by default.
-func Envars() ResolverFunc {
-	return func(context *Context, parent *Path, flag *Flag) (string, error) {
-		if flag.Tag.Env == "" {
-			return "", nil
-		}
-		v, _ := os.LookupEnv(flag.Tag.Env)
-		return v, nil
-	}
 }

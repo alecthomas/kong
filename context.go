@@ -198,6 +198,9 @@ func (c *Context) FlagValue(flag *Flag) interface{} {
 			return v.Interface()
 		}
 	}
+	if flag.Target.IsValid() {
+		return flag.Target.Interface()
+	}
 	return flag.DefaultValue.Interface()
 }
 

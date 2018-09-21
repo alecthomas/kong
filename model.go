@@ -2,6 +2,7 @@ package kong
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -282,11 +283,22 @@ func (v *Value) Apply(value reflect.Value) {
 	v.Set = true
 }
 
-// Reset this value to its default, either the zero value or the parsed result of its "default" tag.
+// Reset this value to its default, either the zero value or the parsed result of its envar,
+// or its "default" tag.
 //
 // Does not include resolvers.
 func (v *Value) Reset() error {
 	v.Target.Set(reflect.Zero(v.Target.Type()))
+	if v.Tag.Env != "" {
+		envar := os.Getenv(v.Tag.Env)
+		if envar != "" {
+			err := v.Parse(Scan(envar), v.Target)
+			if err != nil {
+				return fmt.Errorf("%s (from envar %s=%q)", err, v.Tag.Env, envar)
+			}
+			return nil
+		}
+	}
 	if v.Default != "" {
 		return v.Parse(Scan(v.Default), v.Target)
 	}

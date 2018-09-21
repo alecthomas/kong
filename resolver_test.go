@@ -61,31 +61,6 @@ func TestEnvarsFlagOverride(t *testing.T) {
 	require.Equal(t, "hello", cli.Flag)
 }
 
-func TestEnvarsOnlyPopulateUsedBranches(t *testing.T) {
-	// nolint
-	var cli struct {
-		UnvisitedArg struct {
-			UnvisitedArg string `arg`
-			Int          int    `env:"KONG_INT"`
-		} `arg`
-		UnvisitedCmd struct {
-			Int int `env:"KONG_INT"`
-		} `cmd`
-		Visited struct {
-			Int int `env:"KONG_INT"`
-		} `cmd`
-	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_INT": "512"})
-	defer restoreEnv()
-
-	_, err := parser.Parse([]string{"visited"})
-	require.NoError(t, err)
-
-	require.Equal(t, 512, cli.Visited.Int)
-	require.Equal(t, 0, cli.UnvisitedArg.Int)
-	require.Equal(t, 0, cli.UnvisitedCmd.Int)
-}
-
 func TestEnvarsTag(t *testing.T) {
 	var cli struct {
 		Slice []int `env:"KONG_NUMBERS"`

@@ -63,13 +63,12 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:      os.Exit,
-		Stdout:    os.Stdout,
-		Stderr:    os.Stderr,
-		registry:  NewRegistry().RegisterDefaults(),
-		resolvers: []ResolverFunc{Envars()},
-		vars:      Vars{},
-		bindings:  bindings{},
+		Exit:     os.Exit,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+		registry: NewRegistry().RegisterDefaults(),
+		vars:     Vars{},
+		bindings: bindings{},
 	}
 
 	options = append(options, Bind(k))
@@ -169,11 +168,12 @@ func (k *Kong) extraFlags() []*Flag {
 	value := reflect.ValueOf(&helpTarget).Elem()
 	helpFlag := &Flag{
 		Value: &Value{
-			Name:   "help",
-			Help:   "Show context-sensitive help.",
-			Target: value,
-			Tag:    &Tag{},
-			Mapper: k.registry.ForValue(value),
+			Name:         "help",
+			Help:         "Show context-sensitive help.",
+			Target:       value,
+			Tag:          &Tag{},
+			Mapper:       k.registry.ForValue(value),
+			DefaultValue: reflect.ValueOf(false),
 		},
 	}
 	helpFlag.Flag = helpFlag
