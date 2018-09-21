@@ -180,8 +180,8 @@ func ClearResolvers() OptionFunc {
 	}
 }
 
-// Resolver registers flag resolvers.
-func Resolver(resolvers ...ResolverFunc) OptionFunc {
+// Resolvers registers flag resolvers.
+func Resolvers(resolvers ...Resolver) OptionFunc {
 	return func(k *Kong) error {
 		k.resolvers = append(k.resolvers, resolvers...)
 		return nil

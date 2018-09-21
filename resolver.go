@@ -7,8 +7,26 @@ import (
 	"strings"
 )
 
-// ResolverFunc resolves a Flag value from an external source.
+// A Resolver resolves a Flag value from an external source.
+type Resolver interface {
+	// Validate configuration against Application.
+	//
+	// This can be used to validate that all provided configuration is valid within  this application.
+	Validate(app *Application) error
+
+	// Resolve the value for a Flag.
+	Resolve(context *Context, parent *Path, flag *Flag) (string, error)
+}
+
+// ResolverFunc is a convenience type for non-validating Resolvers.
 type ResolverFunc func(context *Context, parent *Path, flag *Flag) (string, error)
+
+var _ Resolver = ResolverFunc(nil)
+
+func (r ResolverFunc) Resolve(context *Context, parent *Path, flag *Flag) (string, error) { // nolint: golint
+	return r(context, parent, flag)
+}
+func (r ResolverFunc) Validate(app *Application) error { return nil } //  nolint: golint
 
 // JSON returns a Resolver that retrieves values from a JSON source.
 //

@@ -1,6 +1,7 @@
 package kong_test
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"strings"
@@ -91,7 +92,7 @@ func TestJSONBasic(t *testing.T) {
 	r, err := kong.JSON(strings.NewReader(json))
 	require.NoError(t, err)
 
-	parser := mustNew(t, &cli, kong.Resolver(r))
+	parser := mustNew(t, &cli, kong.Resolvers(r))
 	_, err = parser.Parse([]string{})
 	require.NoError(t, err)
 	require.Equal(t, "🍕", cli.String)
@@ -129,14 +130,14 @@ func TestResolverWithBool(t *testing.T) {
 		Bool bool
 	}
 
-	resolver := func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "bool" {
 			return "true", nil
 		}
 		return "", nil
 	}
 
-	p := mustNew(t, &cli, kong.Resolver(resolver))
+	p := mustNew(t, &cli, kong.Resolvers(resolver))
 
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
@@ -162,7 +163,7 @@ func TestLastResolverWins(t *testing.T) {
 		return "", nil
 	}
 
-	p := mustNew(t, &cli, kong.Resolver(first), kong.Resolver(second))
+	p := mustNew(t, &cli, kong.Resolvers(first, second))
 	_, err := p.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, []int{2}, cli.Int)
@@ -173,13 +174,13 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	var cli struct {
 		Int int `required`
 	}
-	resolver := func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
 		if flag.Name == "int" {
 			return "1", nil
 		}
 		return "", nil
 	}
-	_, err := mustNew(t, &cli, kong.Resolver(resolver)).Parse(nil)
+	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, cli.Int)
 }
@@ -198,9 +199,25 @@ func TestResolverTriggersHooks(t *testing.T) {
 		return "", nil
 	}
 
-	_, err := mustNew(t, &cli, kong.Bind(ctx), kong.Resolver(first)).Parse(nil)
+	_, err := mustNew(t, &cli, kong.Bind(ctx), kong.Resolvers(first)).Parse(nil)
 	require.NoError(t, err)
 
 	require.Equal(t, "1", string(cli.Flag))
 	require.Equal(t, []string{"before:", "after:1"}, ctx.values)
+}
+
+type validatingResolver struct {
+	err error
+}
+
+func (v *validatingResolver) Validate(app *kong.Application) error { return v.err }
+func (v *validatingResolver) Resolve(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	return "", nil
+}
+
+func TestValidatingResolverErrors(t *testing.T) {
+	resolver := &validatingResolver{err: errors.New("invalid")}
+	var cli struct{}
+	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
+	require.EqualError(t, err, "invalid")
 }

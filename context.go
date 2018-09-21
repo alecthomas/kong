@@ -51,7 +51,7 @@ type Context struct {
 	Error error
 
 	values    map[*Value]reflect.Value // Temporary values during tracing.
-	resolvers []ResolverFunc           // Extra context-specific resolvers.
+	resolvers []Resolver               // Extra context-specific resolvers.
 	scan      *Scanner
 }
 
@@ -119,6 +119,11 @@ func (c *Context) Empty() bool {
 
 // Validate the current context.
 func (c *Context) Validate() error {
+	for _, resolver := range c.combineResolvers() {
+		if err := resolver.Validate(c.Model); err != nil {
+			return err
+		}
+	}
 	for _, path := range c.Path {
 		if err := checkMissingFlags(path.Flags); err != nil {
 			return err
@@ -183,7 +188,7 @@ func (c *Context) Command() string {
 // AddResolver adds a context-specific resolver.
 //
 // This is most useful in the BeforeResolve() hook.
-func (c *Context) AddResolver(resolver ResolverFunc) {
+func (c *Context) AddResolver(resolver Resolver) {
 	c.resolvers = append(c.resolvers, resolver)
 }
 
@@ -345,31 +350,9 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	return nil
 }
 
-func findPotentialCandidates(needle string, haystack []string, format string, args ...interface{}) error {
-	if len(haystack) == 0 {
-		return fmt.Errorf(format, args...)
-	}
-	closestCandidates := []string{}
-	for _, candidate := range haystack {
-		if strings.HasPrefix(candidate, needle) || levenshtein(candidate, needle) <= 2 {
-			closestCandidates = append(closestCandidates, fmt.Sprintf("%q", candidate))
-		}
-	}
-	prefix := fmt.Sprintf(format, args...)
-	if len(closestCandidates) == 1 {
-		return fmt.Errorf("%s, did you mean %s?", prefix, closestCandidates[0])
-	} else if len(closestCandidates) > 1 {
-		return fmt.Errorf("%s, did you mean one of %s?", prefix, strings.Join(closestCandidates, ", "))
-	}
-	return fmt.Errorf("%s", prefix)
-}
-
 // Resolve walks through the traced path, applying resolvers to any unset flags.
 func (c *Context) Resolve() error {
-	// Combine application-level resolvers and context resolvers.
-	resolvers := []ResolverFunc{}
-	resolvers = append(resolvers, c.Kong.resolvers...)
-	resolvers = append(resolvers, c.resolvers...)
+	resolvers := c.combineResolvers()
 	if len(resolvers) == 0 {
 		return nil
 	}
@@ -382,7 +365,7 @@ func (c *Context) Resolve() error {
 				continue
 			}
 			for _, resolver := range resolvers {
-				s, err := resolver(c, path, flag)
+				s, err := resolver.Resolve(c, path, flag)
 				if err != nil {
 					return err
 				}
@@ -405,6 +388,14 @@ func (c *Context) Resolve() error {
 	}
 	c.Path = append(inserted, c.Path...)
 	return nil
+}
+
+// Combine application-level resolvers and context resolvers.
+func (c *Context) combineResolvers() []Resolver {
+	resolvers := []Resolver{}
+	resolvers = append(resolvers, c.Kong.resolvers...)
+	resolvers = append(resolvers, c.resolvers...)
+	return resolvers
 }
 
 func (c *Context) getValue(value *Value) reflect.Value {
@@ -572,4 +563,23 @@ func checkMissingPositionals(positional int, values []*Value) error {
 		missing = append(missing, "<"+values[positional].Name+">")
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+}
+
+func findPotentialCandidates(needle string, haystack []string, format string, args ...interface{}) error {
+	if len(haystack) == 0 {
+		return fmt.Errorf(format, args...)
+	}
+	closestCandidates := []string{}
+	for _, candidate := range haystack {
+		if strings.HasPrefix(candidate, needle) || levenshtein(candidate, needle) <= 2 {
+			closestCandidates = append(closestCandidates, fmt.Sprintf("%q", candidate))
+		}
+	}
+	prefix := fmt.Sprintf(format, args...)
+	if len(closestCandidates) == 1 {
+		return fmt.Errorf("%s, did you mean %s?", prefix, closestCandidates[0])
+	} else if len(closestCandidates) > 1 {
+		return fmt.Errorf("%s, did you mean one of %s?", prefix, strings.Join(closestCandidates, ", "))
+	}
+	return fmt.Errorf("%s", prefix)
 }

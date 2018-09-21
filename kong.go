@@ -44,7 +44,7 @@ type Kong struct {
 
 	bindings  bindings
 	loader    ConfigurationFunc
-	resolvers []ResolverFunc
+	resolvers []Resolver
 	registry  *Registry
 
 	noDefaultHelp bool
