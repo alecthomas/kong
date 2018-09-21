@@ -188,17 +188,17 @@ func Resolvers(resolvers ...Resolver) OptionFunc {
 	}
 }
 
-// ConfigurationFunc is a function that builds a resolver from a file.
-type ConfigurationFunc func(r io.Reader) (ResolverFunc, error)
+// ConfigurationLoader is a function that builds a resolver from a file.
+type ConfigurationLoader func(r io.Reader) (Resolver, error)
 
 // Configuration provides Kong with support for loading defaults from a set of configuration files.
 //
-// Paths will be opened in order, and "loader" will be used to provide a ResolverFunc which is registered with Kong.
+// Paths will be opened in order, and "loader" will be used to provide a Resolver which is registered with Kong.
 //
-// Note: The JSON function is a ConfigurationFunc.
+// Note: The JSON function is a ConfigurationLoader.
 //
 // ~ expansion will occur on the provided paths.
-func Configuration(loader ConfigurationFunc, paths ...string) OptionFunc {
+func Configuration(loader ConfigurationLoader, paths ...string) OptionFunc {
 	return func(k *Kong) error {
 		k.loader = loader
 		for _, path := range paths {

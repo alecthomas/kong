@@ -31,13 +31,13 @@ func (r ResolverFunc) Validate(app *Application) error { return nil } //  nolint
 // JSON returns a Resolver that retrieves values from a JSON source.
 //
 // Hyphens in flag names are replaced with underscores.
-func JSON(r io.Reader) (ResolverFunc, error) {
+func JSON(r io.Reader) (Resolver, error) {
 	values := map[string]interface{}{}
 	err := json.NewDecoder(r).Decode(&values)
 	if err != nil {
 		return nil, err
 	}
-	f := func(context *Context, parent *Path, flag *Flag) (string, error) {
+	var f ResolverFunc = func(context *Context, parent *Path, flag *Flag) (string, error) {
 		name := strings.Replace(flag.Name, "-", "_", -1)
 		raw, ok := values[name]
 		if !ok {

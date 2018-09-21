@@ -43,7 +43,7 @@ type Kong struct {
 	Stderr io.Writer
 
 	bindings  bindings
-	loader    ConfigurationFunc
+	loader    ConfigurationLoader
 	resolvers []Resolver
 	registry  *Registry
 
@@ -332,7 +332,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 // LoadConfig from path using the loader configured via Configuration(loader).
 //
 // "path" will have ~/ expanded.
-func (k *Kong) LoadConfig(path string) (ResolverFunc, error) {
+func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	path = expandPath(path)
 	r, err := os.Open(path) // nolint: gas
 	if err != nil {
