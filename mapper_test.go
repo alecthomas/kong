@@ -1,7 +1,10 @@
 package kong_test
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -148,4 +151,18 @@ func TestMapperValue(t *testing.T) {
 	_, err := p.Parse([]string{"foo"})
 	require.NoError(t, err)
 	require.Equal(t, "foo", cli.Value.decoded)
+}
+
+func TestFileContentFlag(t *testing.T) {
+	var cli struct {
+		File kong.FileContentFlag
+	}
+	f, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+	fmt.Fprint(f, "hello world")
+	f.Close()
+	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
+	require.NoError(t, err)
+	require.Equal(t, []byte("hello world"), []byte(cli.File))
 }

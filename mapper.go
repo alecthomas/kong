@@ -2,6 +2,7 @@ package kong
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/bits"
 	"net/url"
 	"os"
@@ -58,7 +59,7 @@ func (m *mapperValueAdapter) IsBool() bool {
 //
 // Mappers can be associated with concrete fields via pointer, reflect.Type, reflect.Kind, or via a "type" tag.
 //
-// Additionally, if a type implements this interface, it will be used.
+// Additionally, if a type implements the MappverValue interface, it will be used.
 type Mapper interface {
 	// Decode ctx.Value with ctx.Scanner into target.
 	Decode(ctx *DecodeContext, target reflect.Value) error
@@ -461,4 +462,17 @@ func JoinEscaped(s []string, sep rune) string {
 		escaped = append(escaped, strings.Replace(e, string(sep), `\`+string(sep), -1))
 	}
 	return strings.Join(escaped, string(sep))
+}
+
+// FileContentFlag is a flag value that loads a file's contents into its value.
+type FileContentFlag []byte
+
+func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
+	filename := ctx.Scan.PopValue("filename")
+	data, err := ioutil.ReadFile(filename) // nolint: gosec
+	if err != nil {
+		return fmt.Errorf("failed to open %q: %s", filename, err)
+	}
+	*f = FileContentFlag(data)
+	return nil
 }
