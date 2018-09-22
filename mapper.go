@@ -465,7 +465,10 @@ func JoinEscaped(s []string, sep rune) string {
 }
 
 // FileContentFlag is a flag value that loads a file's contents into its value.
-type FileContentFlag []byte
+type FileContentFlag struct {
+	Path string
+	Data []byte
+}
 
 func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
 	filename := ctx.Scan.PopValue("filename")
@@ -473,6 +476,7 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %s", filename, err)
 	}
-	*f = FileContentFlag(data)
+	f.Path = filename
+	f.Data = data
 	return nil
 }
