@@ -368,6 +368,9 @@ func pathMapper(r *Registry) MapperFunc {
 		if target.Kind() == reflect.Slice {
 			return sliceDecoder(r)(ctx, target)
 		}
+		if target.Kind() != reflect.String {
+			return fmt.Errorf("\"path\" type must be applied to a string not %s", target.Type())
+		}
 		path := ctx.Scan.PopValue("file")
 		path = expandPath(path)
 		target.SetString(path)
@@ -379,6 +382,9 @@ func existingFileMapper(r *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		if target.Kind() == reflect.Slice {
 			return sliceDecoder(r)(ctx, target)
+		}
+		if target.Kind() != reflect.String {
+			return fmt.Errorf("\"existingfile\" type must be applied to a string not %s", target.Type())
 		}
 		path := ctx.Scan.PopValue("file")
 		path = expandPath(path)
@@ -398,6 +404,9 @@ func existingDirMapper(r *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		if target.Kind() == reflect.Slice {
 			return sliceDecoder(r)(ctx, target)
+		}
+		if target.Kind() != reflect.String {
+			return fmt.Errorf("\"existingdir\" must be applied to a string not %s", target.Type())
 		}
 		path := ctx.Scan.PopValue("file")
 		path = expandPath(path)
