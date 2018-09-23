@@ -119,6 +119,17 @@ func (c *Context) Empty() bool {
 
 // Validate the current context.
 func (c *Context) Validate() error {
+	err := Visit(c.Model, func(node Visitable, next Next) error {
+		if value, ok := node.(*Value); ok {
+			if value.Enum != "" && !value.EnumMap()[fmt.Sprintf("%v", value.Target.Interface())] {
+				return fmt.Errorf("%s must be one of %s but got %q", value.Summary(), value.Enum, value.Target.Interface())
+			}
+		}
+		return next(nil)
+	})
+	if err != nil {
+		return err
+	}
 	for _, resolver := range c.combineResolvers() {
 		if err := resolver.Validate(c.Model); err != nil {
 			return err

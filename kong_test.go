@@ -654,3 +654,11 @@ func TestHooksCalledForDefault(t *testing.T) {
 	require.Equal(t, "default", string(cli.Flag))
 	require.Equal(t, []string{"before:default", "after:default"}, ctx.values)
 }
+
+func TestEnum(t *testing.T) {
+	var cli struct {
+		Flag string `enum:"a,b,c"`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--flag", "d"})
+	require.EqualError(t, err, "--flag=STRING must be one of a,b,c but got \"\"")
+}

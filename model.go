@@ -269,6 +269,11 @@ func (v *Value) IsBool() bool {
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner, target reflect.Value) error {
+	defer func() {
+		if err := recover(); err != nil {
+			panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), err))
+		}
+	}()
 	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
 		return fmt.Errorf("%s: %s", v.Summary(), err)
