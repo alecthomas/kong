@@ -239,7 +239,10 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		if !method.IsValid() {
 			continue
 		}
-		binds := k.bindings.clone().add(ctx, trace).add(trace.Node().Vars().CloneWith(k.vars))
+		binds := k.bindings.clone()
+		binds.add(ctx, trace)
+		binds.add(trace.Node().Vars().CloneWith(k.vars))
+		binds.merge(ctx.bindings)
 		if err := callMethod(name, value, method, binds); err != nil {
 			return err
 		}

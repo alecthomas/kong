@@ -23,6 +23,12 @@ func (b bindings) clone() bindings {
 	return out
 }
 
+func (b bindings) merge(other bindings) {
+	for k, v := range other {
+		b[k] = v
+	}
+}
+
 func getMethod(value reflect.Value, name string) reflect.Value {
 	method := value.MethodByName(name)
 	if !method.IsValid() {

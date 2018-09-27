@@ -51,7 +51,8 @@ type Context struct {
 	Error error
 
 	values    map[*Value]reflect.Value // Temporary values during tracing.
-	resolvers []Resolver               // Extra context-specific resolvers.
+	bindings  bindings
+	resolvers []Resolver // Extra context-specific resolvers.
 	scan      *Scanner
 }
 
@@ -68,8 +69,9 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		Path: []*Path{
 			{App: k.Model, Flags: k.Model.Flags},
 		},
-		values: map[*Value]reflect.Value{},
-		scan:   Scan(args...),
+		values:   map[*Value]reflect.Value{},
+		scan:     Scan(args...),
+		bindings: bindings{},
 	}
 	c.Error = c.trace(c.Model.Node)
 	err := c.reset(c.Model.Node)
@@ -78,6 +80,16 @@ func Trace(k *Kong, args []string) (*Context, error) {
 	}
 
 	return c, nil
+}
+
+// Bind adds bindings to the Context.
+func (c *Context) Bind(args ...interface{}) {
+	c.bindings.add(args...)
+}
+
+// BindTo adds a binding to the Context.
+func (c *Context) BindTo(impl, iface interface{}) {
+	c.bindings[reflect.TypeOf(iface).Elem()] = reflect.ValueOf(impl)
 }
 
 // Value returns the value for a particular path element.

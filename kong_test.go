@@ -662,3 +662,29 @@ func TestEnum(t *testing.T) {
 	_, err := mustNew(t, &cli).Parse([]string{"--flag", "d"})
 	require.EqualError(t, err, "--flag=STRING must be one of a,b,c but got \"\"")
 }
+
+type commandWithHook struct {
+	value string
+}
+
+func (c *commandWithHook) AfterApply(cli *cliWithHook) error {
+	c.value = cli.Flag
+	return nil
+}
+
+type cliWithHook struct {
+	Flag    string
+	Command commandWithHook `cmd:""`
+}
+
+func (c *cliWithHook) AfterApply(ctx *kong.Context) error {
+	ctx.Bind(c)
+	return nil
+}
+
+func TestParentBindings(t *testing.T) {
+	cli := &cliWithHook{}
+	_, err := mustNew(t, cli).Parse([]string{"command", "--flag=foo"})
+	require.NoError(t, err)
+	require.Equal(t, "foo", cli.Command.value)
+}
