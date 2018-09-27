@@ -23,10 +23,11 @@ func (b bindings) clone() bindings {
 	return out
 }
 
-func (b bindings) merge(other bindings) {
+func (b bindings) merge(other bindings) bindings {
 	for k, v := range other {
 		b[k] = v
 	}
+	return b
 }
 
 func getMethod(value reflect.Value, name string) reflect.Value {

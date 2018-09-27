@@ -501,7 +501,7 @@ func (c *Context) Run(bindings ...interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	binds := c.Kong.bindings.clone().add(bindings...).add(c)
+	binds := c.Kong.bindings.clone().add(bindings...).add(c).merge(c.bindings)
 	return callMethod("Run", node.Target, method, binds)
 }
 
