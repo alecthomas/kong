@@ -164,6 +164,5 @@ func TestFileContentFlag(t *testing.T) {
 	f.Close()
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
 	require.NoError(t, err)
-	require.Equal(t, []byte("hello world"), cli.File.Data)
-	require.Equal(t, f.Name(), cli.File.Path)
+	require.Equal(t, []byte("hello world"), []byte(cli.File))
 }
