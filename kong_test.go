@@ -688,3 +688,12 @@ func TestParentBindings(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "foo", cli.Command.value)
 }
+
+func TestNumericParamErrors(t *testing.T) {
+	var cli struct {
+		Name string
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"--name", "-10"})
+	require.EqualError(t, err, `expected string value but got "-10" (short flag)`)
+}

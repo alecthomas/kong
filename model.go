@@ -271,7 +271,12 @@ func (v *Value) IsBool() bool {
 func (v *Value) Parse(scan *Scanner, target reflect.Value) error {
 	defer func() {
 		if err := recover(); err != nil {
-			panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), err))
+			switch err := err.(type) {
+			case Error:
+				panic(err)
+			default:
+				panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), err))
+			}
 		}
 	}()
 	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)

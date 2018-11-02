@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-//go:generate stringer -type=TokenType
-
 // TokenType is the type of a token.
 type TokenType int
 
@@ -20,6 +18,26 @@ const (
 	ShortFlagTailToken      // <tail>
 	PositionalArgumentToken // <arg>
 )
+
+func (t TokenType) String() string {
+	switch t {
+	case UntypedToken:
+		return "untyped"
+	case EOLToken:
+		return "<EOL>"
+	case FlagToken: // --<flag>
+		return "long flag"
+	case FlagValueToken: // =<value>
+		return "flag value"
+	case ShortFlagToken: // -<short>[<tail]
+		return "short flag"
+	case ShortFlagTailToken: // <tail>
+		return "short flag remainder"
+	case PositionalArgumentToken: // <arg>
+		return "positional argument"
+	}
+	panic("unsupported type")
+}
 
 // Token created by Scanner.
 type Token struct {
@@ -56,6 +74,18 @@ func (t Token) IsAny(types ...TokenType) bool {
 		}
 	}
 	return false
+}
+
+// InferredType tries to infer the type of a token.
+func (t Token) InferredType() TokenType {
+	if t.Type == UntypedToken {
+		if strings.HasPrefix(t.Value, "--") {
+			return FlagToken
+		} else if strings.HasPrefix(t.Value, "-") {
+			return ShortFlagToken
+		}
+	}
+	return t.Type
 }
 
 // IsValue returns true if token is usable as a parseable value.
@@ -113,7 +143,7 @@ func (s *Scanner) Pop() Token {
 func (s *Scanner) PopValue(context string) string {
 	t := s.Pop()
 	if !t.IsValue() {
-		fail("expected %s value but got %s", context, t)
+		fail("expected %s value but got %s (%s)", context, t, t.InferredType())
 	}
 	return t.Value
 }
