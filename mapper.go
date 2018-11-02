@@ -477,7 +477,7 @@ func JoinEscaped(s []string, sep rune) string {
 type FileContentFlag []byte
 
 func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
-	filename := ctx.Scan.PopValue("filename")
+	filename := expandPath(ctx.Scan.PopValue("filename"))
 	data, err := ioutil.ReadFile(filename) // nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %s", filename, err)
