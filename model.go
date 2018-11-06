@@ -251,7 +251,7 @@ func (v *Value) IsCumulative() bool {
 
 // IsSlice returns true if the value is a slice.
 func (v *Value) IsSlice() bool {
-	return v.Target.Kind() == reflect.Slice
+	return v.Target.Type().Name() == "" && v.Target.Kind() == reflect.Slice
 }
 
 // IsMap returns true if the value is a map.

@@ -1,6 +1,7 @@
 package kong_test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -165,4 +166,18 @@ func TestFileContentFlag(t *testing.T) {
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
 	require.NoError(t, err)
 	require.Equal(t, []byte("hello world"), []byte(cli.File))
+}
+
+func TestNamedSliceTypesDontHaveEllipsis(t *testing.T) {
+	var cli struct {
+		File kong.FileContentFlag
+	}
+	b := bytes.NewBuffer(nil)
+	parser := mustNew(t, &cli, kong.Writers(b, b), kong.Exit(func(int) { panic("exit") }))
+	// Ensure that --help
+	require.Panics(t, func() {
+		_, err := parser.Parse([]string{"--help"})
+		require.NoError(t, err)
+	})
+	require.NotContains(t, b.String(), `--file=FILE-CONTENT-FLAG,...`)
 }
