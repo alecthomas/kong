@@ -302,7 +302,7 @@ func (v *Value) Reset() error {
 	if v.Tag.Env != "" {
 		envar := os.Getenv(v.Tag.Env)
 		if envar != "" {
-			err := v.Parse(Scan(envar), v.Target)
+			err := v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: envar}), v.Target)
 			if err != nil {
 				return fmt.Errorf("%s (from envar %s=%q)", err, v.Tag.Env, envar)
 			}
@@ -310,7 +310,7 @@ func (v *Value) Reset() error {
 		}
 	}
 	if v.Default != "" {
-		return v.Parse(Scan(v.Default), v.Target)
+		return v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
 	}
 	return nil
 }

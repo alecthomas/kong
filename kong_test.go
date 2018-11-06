@@ -697,3 +697,13 @@ func TestNumericParamErrors(t *testing.T) {
 	_, err := parser.Parse([]string{"--name", "-10"})
 	require.EqualError(t, err, `expected string value but got "-10" (short flag)`)
 }
+
+func TestDefaultValueIsHyphen(t *testing.T) {
+	var cli struct {
+		Flag string `default:"-"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "-", cli.Flag)
+}
