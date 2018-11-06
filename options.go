@@ -211,7 +211,10 @@ func Configuration(loader ConfigurationLoader, paths ...string) OptionFunc {
 	}
 }
 
-func expandPath(path string) string {
+// ExpandPath is a helper function to expand a relative or home-relative path to an absolute path.
+//
+// eg. ~/.someconf -> /home/alec/.someconf
+func ExpandPath(path string) string {
 	if filepath.IsAbs(path) {
 		return path
 	}

@@ -336,7 +336,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 //
 // "path" will have ~/ expanded.
 func (k *Kong) LoadConfig(path string) (Resolver, error) {
-	path = expandPath(path)
+	path = ExpandPath(path)
 	r, err := os.Open(path) // nolint: gas
 	if err != nil {
 		return nil, err

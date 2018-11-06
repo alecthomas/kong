@@ -372,7 +372,7 @@ func pathMapper(r *Registry) MapperFunc {
 			return fmt.Errorf("\"path\" type must be applied to a string not %s", target.Type())
 		}
 		path := ctx.Scan.PopValue("file")
-		path = expandPath(path)
+		path = ExpandPath(path)
 		target.SetString(path)
 		return nil
 	}
@@ -387,7 +387,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 			return fmt.Errorf("\"existingfile\" type must be applied to a string not %s", target.Type())
 		}
 		path := ctx.Scan.PopValue("file")
-		path = expandPath(path)
+		path = ExpandPath(path)
 		stat, err := os.Stat(path)
 		if err != nil {
 			return err
@@ -409,7 +409,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return fmt.Errorf("\"existingdir\" must be applied to a string not %s", target.Type())
 		}
 		path := ctx.Scan.PopValue("file")
-		path = expandPath(path)
+		path = ExpandPath(path)
 		stat, err := os.Stat(path)
 		if err != nil {
 			return err
@@ -477,7 +477,7 @@ func JoinEscaped(s []string, sep rune) string {
 type FileContentFlag []byte
 
 func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
-	filename := expandPath(ctx.Scan.PopValue("filename"))
+	filename := ExpandPath(ctx.Scan.PopValue("filename"))
 	data, err := ioutil.ReadFile(filename) // nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %s", filename, err)
