@@ -67,7 +67,7 @@ func printApp(w *helpWriter, app *Application) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s%s", app.Name, app.Summary())
 	}
-	printNodeDetail(w, app.Node)
+	printNodeDetail(w, app.Node, true)
 	cmds := app.Leaves(true)
 	if len(cmds) > 0 && app.HelpFlag != nil {
 		w.Print("")
@@ -83,14 +83,14 @@ func printCommand(w *helpWriter, app *Application, cmd *Command) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
 	}
-	printNodeDetail(w, cmd)
+	printNodeDetail(w, cmd, false)
 	if w.Summary && app.HelpFlag != nil {
 		w.Print("")
 		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
 	}
 }
 
-func printNodeDetail(w *helpWriter, node *Node) {
+func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	if node.Help != "" {
 		w.Print("")
 		w.Wrap(node.Help)
@@ -112,7 +112,7 @@ func printNodeDetail(w *helpWriter, node *Node) {
 		w.Print("Flags:")
 		writeFlags(w.Indent(), flags)
 	}
-	cmds := node.Leaves(true)
+	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
 		w.Print("")
 		w.Print("Commands:")

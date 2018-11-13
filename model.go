@@ -113,7 +113,7 @@ func (n *Node) Leaves(hide bool) (out []*Node) {
 		}
 		if node, ok := nd.(*Node); ok {
 			if hide && node.Hidden {
-				return next(nil)
+				return nil
 			}
 			if len(node.Children) == 0 && node.Type != ApplicationNode {
 				out = append(out, node)
