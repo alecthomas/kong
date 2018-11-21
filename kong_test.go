@@ -707,3 +707,12 @@ func TestDefaultValueIsHyphen(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "-", cli.Flag)
 }
+
+func TestDefaultEnumValidated(t *testing.T) {
+	var cli struct {
+		Flag string `default:"invalid" enum:"valid"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.Error(t, err)
+}

@@ -74,6 +74,24 @@ func TestEnvarsTag(t *testing.T) {
 	require.Equal(t, []int{5, 2, 9}, cli.Slice)
 }
 
+func TestEnvarsWithDefault(t *testing.T) {
+	var cli struct {
+		Flag string `env:"KONG_FLAG" default:"default"`
+	}
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{})
+	defer restoreEnv()
+
+	_, err := parser.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "default", cli.Flag)
+
+	parser, restoreEnv = newEnvParser(t, &cli, envMap{"KONG_FLAG": "moo"})
+	defer restoreEnv()
+	_, err = parser.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "moo", cli.Flag)
+}
+
 func TestJSONBasic(t *testing.T) {
 	var cli struct {
 		String          string

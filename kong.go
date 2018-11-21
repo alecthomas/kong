@@ -326,7 +326,6 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	if err, ok := err.(*ParseError); ok && k.usageOnError {
 		fmt.Fprintln(k.Stdout)
 		options := k.helpOptions
-		options.Summary = true
 		_ = k.help(options, err.Context)
 	}
 	k.Exit(1)
