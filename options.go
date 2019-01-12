@@ -25,7 +25,9 @@ type Vars map[string]string
 
 // Apply lets Vars act as an Option.
 func (v Vars) Apply(k *Kong) error {
-	k.vars = v
+	for key, value := range v {
+		k.vars[key] = value
+	}
 	return nil
 }
 
