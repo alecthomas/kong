@@ -357,7 +357,7 @@ func (f *Flag) FormatPlaceHolder() string {
 		return f.PlaceHolder + tail
 	}
 	if f.Value.IsMap() {
-		return "KEY=VALUE" + tail
+		return "KEY=VALUE;..."
 	}
 	return strings.ToUpper(f.Name) + tail
 }

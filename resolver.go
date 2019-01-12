@@ -70,6 +70,16 @@ func jsonDecodeValue(sep rune, value interface{}) (string, error) {
 			out = append(out, sel)
 		}
 		return JoinEscaped(out, sep), nil
+	case map[string]interface{}:
+		out := []string{}
+		for key, el := range v {
+			sel, err := jsonDecodeValue(sep, el)
+			if err != nil {
+				return "", err
+			}
+			out = append(out, fmt.Sprintf("%s=%s", key, sel))
+		}
+		return JoinEscaped(out, ';'), nil
 	case bool:
 		if v {
 			return "true", nil
