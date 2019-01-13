@@ -513,9 +513,22 @@ func (c *cmdWithRun) Run(key string) error {
 	return nil
 }
 
+type parentCmdWithRun struct {
+	Flag       string
+	SubCommand struct {
+		Arg string `arg:""`
+	} `cmd:""`
+}
+
+func (p *parentCmdWithRun) Run(key string) error {
+	p.SubCommand.Arg += key
+	return nil
+}
+
 type grammarWithRun struct {
-	One cmdWithRun `cmd:""`
-	Two cmdWithRun `cmd:""`
+	One   cmdWithRun       `cmd:""`
+	Two   cmdWithRun       `cmd:""`
+	Three parentCmdWithRun `cmd:""`
 }
 
 func TestRun(t *testing.T) {
@@ -532,6 +545,12 @@ func TestRun(t *testing.T) {
 	require.NoError(t, err)
 	err = ctx.Run("ERROR")
 	require.Error(t, err)
+
+	ctx, err = p.Parse([]string{"three", "sub-command", "arg"})
+	require.NoError(t, err)
+	err = ctx.Run("ping")
+	require.NoError(t, err)
+	require.Equal(t, "argping", cli.Three.SubCommand.Arg)
 }
 
 func TestInterpolationIntoModel(t *testing.T) {

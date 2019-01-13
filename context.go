@@ -88,6 +88,10 @@ func (c *Context) Bind(args ...interface{}) {
 }
 
 // BindTo adds a binding to the Context.
+//
+// This will typically have to be called like so:
+//
+//    BindTo(impl, (*MyInterface)(nil))
 func (c *Context) BindTo(impl, iface interface{}) {
 	c.bindings[reflect.TypeOf(iface).Elem()] = reflect.ValueOf(impl)
 }
@@ -493,16 +497,32 @@ func (c *Context) Run(bindings ...interface{}) (err error) {
 	if node == nil {
 		return fmt.Errorf("no command selected")
 	}
-	method := getMethod(node.Target, "Run")
-	if !method.IsValid() {
-		return fmt.Errorf("no Run() method on %s", node.Target)
+	type targetMethod struct {
+		node   *Node
+		method reflect.Value
+	}
+	methods := []targetMethod{}
+	for i := 0; node != nil; i, node = i+1, node.Parent {
+		method := getMethod(node.Target, "Run")
+		if method.IsValid() {
+			methods = append(methods, targetMethod{node, method})
+		}
+	}
+	if len(methods) == 0 {
+		return fmt.Errorf("no Run() method found in hierarchy of %s", c.Selected().Summary())
 	}
 	_, err = c.Apply()
 	if err != nil {
 		return err
 	}
-	binds := c.Kong.bindings.clone().add(bindings...).add(c).merge(c.bindings)
-	return callMethod("Run", node.Target, method, binds)
+
+	for _, method := range methods {
+		binds := c.Kong.bindings.clone().add(bindings...).add(c).merge(c.bindings)
+		if err = callMethod("Run", method.node.Target, method.method, binds); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // PrintUsage to Kong's stdout.

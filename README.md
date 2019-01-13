@@ -166,6 +166,10 @@ A more robust approach is to break each command out into their own structs:
 3. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
 4. Call `kong.Context.Run(bindings...)` to call the selected parsed command.
 
+Once a command node is selected by Kong it will search from that node back to the root. Each
+encountered command node with a `Run(...) error` will be called in reverse order. This allows
+sub-trees to be re-used fairly conveniently.
+
 In addition to values bound with the `kong.Bind(...)` option, any values
 passed through to `kong.Context.Run(...)` are also bindable to the target's
 `Run()` arguments.
