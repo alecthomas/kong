@@ -37,6 +37,9 @@ type HelpOptions struct {
 
 	// Write help in a more compact, but still fully-specified, form.
 	Compact bool
+
+	// TreeView writes command chains in a tree structure instead of listing them separately.
+	TreeView bool
 }
 
 // HelpProvider can be implemented by commands/args to provide detailed help.
@@ -115,19 +118,32 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
 		w.Print("")
-		w.Print("Commands:")
-		iw := w.Indent()
-		if w.Compact {
-			rows := [][2]string{}
-			for _, cmd := range cmds {
-				rows = append(rows, [2]string{cmd.Path(), cmd.Help})
+		if w.TreeView {
+			w.Print("Command Tree:")
+			iw := w.Indent()
+			var rows [][2]string
+			for i, cmd := range node.Children {
+				rows = append(rows, commandTree(cmd, "")...)
+				if i != len(cmds)-1 {
+					rows = append(rows, [2]string{"", ""})
+				}
 			}
 			writeTwoColumns(iw, defaultColumnPadding, rows)
 		} else {
-			for i, cmd := range cmds {
-				printCommandSummary(iw, cmd)
-				if i != len(cmds)-1 {
-					iw.Print("")
+			w.Print("Commands:")
+			iw := w.Indent()
+			if w.Compact {
+				rows := [][2]string{}
+				for _, cmd := range cmds {
+					rows = append(rows, [2]string{cmd.Path(), cmd.Help})
+				}
+				writeTwoColumns(iw, defaultColumnPadding, rows)
+			} else {
+				for i, cmd := range cmds {
+					printCommandSummary(iw, cmd)
+					if i != len(cmds)-1 {
+						iw.Print("")
+					}
 				}
 			}
 		}
@@ -275,4 +291,28 @@ func formatFlag(haveShort bool, flag *Flag) string {
 		flagString += fmt.Sprintf("=%s", flag.FormatPlaceHolder())
 	}
 	return flagString
+}
+
+// commandTree creates a tree with the given node name as root and its children's arguments and sub commands as leafs.
+func commandTree(node *Node, prefix string) (rows [][2]string) {
+	var nodeName string
+	switch node.Type {
+	case CommandNode:
+		nodeName += prefix + node.Name
+	case ArgumentNode:
+		nodeName += prefix + "<" + node.Name + ">"
+	}
+	rows = append(rows, [2]string{nodeName, node.Help})
+	if prefix == "" {
+		prefix = "|- "
+	} else {
+		prefix = "|" + strings.Repeat(" ", defaultIndent) + prefix
+	}
+	for _, arg := range node.Positional {
+		rows = append(rows, [2]string{prefix + arg.Summary(), arg.Help})
+	}
+	for _, subCmd := range node.Children {
+		rows = append(rows, commandTree(subCmd, prefix)...)
+	}
+	return
 }
