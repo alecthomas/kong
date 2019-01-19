@@ -204,6 +204,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			PlaceHolder: tag.PlaceHolder,
 			Env:         tag.Env,
 			Group:       tag.Group,
+			Hidden:      tag.Hidden,
 		}
 		value.Flag = flag
 		node.Flags = append(node.Flags, flag)
