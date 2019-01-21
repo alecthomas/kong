@@ -40,11 +40,11 @@ type HelpOptions struct {
 
 	// Tree writes command chains in a tree structure instead of listing them separately.
 	Tree bool
-	
+
 	// Indenter modulates the given prefix for the next layer in the tree view.
 	// The following exported templates can be used: kong.SpaceIndenter, kong.LineIndenter, kong.TreeIndenter
 	// The kong.SpaceIndenter will be used by default.
-  	Indenter HelpIndenter
+	Indenter HelpIndenter
 }
 
 // HelpProvider can be implemented by commands/args to provide detailed help.
@@ -126,13 +126,13 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
 		w.Print("")
-		if w.TreeView {
+		if w.Tree {
 			w.Print("Command Tree:")
 			iw := w.Indent()
 			var rows [][2]string
 			for i, cmd := range node.Children {
 				rows = append(rows, w.commandTree(cmd, "")...)
-				if i != len(cmds)-1 {
+				if i != len(node.Children)-1 {
 					rows = append(rows, [2]string{"", ""})
 				}
 			}
