@@ -174,7 +174,7 @@ A test app.
 Flags:
   --help    Show context-sensitive help.
 
-Command Tree:
+Commands:
   one          subcommand one
   - thing      subcommand thing
     - <arg>    argument
@@ -207,7 +207,7 @@ subcommand one
 Flags:
   --help    Show context-sensitive help.
 
-Command Tree:
+Commands:
   thing      subcommand thing
   - <arg>    argument
 

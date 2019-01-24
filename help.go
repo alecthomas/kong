@@ -126,36 +126,67 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
 		w.Print("")
+		w.Print("Commands:")
 		if w.Tree {
-			w.Print("Command Tree:")
-			iw := w.Indent()
-			var rows [][2]string
-			for i, cmd := range node.Children {
-				rows = append(rows, w.commandTree(cmd, "")...)
-				if i != len(node.Children)-1 {
-					rows = append(rows, [2]string{"", ""})
-				}
-			}
-			writeTwoColumns(iw, defaultColumnPadding, rows)
+			writeCommandTree(w, node)
 		} else {
-			w.Print("Commands:")
 			iw := w.Indent()
 			if w.Compact {
-				rows := [][2]string{}
-				for _, cmd := range cmds {
-					rows = append(rows, [2]string{cmd.Path(), cmd.Help})
-				}
-				writeTwoColumns(iw, defaultColumnPadding, rows)
+				writeCompactCommandList(cmds, iw)
 			} else {
-				for i, cmd := range cmds {
-					printCommandSummary(iw, cmd)
-					if i != len(cmds)-1 {
-						iw.Print("")
-					}
-				}
+				writeCommandList(cmds, iw)
 			}
 		}
 	}
+}
+
+func writeCommandList(cmds []*Node, iw *helpWriter) {
+	for i, cmd := range cmds {
+		printCommandSummary(iw, cmd)
+		if i != len(cmds)-1 {
+			iw.Print("")
+		}
+	}
+}
+
+func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
+	rows := [][2]string{}
+	for _, cmd := range cmds {
+		rows = append(rows, [2]string{cmd.Path(), cmd.Help})
+	}
+	writeTwoColumns(iw, defaultColumnPadding, rows)
+}
+
+func writeCommandTree(w *helpWriter, node *Node) {
+	iw := w.Indent()
+	rows := make([][2]string, 0, len(node.Children)*2)
+	for i, cmd := range node.Children {
+		rows = append(rows, w.commandTree(cmd, "")...)
+		if i != len(node.Children)-1 {
+			rows = append(rows, [2]string{"", ""})
+		}
+	}
+	writeTwoColumns(iw, defaultColumnPadding, rows)
+}
+
+type helpCommandGroup struct {
+	Name     string
+	Commands []*Node
+}
+
+func collectCommandGroups(nodes []*Node) []helpCommandGroup { // nolint: deadcode
+	groups := map[string][]*Node{}
+	for _, node := range nodes {
+		groups[node.Group] = append(groups[node.Group], node)
+	}
+	out := []helpCommandGroup{}
+	for name, nodes := range groups {
+		if name == "" {
+			name = "Commands"
+		}
+		out = append(out, helpCommandGroup{Name: name, Commands: nodes})
+	}
+	return out
 }
 
 func printCommandSummary(w *helpWriter, cmd *Command) {
@@ -330,20 +361,18 @@ func SpaceIndenter(prefix string) string {
 	return prefix + strings.Repeat(" ", defaultIndent)
 }
 
-// SpaceIndenter adds line points to every new indent.
+// LineIndenter adds line points to every new indent.
 func LineIndenter(prefix string) string {
 	if prefix == "" {
 		return "- "
-	} else {
-		return strings.Repeat(" ", defaultIndent) + prefix
 	}
+	return strings.Repeat(" ", defaultIndent) + prefix
 }
 
 // TreeIndenter adds line points to every new indent and vertical lines to every layer.
 func TreeIndenter(prefix string) string {
 	if prefix == "" {
 		return "|- "
-	} else {
-		return "|" + strings.Repeat(" ", defaultIndent) + prefix
 	}
+	return "|" + strings.Repeat(" ", defaultIndent) + prefix
 }
