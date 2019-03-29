@@ -409,6 +409,7 @@ func TestHooks(t *testing.T) {
 	for _, test := range tests {
 		*ctx = hookContext{}
 		cli.One = hookCmd{}
+		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
 			_, err := p.Parse(strings.Split(test.input, " "))
 			require.NoError(t, err)

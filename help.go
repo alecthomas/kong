@@ -142,6 +142,9 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 
 func writeCommandList(cmds []*Node, iw *helpWriter) {
 	for i, cmd := range cmds {
+		if cmd.Hidden {
+			continue
+		}
 		printCommandSummary(iw, cmd)
 		if i != len(cmds)-1 {
 			iw.Print("")
@@ -152,29 +155,37 @@ func writeCommandList(cmds []*Node, iw *helpWriter) {
 func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
 	rows := [][2]string{}
 	for _, cmd := range cmds {
+		if cmd.Hidden {
+			continue
+		}
 		rows = append(rows, [2]string{cmd.Path(), cmd.Help})
 	}
-	writeTwoColumns(iw, defaultColumnPadding, rows)
+	writeTwoColumns(iw, rows)
 }
 
 func writeCommandTree(w *helpWriter, node *Node) {
 	iw := w.Indent()
 	rows := make([][2]string, 0, len(node.Children)*2)
 	for i, cmd := range node.Children {
+		if cmd.Hidden {
+			continue
+		}
 		rows = append(rows, w.commandTree(cmd, "")...)
 		if i != len(node.Children)-1 {
 			rows = append(rows, [2]string{"", ""})
 		}
 	}
-	writeTwoColumns(iw, defaultColumnPadding, rows)
+	writeTwoColumns(iw, rows)
 }
 
+// nolint: unused
 type helpCommandGroup struct {
 	Name     string
 	Commands []*Node
 }
 
-func collectCommandGroups(nodes []*Node) []helpCommandGroup { // nolint: deadcode
+// nolint: unused, deadcode
+func collectCommandGroups(nodes []*Node) []helpCommandGroup {
 	groups := map[string][]*Node{}
 	for _, node := range nodes {
 		groups[node.Group] = append(groups[node.Group], node)
@@ -253,7 +264,7 @@ func writePositionals(w *helpWriter, args []*Positional) {
 	for _, arg := range args {
 		rows = append(rows, [2]string{arg.Summary(), arg.Help})
 	}
-	writeTwoColumns(w, defaultColumnPadding, rows)
+	writeTwoColumns(w, rows)
 }
 
 func writeFlags(w *helpWriter, groups [][]*Flag) {
@@ -277,10 +288,10 @@ func writeFlags(w *helpWriter, groups [][]*Flag) {
 			}
 		}
 	}
-	writeTwoColumns(w, defaultColumnPadding, rows)
+	writeTwoColumns(w, rows)
 }
 
-func writeTwoColumns(w *helpWriter, padding int, rows [][2]string) {
+func writeTwoColumns(w *helpWriter, rows [][2]string) {
 	maxLeft := 375 * w.width / 1000
 	if maxLeft < 30 {
 		maxLeft = 30
@@ -293,16 +304,16 @@ func writeTwoColumns(w *helpWriter, padding int, rows [][2]string) {
 		}
 	}
 
-	offsetStr := strings.Repeat(" ", leftSize+padding)
+	offsetStr := strings.Repeat(" ", leftSize+defaultColumnPadding)
 
 	for _, row := range rows {
 		buf := bytes.NewBuffer(nil)
-		doc.ToText(buf, row[1], "", strings.Repeat(" ", defaultIndent), w.width-leftSize-padding)
+		doc.ToText(buf, row[1], "", strings.Repeat(" ", defaultIndent), w.width-leftSize-defaultColumnPadding)
 		lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
 
 		line := fmt.Sprintf("%-*s", leftSize, row[0])
 		if len(row[0]) < maxLeft {
-			line += fmt.Sprintf("%*s%s", padding, "", lines[0])
+			line += fmt.Sprintf("%*s%s", defaultColumnPadding, "", lines[0])
 			lines = lines[1:]
 		}
 		w.Print(line)

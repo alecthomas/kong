@@ -13,7 +13,7 @@ type ConfigFlag string
 // BeforeResolve adds a resolver.
 func (c ConfigFlag) BeforeResolve(kong *Kong, ctx *Context, trace *Path) error {
 	if kong.loader == nil {
-		return fmt.Errorf("Kong must be configured with kong.Configuration(...)")
+		return fmt.Errorf("kong must be configured with kong.Configuration(...)")
 	}
 	path := string(ctx.FlagValue(trace.Flag).(ConfigFlag))
 	resolver, err := kong.LoadConfig(path)
