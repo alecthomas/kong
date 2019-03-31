@@ -75,7 +75,7 @@ type BoolMapper interface {
 // A MapperFunc is a single function that complies with the Mapper interface.
 type MapperFunc func(ctx *DecodeContext, target reflect.Value) error
 
-func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { //nolint: golint
+func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { // nolint: golint
 	return m(ctx, target)
 }
 
@@ -224,9 +224,10 @@ func (boolMapper) IsBool() bool { return true }
 
 func durationDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		r, err := time.ParseDuration(ctx.Scan.PopValue("duration"))
+		value := ctx.Scan.PopValue("duration")
+		r, err := time.ParseDuration(value)
 		if err != nil {
-			return err
+			return fmt.Errorf("expected duration but got %q: %s", value, err)
 		}
 		target.Set(reflect.ValueOf(r))
 		return nil
@@ -235,11 +236,12 @@ func durationDecoder() MapperFunc {
 
 func timeDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		fmt := time.RFC3339
+		format := time.RFC3339
 		if ctx.Value.Format != "" {
-			fmt = ctx.Value.Format
+			format = ctx.Value.Format
 		}
-		t, err := time.Parse(fmt, ctx.Scan.PopValue("time"))
+		value := ctx.Scan.PopValue("time")
+		t, err := time.Parse(format, value)
 		if err != nil {
 			return err
 		}
@@ -253,7 +255,7 @@ func intDecoder(bits int) MapperFunc {
 		value := ctx.Scan.PopValue("int")
 		n, err := strconv.ParseInt(value, 10, bits)
 		if err != nil {
-			return fmt.Errorf("invalid int %q", value)
+			return fmt.Errorf("expected int but got %q", value)
 		}
 		target.SetInt(n)
 		return nil
@@ -265,7 +267,7 @@ func uintDecoder(bits int) MapperFunc {
 		value := ctx.Scan.PopValue("uint")
 		n, err := strconv.ParseUint(value, 10, bits)
 		if err != nil {
-			return fmt.Errorf("invalid uint %q", value)
+			return fmt.Errorf("expected unsigned int but got %q", value)
 		}
 		target.SetUint(n)
 		return nil
@@ -277,7 +279,7 @@ func floatDecoder(bits int) MapperFunc {
 		value := ctx.Scan.PopValue("float")
 		n, err := strconv.ParseFloat(value, bits)
 		if err != nil {
-			return fmt.Errorf("invalid float %q", value)
+			return fmt.Errorf("expected float but got %q", value)
 		}
 		target.SetFloat(n)
 		return nil

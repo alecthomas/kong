@@ -226,6 +226,21 @@ func (v *Value) EnumMap() map[string]bool {
 	return out
 }
 
+// ShortSummary returns a human-readable summary of the value, not including any placeholders/defaults.
+func (v *Value) ShortSummary() string {
+	if v.Flag != nil {
+		return fmt.Sprintf("--%s", v.Name)
+	}
+	argText := "<" + v.Name + ">"
+	if v.IsCumulative() {
+		argText += " ..."
+	}
+	if !v.Required {
+		argText = "[" + argText + "]"
+	}
+	return argText
+}
+
 // Summary returns a human-readable summary of the value.
 func (v *Value) Summary() string {
 	if v.Flag != nil {
@@ -268,20 +283,20 @@ func (v *Value) IsBool() bool {
 }
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
-func (v *Value) Parse(scan *Scanner, target reflect.Value) error {
+func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 	defer func() {
-		if err := recover(); err != nil {
-			switch err := err.(type) {
+		if rerr := recover(); rerr != nil {
+			switch rerr := rerr.(type) {
 			case Error:
-				panic(err)
+				err = fmt.Errorf("%s: %s", v.ShortSummary(), rerr)
 			default:
-				panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), err))
+				panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), rerr))
 			}
 		}
 	}()
-	err := v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
+	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
-		return fmt.Errorf("%s: %s", v.Summary(), err)
+		return fmt.Errorf("%s: %s", v.ShortSummary(), err)
 	}
 	v.Set = true
 	return nil

@@ -715,7 +715,7 @@ func TestNumericParamErrors(t *testing.T) {
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"--name", "-10"})
-	require.EqualError(t, err, `expected string value but got "-10" (short flag)`)
+	require.EqualError(t, err, `--name: expected string value but got "-10" (short flag)`)
 }
 
 func TestDefaultValueIsHyphen(t *testing.T) {
