@@ -140,8 +140,8 @@ type mappedValue struct {
 }
 
 func (m *mappedValue) Decode(ctx *kong.DecodeContext) error {
-	m.decoded = ctx.Scan.PopValue("mapped")
-	return nil
+	_, err := ctx.Scan.PopValueInto("mapped", &m.decoded)
+	return err
 }
 
 func TestMapperValue(t *testing.T) {

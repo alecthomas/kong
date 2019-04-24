@@ -122,7 +122,11 @@ func TestJSONBasic(t *testing.T) {
 type testUppercaseMapper struct{}
 
 func (testUppercaseMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
-	value := ctx.Scan.PopValue("lowercase")
+	var value string
+	_, err := ctx.Scan.PopValueInto("lowercase", &value)
+	if err != nil {
+		return err
+	}
 	target.SetString(strings.ToUpper(value))
 	return nil
 }
@@ -148,11 +152,11 @@ func TestResolverWithBool(t *testing.T) {
 		Bool bool
 	}
 
-	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
 		if flag.Name == "bool" {
-			return "true", nil
+			return true, nil
 		}
-		return "", nil
+		return nil, nil
 	}
 
 	p := mustNew(t, &cli, kong.Resolvers(resolver))
@@ -167,18 +171,18 @@ func TestLastResolverWins(t *testing.T) {
 		Int []int
 	}
 
-	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
 		if flag.Name == "int" {
-			return "1", nil
+			return 1, nil
 		}
-		return "", nil
+		return nil, nil
 	}
 
-	var second kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var second kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
 		if flag.Name == "int" {
-			return "2", nil
+			return 2, nil
 		}
-		return "", nil
+		return nil, nil
 	}
 
 	p := mustNew(t, &cli, kong.Resolvers(first, second))
@@ -192,11 +196,11 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	var cli struct {
 		Int int `required`
 	}
-	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
 		if flag.Name == "int" {
-			return "1", nil
+			return 1, nil
 		}
-		return "", nil
+		return nil, nil
 	}
 	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
 	require.NoError(t, err)
@@ -210,18 +214,18 @@ func TestResolverTriggersHooks(t *testing.T) {
 		Flag hookValue
 	}
 
-	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
+	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
 		if flag.Name == "flag" {
-			return "1", nil
+			return "one", nil
 		}
-		return "", nil
+		return nil, nil
 	}
 
 	_, err := mustNew(t, &cli, kong.Bind(ctx), kong.Resolvers(first)).Parse(nil)
 	require.NoError(t, err)
 
-	require.Equal(t, "1", string(cli.Flag))
-	require.Equal(t, []string{"before:", "after:1"}, ctx.values)
+	require.Equal(t, "one", string(cli.Flag))
+	require.Equal(t, []string{"before:", "after:one"}, ctx.values)
 }
 
 type validatingResolver struct {
@@ -229,8 +233,8 @@ type validatingResolver struct {
 }
 
 func (v *validatingResolver) Validate(app *kong.Application) error { return v.err }
-func (v *validatingResolver) Resolve(context *kong.Context, parent *kong.Path, flag *kong.Flag) (string, error) {
-	return "", nil
+func (v *validatingResolver) Resolve(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+	return nil, nil
 }
 
 func TestValidatingResolverErrors(t *testing.T) {

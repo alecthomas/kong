@@ -258,42 +258,49 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 		token := c.scan.Peek()
 		switch token.Type {
 		case UntypedToken:
-			switch {
-			// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
-			case token.Value == "--":
-				c.scan.Pop()
-				args := []string{}
-				for {
-					token = c.scan.Pop()
-					if token.Type == EOLToken {
-						break
+			switch v := token.Value.(type) {
+			case string:
+
+				switch {
+				// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
+				case v == "--":
+					c.scan.Pop()
+					args := []string{}
+					for {
+						token = c.scan.Pop()
+						if token.Type == EOLToken {
+							break
+						}
+						args = append(args, token.String())
 					}
-					args = append(args, token.Value)
-				}
-				// Note: tokens must be pushed in reverse order.
-				for i := range args {
-					c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
-				}
+					// Note: tokens must be pushed in reverse order.
+					for i := range args {
+						c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
+					}
 
-			// Long flag.
-			case strings.HasPrefix(token.Value, "--"):
-				c.scan.Pop()
-				// Parse it and push the tokens.
-				parts := strings.SplitN(token.Value[2:], "=", 2)
-				if len(parts) > 1 {
-					c.scan.PushTyped(parts[1], FlagValueToken)
-				}
-				c.scan.PushTyped(parts[0], FlagToken)
+				// Long flag.
+				case strings.HasPrefix(v, "--"):
+					c.scan.Pop()
+					// Parse it and push the tokens.
+					parts := strings.SplitN(v[2:], "=", 2)
+					if len(parts) > 1 {
+						c.scan.PushTyped(parts[1], FlagValueToken)
+					}
+					c.scan.PushTyped(parts[0], FlagToken)
 
-			// Short flag.
-			case strings.HasPrefix(token.Value, "-"):
-				c.scan.Pop()
-				// Note: tokens must be pushed in reverse order.
-				if tail := token.Value[2:]; tail != "" {
-					c.scan.PushTyped(tail, ShortFlagTailToken)
-				}
-				c.scan.PushTyped(token.Value[1:2], ShortFlagToken)
+				// Short flag.
+				case strings.HasPrefix(v, "-"):
+					c.scan.Pop()
+					// Note: tokens must be pushed in reverse order.
+					if tail := v[2:]; tail != "" {
+						c.scan.PushTyped(tail, ShortFlagTailToken)
+					}
+					c.scan.PushTyped(v[1:2], ShortFlagToken)
 
+				default:
+					c.scan.Pop()
+					c.scan.PushTyped(token.Value, PositionalArgumentToken)
+				}
 			default:
 				c.scan.Pop()
 				c.scan.PushTyped(token.Value, PositionalArgumentToken)
@@ -302,18 +309,18 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 		case ShortFlagTailToken:
 			c.scan.Pop()
 			// Note: tokens must be pushed in reverse order.
-			if tail := token.Value[1:]; tail != "" {
+			if tail := token.String()[1:]; tail != "" {
 				c.scan.PushTyped(tail, ShortFlagTailToken)
 			}
-			c.scan.PushTyped(token.Value[0:1], ShortFlagToken)
+			c.scan.PushTyped(token.String()[0:1], ShortFlagToken)
 
 		case FlagToken:
-			if err := c.parseFlag(flags, "--"+token.Value); err != nil {
+			if err := c.parseFlag(flags, token.String()); err != nil {
 				return err
 			}
 
 		case ShortFlagToken:
-			if err := c.parseFlag(flags, "-"+token.Value); err != nil {
+			if err := c.parseFlag(flags, token.String()); err != nil {
 				return err
 			}
 
@@ -369,7 +376,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 			}
 
-			return findPotentialCandidates(token.Value, candidates, "unexpected argument %s", token)
+			return findPotentialCandidates(token.String(), candidates, "unexpected argument %s", token)
 		default:
 			return fmt.Errorf("unexpected token %s", token)
 		}
@@ -396,7 +403,7 @@ func (c *Context) Resolve() error {
 				if err != nil {
 					return err
 				}
-				if s == "" {
+				if s == nil {
 					continue
 				}
 

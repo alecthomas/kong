@@ -1,8 +1,10 @@
 package kong
 
 import (
-	"strconv"
+	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // TokenType is the type of a token.
@@ -41,23 +43,23 @@ func (t TokenType) String() string {
 
 // Token created by Scanner.
 type Token struct {
-	Value string
+	Value interface{}
 	Type  TokenType
 }
 
 func (t Token) String() string {
 	switch t.Type {
 	case FlagToken:
-		return "--" + t.Value
+		return fmt.Sprintf("--%v", t.Value)
 
 	case ShortFlagToken:
-		return "-" + t.Value
+		return fmt.Sprintf("-%v", t.Value)
 
 	case EOLToken:
 		return "EOL"
 
 	default:
-		return strconv.Quote(t.Value)
+		return fmt.Sprintf("%v", t.Value)
 	}
 }
 
@@ -67,9 +69,9 @@ func (t Token) IsEOL() bool {
 }
 
 // IsAny returns true if the token's type is any of those provided.
-func (t Token) IsAny(types ...TokenType) bool {
+func (t TokenType) IsAny(types ...TokenType) bool {
 	for _, typ := range types {
-		if t.Type == typ {
+		if t == typ {
 			return true
 		}
 	}
@@ -79,10 +81,12 @@ func (t Token) IsAny(types ...TokenType) bool {
 // InferredType tries to infer the type of a token.
 func (t Token) InferredType() TokenType {
 	if t.Type == UntypedToken {
-		if strings.HasPrefix(t.Value, "--") {
-			return FlagToken
-		} else if strings.HasPrefix(t.Value, "-") {
-			return ShortFlagToken
+		if v, ok := t.Value.(string); ok {
+			if strings.HasPrefix(v, "--") {
+				return FlagToken
+			} else if strings.HasPrefix(v, "-") {
+				return ShortFlagToken
+			}
 		}
 	}
 	return t.Type
@@ -92,8 +96,9 @@ func (t Token) InferredType() TokenType {
 //
 // A parseable value is either a value typed token, or an untyped token NOT starting with a hyphen.
 func (t Token) IsValue() bool {
-	return t.IsAny(FlagValueToken, ShortFlagTailToken, PositionalArgumentToken) ||
-		(t.Type == UntypedToken && !strings.HasPrefix(t.Value, "-"))
+	tt := t.InferredType()
+	return tt.IsAny(FlagValueToken, ShortFlagTailToken, PositionalArgumentToken) ||
+		(tt == UntypedToken && !strings.HasPrefix(t.String(), "-"))
 }
 
 // Scanner is a stack-based scanner over command-line tokens.
@@ -137,15 +142,26 @@ func (s *Scanner) Pop() Token {
 	return arg
 }
 
-// PopValue token, or panic with Error.
+// PopValue pops a value token, or returns an error.
 //
 // "context" is used to assist the user if the value can not be popped, eg. "expected <context> value but got <type>"
-func (s *Scanner) PopValue(context string) string {
+func (s *Scanner) PopValue(context string) (Token, error) {
 	t := s.Pop()
 	if !t.IsValue() {
-		fail("expected %s value but got %s (%s)", context, t, t.InferredType())
+		return t, errors.Errorf("expected %s value but got %q (%s)", context, t, t.InferredType())
 	}
-	return t.Value
+	return t, nil
+}
+
+// PopValueInto pops a value token into target or returns an error.
+//
+// "context" is used to assist the user if the value can not be popped, eg. "expected <context> value but got <type>"
+func (s *Scanner) PopValueInto(context string, target interface{}) (Token, error) {
+	t := s.Pop()
+	if !t.IsValue() {
+		return t, errors.Errorf("expected %s value but got %q (%s)", context, t, t.InferredType())
+	}
+	return t, jsonTranscode(t.Value, target)
 }
 
 // PopWhile predicate returns true.
@@ -173,13 +189,13 @@ func (s *Scanner) Peek() Token {
 }
 
 // Push an untyped Token onto the front of the Scanner.
-func (s *Scanner) Push(arg string) *Scanner {
+func (s *Scanner) Push(arg interface{}) *Scanner {
 	s.PushToken(Token{Value: arg})
 	return s
 }
 
 // PushTyped pushes a typed token onto the front of the Scanner.
-func (s *Scanner) PushTyped(arg string, typ TokenType) *Scanner {
+func (s *Scanner) PushTyped(arg interface{}, typ TokenType) *Scanner {
 	s.PushToken(Token{Value: arg, Type: typ})
 	return s
 }
