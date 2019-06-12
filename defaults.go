@@ -1,11 +1,22 @@
 package kong
 
-// ApplyDefaults applies defaults to a struct.
+// ApplyDefaults if they are not already set.
 func ApplyDefaults(target interface{}, options ...Option) error {
 	app, err := New(target, options...)
 	if err != nil {
 		return err
 	}
-	_, err = app.Parse(nil)
-	return err
+	ctx, err := Trace(app, nil)
+	if err != nil {
+		return err
+	}
+	err = ctx.Resolve()
+	if err != nil {
+		return err
+	}
+	err = ctx.Validate()
+	if err != nil {
+		return err
+	}
+	return ctx.ApplyDefaults()
 }

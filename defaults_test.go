@@ -12,8 +12,23 @@ func TestApplyDefaults(t *testing.T) {
 		Str      string        `default:"str"`
 		Duration time.Duration `default:"30s"`
 	}
-	cli := &CLI{}
-	err := ApplyDefaults(cli)
-	require.NoError(t, err)
-	require.Equal(t, &CLI{Str: "str", Duration: time.Second * 30}, cli)
+	tests := []struct {
+		name     string
+		target   CLI
+		expected CLI
+	}{
+		{name: "DefaultsWhenNotSet",
+			expected: CLI{Str: "str", Duration: time.Second * 30}},
+		{name: "PartiallySetDefaults",
+			target:   CLI{Duration: time.Second},
+			expected: CLI{Str: "str", Duration: time.Second}},
+	}
+	for _, tt := range tests {
+		// nolint: scopelint
+		t.Run(tt.name, func(t *testing.T) {
+			err := ApplyDefaults(&tt.target)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, tt.target)
+		})
+	}
 }

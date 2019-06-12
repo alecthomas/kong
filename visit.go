@@ -5,7 +5,9 @@ import (
 )
 
 // Next should be called by Visitor to proceed with the walk.
-type Next func(error) error
+//
+// The walk will terminate if "err" is non-nil.
+type Next func(err error) error
 
 // Visitor can be used to walk all nodes in the model.
 type Visitor func(node Visitable, next Next) error

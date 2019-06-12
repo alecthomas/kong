@@ -60,8 +60,8 @@ type Context struct {
 //
 // The returned Context will include a Path of all commands, arguments, positionals and flags.
 //
-// This just constructs a new trace. To fully apply the trace you must call Resolve(), Validate() and
-// Apply().
+// This just constructs a new trace. To fully apply the trace you must call Reset(), Resolve(),
+// Validate() and Apply().
 func Trace(k *Kong, args []string) (*Context, error) {
 	c := &Context{
 		Kong: k,
@@ -74,11 +74,6 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		bindings: bindings{},
 	}
 	c.Error = c.trace(c.Model.Node)
-	err := c.reset(c.Model.Node)
-	if err != nil {
-		return nil, err
-	}
-
 	return c, nil
 }
 
@@ -236,9 +231,9 @@ func (c *Context) FlagValue(flag *Flag) interface{} {
 	return flag.DefaultValue.Interface()
 }
 
-// Recursively reset values to defaults (as specified in the grammar) or the zero value.
-func (c *Context) reset(node *Node) error {
-	return Visit(node, func(node Visitable, next Next) error {
+// Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
+func (c *Context) Reset() error {
+	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		if value, ok := node.(*Value); ok {
 			return next(value.Reset())
 		}
@@ -439,6 +434,28 @@ func (c *Context) getValue(value *Value) reflect.Value {
 		c.values[value] = v
 	}
 	return v
+}
+
+// ApplyDefaults if they are not already set.
+func (c *Context) ApplyDefaults() error {
+	return Visit(c.Model.Node, func(node Visitable, next Next) error {
+		var value *Value
+		switch node := node.(type) {
+		case *Flag:
+			value = node.Value
+		case *Node:
+			value = node.Argument
+		case *Value:
+			value = node
+		default:
+		}
+		if value != nil {
+			if err := value.ApplyDefault(); err != nil {
+				return err
+			}
+		}
+		return next(nil)
+	})
 }
 
 // Apply traced context to the target grammar.
