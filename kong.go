@@ -324,13 +324,13 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error()
 	}
-	k.Errorf("%s", msg)
 	// Maybe display usage information.
 	if err, ok := err.(*ParseError); ok && k.usageOnError {
-		fmt.Fprintln(k.Stdout)
 		options := k.helpOptions
 		_ = k.help(options, err.Context)
+		fmt.Fprintln(k.Stdout)
 	}
+	k.Errorf("%s", msg)
 	k.Exit(1)
 }
 
