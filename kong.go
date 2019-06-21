@@ -209,10 +209,10 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = ctx.Validate(); err != nil {
+	if _, err = ctx.Apply(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if _, err = ctx.Apply(); err != nil {
+	if err = ctx.Validate(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = k.applyHook(ctx, "AfterApply"); err != nil {

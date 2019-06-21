@@ -14,9 +14,8 @@ func ApplyDefaults(target interface{}, options ...Option) error {
 	if err != nil {
 		return err
 	}
-	err = ctx.Validate()
-	if err != nil {
+	if err = ctx.ApplyDefaults(); err != nil {
 		return err
 	}
-	return ctx.ApplyDefaults()
+	return ctx.Validate()
 }
