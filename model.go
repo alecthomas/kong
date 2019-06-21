@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // A Visitable component in the model.
@@ -289,7 +291,7 @@ func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 		if rerr := recover(); rerr != nil {
 			switch rerr := rerr.(type) {
 			case Error:
-				err = fmt.Errorf("%s: %s", v.ShortSummary(), rerr)
+				err = errors.Wrap(rerr, v.ShortSummary())
 			default:
 				panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), rerr))
 			}
@@ -297,7 +299,7 @@ func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 	}()
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
-		return fmt.Errorf("%s: %s", v.ShortSummary(), err)
+		return errors.Wrap(err, v.ShortSummary())
 	}
 	v.Set = true
 	return nil

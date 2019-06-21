@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // Path records the nodes and parsed values from the current command-line.
@@ -504,6 +506,9 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		c.scan.Pop()
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
+			if e, ok := errors.Cause(err).(*expectedError); ok && e.token.InferredType().IsAny(FlagToken, ShortFlagToken) {
+				return errors.Errorf("%s; perhaps try %s=%q?", err, flag.ShortSummary(), e.token)
+			}
 			return err
 		}
 		c.Path = append(c.Path, &Path{Flag: flag})
