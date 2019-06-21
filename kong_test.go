@@ -680,7 +680,7 @@ func TestEnum(t *testing.T) {
 		Flag string `enum:"a,b,c"`
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--flag", "d"})
-	require.EqualError(t, err, "--flag must be one of a,b,c but got \"d\"")
+	require.EqualError(t, err, "--flag must be one of \"a\",\"b\",\"c\" but got \"d\"")
 }
 
 type commandWithHook struct {
@@ -734,7 +734,7 @@ func TestDefaultEnumValidated(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.EqualError(t, err, "--flag must be one of valid but got \"invalid\"")
+	require.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }
 
 func TestEnvarEnumValidated(t *testing.T) {
@@ -747,5 +747,5 @@ func TestEnvarEnumValidated(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.EqualError(t, err, "--flag must be one of valid but got \"invalid\"")
+	require.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }

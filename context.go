@@ -3,6 +3,7 @@ package kong
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -135,7 +136,12 @@ func (c *Context) Validate() error {
 	err := Visit(c.Model, func(node Visitable, next Next) error {
 		if value, ok := node.(*Value); ok {
 			if value.Enum != "" && !value.EnumMap()[fmt.Sprintf("%v", value.Target.Interface())] {
-				return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), value.Enum, value.Target.Interface())
+				enums := []string{}
+				for enum := range value.EnumMap() {
+					enums = append(enums, fmt.Sprintf("%q", enum))
+				}
+				sort.Strings(enums)
+				return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), value.Target.Interface())
 			}
 		}
 		return next(nil)
