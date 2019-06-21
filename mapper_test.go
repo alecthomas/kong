@@ -140,7 +140,7 @@ type mappedValue struct {
 }
 
 func (m *mappedValue) Decode(ctx *kong.DecodeContext) error {
-	_, err := ctx.Scan.PopValueInto("mapped", &m.decoded)
+	err := ctx.Scan.PopValueInto("mapped", &m.decoded)
 	return err
 }
 

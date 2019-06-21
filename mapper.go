@@ -196,7 +196,7 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Float32, floatDecoder(32)).
 		RegisterKind(reflect.Float64, floatDecoder(64)).
 		RegisterKind(reflect.String, MapperFunc(func(ctx *DecodeContext, target reflect.Value) error {
-			_, err := ctx.Scan.PopValueInto("string", target.Addr().Interface())
+			err := ctx.Scan.PopValueInto("string", target.Addr().Interface())
 			return err
 		})).
 		RegisterKind(reflect.Bool, boolMapper{}).
@@ -235,7 +235,7 @@ func (boolMapper) IsBool() bool { return true }
 func durationDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		var value string
-		if _, err := ctx.Scan.PopValueInto("duration", &value); err != nil {
+		if err := ctx.Scan.PopValueInto("duration", &value); err != nil {
 			return err
 		}
 		r, err := time.ParseDuration(value)
@@ -254,7 +254,7 @@ func timeDecoder() MapperFunc {
 			format = ctx.Value.Format
 		}
 		var value string
-		if _, err := ctx.Scan.PopValueInto("time", &value); err != nil {
+		if err := ctx.Scan.PopValueInto("time", &value); err != nil {
 			return err
 		}
 		t, err := time.Parse(format, value)
@@ -388,7 +388,7 @@ func mapDecoder(r *Registry) MapperFunc {
 		}
 		for !childScanner.Peek().IsEOL() {
 			var token string
-			_, err := childScanner.PopValueInto("map", &token)
+			err := childScanner.PopValueInto("map", &token)
 			if err != nil {
 				return err
 			}
@@ -478,7 +478,7 @@ func pathMapper(r *Registry) MapperFunc {
 			return errors.Errorf("\"path\" type must be applied to a string not %s", target.Type())
 		}
 		var path string
-		_, err := ctx.Scan.PopValueInto("file", &path)
+		err := ctx.Scan.PopValueInto("file", &path)
 		if err != nil {
 			return err
 		}
@@ -497,7 +497,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 			return errors.Errorf("\"existingfile\" type must be applied to a string not %s", target.Type())
 		}
 		var path string
-		_, err := ctx.Scan.PopValueInto("file", &path)
+		err := ctx.Scan.PopValueInto("file", &path)
 		if err != nil {
 			return err
 		}
@@ -523,7 +523,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return errors.Errorf("\"existingdir\" must be applied to a string not %s", target.Type())
 		}
 		var path string
-		_, err := ctx.Scan.PopValueInto("file", &path)
+		err := ctx.Scan.PopValueInto("file", &path)
 		if err != nil {
 			return err
 		}
@@ -543,7 +543,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 func urlMapper() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		var urlStr string
-		_, err := ctx.Scan.PopValueInto("url", &urlStr)
+		err := ctx.Scan.PopValueInto("url", &urlStr)
 		if err != nil {
 			return err
 		}
@@ -601,7 +601,7 @@ type FileContentFlag []byte
 
 func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
 	var filename string
-	_, err := ctx.Scan.PopValueInto("filename", &filename)
+	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {
 		return err
 	}

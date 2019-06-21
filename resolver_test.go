@@ -123,7 +123,7 @@ type testUppercaseMapper struct{}
 
 func (testUppercaseMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
 	var value string
-	_, err := ctx.Scan.PopValueInto("lowercase", &value)
+	err := ctx.Scan.PopValueInto("lowercase", &value)
 	if err != nil {
 		return err
 	}

@@ -14,11 +14,11 @@ type TokenType int
 const (
 	UntypedToken TokenType = iota
 	EOLToken
-	FlagToken               // --<flag>
-	FlagValueToken          // =<value>
-	ShortFlagToken          // -<short>[<tail]
-	ShortFlagTailToken      // <tail>
-	PositionalArgumentToken // <arg>
+	FlagToken                // --<flag>
+	FlagValueToken           // =<value>
+	ShortFlagToken           // -<short>[<tail]
+	ShortFlagTailToken       // <tail>
+	PositionalArgumentToken  // <arg>
 )
 
 func (t TokenType) String() string {
@@ -156,12 +156,12 @@ func (s *Scanner) PopValue(context string) (Token, error) {
 // PopValueInto pops a value token into target or returns an error.
 //
 // "context" is used to assist the user if the value can not be popped, eg. "expected <context> value but got <type>"
-func (s *Scanner) PopValueInto(context string, target interface{}) (Token, error) {
+func (s *Scanner) PopValueInto(context string, target interface{}) error {
 	t := s.Pop()
 	if !t.IsValue() {
-		return t, errors.Errorf("expected %s value but got %q (%s)", context, t, t.InferredType())
+		return errors.Errorf("expected %s value but got %q (%s)", context, t, t.InferredType())
 	}
-	return t, jsonTranscode(t.Value, target)
+	return jsonTranscode(t.Value, target)
 }
 
 // PopWhile predicate returns true.
