@@ -351,6 +351,7 @@ type Positional = Value
 type Flag struct {
 	*Value
 	Group       string // Logical grouping when displaying. May also be used by configuration loaders to group options logically.
+	Xor         string
 	PlaceHolder string
 	Env         string
 	Short       rune

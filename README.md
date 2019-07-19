@@ -403,6 +403,7 @@ Tag                    | Description
 `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
 `enum:"X,Y,..."`       | Set of valid values allowed for this flag.
 `group:"X"`            | Logical group for a flag or command.
+`xor:"X"`              | Exclusive OR group for flags. Only one flag in the group can be used.
 `prefix:"X"`           | Prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
