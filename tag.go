@@ -27,6 +27,7 @@ type Tag struct {
 	Sep         rune
 	Enum        string
 	Group       string
+	Xor         string
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 	Embed       bool
@@ -151,6 +152,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetRune("sep")
 	t.Group = t.Get("group")
+	t.Xor = t.Get("xor")
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
 	if t.Sep == 0 {

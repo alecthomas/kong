@@ -179,6 +179,9 @@ func (c *Context) Validate() error {
 	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
 		return err
 	}
+	if err := checkXorDuplicates(c.Path); err != nil {
+		return err
+	}
 
 	if node.Type == ArgumentNode {
 		value := node.Argument
@@ -641,6 +644,25 @@ func checkMissingPositionals(positional int, values []*Value) error {
 		missing = append(missing, "<"+values[positional].Name+">")
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+}
+
+func checkXorDuplicates(paths []*Path) error {
+	for _, path := range paths {
+		seen := map[string]*Flag{}
+		for _, flag := range path.Flags {
+			if !flag.Set {
+				continue
+			}
+			if flag.Xor == "" {
+				continue
+			}
+			if seen[flag.Xor] != nil {
+				return fmt.Errorf("--%s and --%s can't be used together", seen[flag.Xor].Name, flag.Name)
+			}
+			seen[flag.Xor] = flag
+		}
+	}
+	return nil
 }
 
 func findPotentialCandidates(needle string, haystack []string, format string, args ...interface{}) error {

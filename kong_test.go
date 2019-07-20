@@ -749,3 +749,35 @@ func TestEnvarEnumValidated(t *testing.T) {
 	_, err := p.Parse(nil)
 	require.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }
+
+func TestXor(t *testing.T) {
+	var cli struct {
+		Hello bool   `xor:"another"`
+		One   bool   `xor:"group"`
+		Two   string `xor:"group"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--hello", "--one", "--two=hi"})
+	require.EqualError(t, err, "--one and --two can't be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one", "--hello"})
+	require.NoError(t, err)
+}
+
+func TestXorChild(t *testing.T) {
+	var cli struct {
+		One bool `xor:"group"`
+		Cmd struct {
+			Two   string `xor:"group"`
+			Three string `xor:"group"`
+		} `cmd`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--one", "cmd", "--two=hi"})
+	require.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--two=hi", "cmd", "--three"})
+	require.Error(t, err, "--two and --three can't be used together")
+}
