@@ -647,8 +647,8 @@ func checkMissingPositionals(positional int, values []*Value) error {
 }
 
 func checkXorDuplicates(paths []*Path) error {
-	seen := map[string]*Flag{}
 	for _, path := range paths {
+		seen := map[string]*Flag{}
 		for _, flag := range path.Flags {
 			if !flag.Set {
 				continue

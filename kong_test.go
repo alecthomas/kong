@@ -769,10 +769,15 @@ func TestXorChild(t *testing.T) {
 	var cli struct {
 		One bool `xor:"group"`
 		Cmd struct {
-			Two string `xor:"group"`
+			Two   string `xor:"group"`
+			Three string `xor:"group"`
 		} `cmd`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--one", "cmd", "--two=hi"})
-	require.EqualError(t, err, "--one and --two can't be used together")
+	require.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--two=hi", "cmd", "--three"})
+	require.Error(t, err, "--two and --three can't be used together")
 }
