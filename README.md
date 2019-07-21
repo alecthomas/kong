@@ -469,6 +469,8 @@ eg.
 kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json"))
 ```
 
+[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L103) for an example of how the JSON file is structured.
+
 ### `Resolver(...)` - support for default values from external sources
 
 Resolvers are Kong's extension point for providing default values from external sources. As an example, support for environment variables via the `env` tag is provided by a resolver. There's also a builtin resolver for JSON configuration files.
