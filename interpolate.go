@@ -5,18 +5,21 @@ import (
 	"regexp"
 )
 
-var interpolationRegex = regexp.MustCompile(`(\${[[:alpha:]_][[:word:]]*})|(\$)|([^$]+)`)
+var interpolationRegex = regexp.MustCompile(`((?:\${([[:alpha:]_][[:word:]]*))(?:=([^}]+))?})|(\$)|([^$]+)`)
 
-// Interpolate variables from vars into s for substrings in the form ${var}.
+// Interpolate variables from vars into s for substrings in the form ${var} or ${var=default}.
 func interpolate(s string, vars map[string]string) (string, error) {
 	out := ""
 	matches := interpolationRegex.FindAllStringSubmatch(s, -1)
 	for _, match := range matches {
-		if match[1] != "" {
-			name := match[1][2 : len(match[1])-1]
+		if name := match[2]; name != "" {
 			value, ok := vars[name]
 			if !ok {
-				return "", fmt.Errorf("undefined variable ${%s}", name)
+				// No default value.
+				if match[3] == "" {
+					return "", fmt.Errorf("undefined variable ${%s}", name)
+				}
+				value = match[3]
 			}
 			out += value
 		} else {

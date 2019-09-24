@@ -8,10 +8,9 @@ import (
 
 func TestInterpolate(t *testing.T) {
 	vars := map[string]string{
-		"name": "Bobby Brown",
-		"age":  "35",
+		"age": "35",
 	}
-	actual, err := interpolate("${name} is ${age} years old", vars)
+	actual, err := interpolate("${name=Bobby Brown} is ${age} years old", vars)
 	require.NoError(t, err)
 	require.Equal(t, `Bobby Brown is 35 years old`, actual)
 }

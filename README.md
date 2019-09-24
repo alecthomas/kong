@@ -416,10 +416,11 @@ default values.
 Variables are in the form:
 
     ${<name>}
+    ${<name>=<default>}
 
 Variables are set with the `Vars{"key": "value", ...}` option. Undefined
-variable references in the grammar will result in an error at construction
-time.
+variable references in the grammar without a default will result in an error at 
+construction time.
 
 Variables can also be set via the `set:"K=V"` tag. In this case, those variables will be available for that
 node and all children. This is useful for composition by allowing the same struct to be reused.
