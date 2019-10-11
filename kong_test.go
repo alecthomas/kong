@@ -781,3 +781,13 @@ func TestXorChild(t *testing.T) {
 	_, err = p.Parse([]string{"--two=hi", "cmd", "--three"})
 	require.Error(t, err, "--two and --three can't be used together")
 }
+
+func TestEnumSequence(t *testing.T) {
+	var cli struct {
+		State []string `enum:"a,b,c" default:"a"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{"a"}, cli.State)
+}
