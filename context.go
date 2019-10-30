@@ -525,8 +525,9 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 
 // Run executes the Run() method on the selected command, which must exist.
 //
-// Any passed values will be bindable to arguments of the target Run() method.
-func (c *Context) Run(bindings ...interface{}) (err error) {
+// Any passed values will be bindable to arguments of the target Run() method. Additionally,
+// all parent nodes in the command structure will be bound.
+func (c *Context) Run(binds ...interface{}) (err error) {
 	defer catch(&err)
 	node := c.Selected()
 	if node == nil {
@@ -535,12 +536,18 @@ func (c *Context) Run(bindings ...interface{}) (err error) {
 	type targetMethod struct {
 		node   *Node
 		method reflect.Value
+		binds  bindings
 	}
+	methodBinds := c.Kong.bindings.clone().add(binds...).add(c).merge(c.bindings)
 	methods := []targetMethod{}
 	for i := 0; node != nil; i, node = i+1, node.Parent {
 		method := getMethod(node.Target, "Run")
+		methodBinds = methodBinds.clone()
+		for p := node; p != nil; p = p.Parent {
+			methodBinds = methodBinds.add(p.Target.Addr().Interface())
+		}
 		if method.IsValid() {
-			methods = append(methods, targetMethod{node, method})
+			methods = append(methods, targetMethod{node, method, methodBinds})
 		}
 	}
 	if len(methods) == 0 {
@@ -552,8 +559,7 @@ func (c *Context) Run(bindings ...interface{}) (err error) {
 	}
 
 	for _, method := range methods {
-		binds := c.Kong.bindings.clone().add(bindings...).add(c).merge(c.bindings)
-		if err = callMethod("Run", method.node.Target, method.method, binds); err != nil {
+		if err = callMethod("Run", method.node.Target, method.method, method.binds); err != nil {
 			return err
 		}
 	}

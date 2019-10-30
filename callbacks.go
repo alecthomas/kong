@@ -3,9 +3,18 @@ package kong
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type bindings map[reflect.Type]reflect.Value
+
+func (b bindings) String() string {
+	out := []string{}
+	for k := range b {
+		out = append(out, k.String())
+	}
+	return "bindings{" + strings.Join(out, ", ") + "}"
+}
 
 func (b bindings) add(values ...interface{}) bindings {
 	for _, v := range values {
@@ -51,7 +60,7 @@ func callMethod(name string, v, f reflect.Value, bindings bindings) error {
 		if arg, ok := bindings[pt]; ok {
 			in = append(in, arg)
 		} else {
-			return fmt.Errorf("couldn't find binding of type %s for parameter %d of %T.%s(), use kong.Bind(%s)", pt, i, v.Type(), name, pt)
+			return fmt.Errorf("couldn't find binding of type %s for parameter %d of %s.%s(), use kong.Bind(%s)", pt, i, v.Type(), name, pt)
 		}
 	}
 	out := f.Call(in)
