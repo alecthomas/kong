@@ -217,7 +217,17 @@ func (boolMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
 		token := ctx.Scan.Pop()
 		switch v := token.Value.(type) {
 		case string:
-			target.SetBool(strings.ToLower(v) == "true")
+			v = strings.ToLower(v)
+			switch v {
+			case "true", "1", "yes":
+				target.SetBool(true)
+
+			case "false", "0", "no":
+				target.SetBool(false)
+
+			default:
+				return errors.Errorf("bool value must be true, 1, yes, false, 0 or no but got %q", v)
+			}
 
 		case bool:
 			target.SetBool(v)

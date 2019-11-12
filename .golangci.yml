@@ -10,6 +10,9 @@ linters:
     - maligned
     - lll
     - gochecknoglobals
+    - wsl
+    - funlen
+    - gocognit
 
 linters-settings:
   govet:
