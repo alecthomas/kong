@@ -132,10 +132,10 @@ func (c *Context) Empty() bool {
 }
 
 // Validate the current context.
-func (c *Context) Validate() error {
+func (c *Context) Validate() error { // nolint: gocyclo
 	err := Visit(c.Model, func(node Visitable, next Next) error {
 		if value, ok := node.(*Value); ok {
-			if value.Enum != "" {
+			if value.Enum != "" && (!value.Required || value.Default != "") {
 				if err := checkEnum(value, value.Target); err != nil {
 					return err
 				}
@@ -152,6 +152,19 @@ func (c *Context) Validate() error {
 		}
 	}
 	for _, path := range c.Path {
+		var value *Value
+		switch {
+		case path.Flag != nil:
+			value = path.Flag.Value
+
+		case path.Positional != nil:
+			value = path.Positional
+		}
+		if value != nil && value.Tag.Enum != "" {
+			if err := checkEnum(value, value.Target); err != nil {
+				return err
+			}
+		}
 		if err := checkMissingFlags(path.Flags); err != nil {
 			return err
 		}

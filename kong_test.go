@@ -791,3 +791,27 @@ func TestEnumSequence(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"a"}, cli.State)
 }
+
+func TestIssue40EnumAcrossCommands(t *testing.T) {
+	var cli struct {
+		One struct {
+			OneArg string `arg:"" required:""`
+		} `cmd:""`
+		Two struct {
+			TwoArg string `arg:"" enum:"a,b,c" required:""`
+		} `cmd:""`
+		Three struct {
+			ThreeArg string `arg:"" optional:"" default:"a" enum:"a,b,c"`
+		} `cmd:""`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"one", "two"})
+	require.NoError(t, err)
+	_, err = p.Parse([]string{"two", "d"})
+	require.Error(t, err)
+	_, err = p.Parse([]string{"three", "d"})
+	require.Error(t, err)
+	_, err = p.Parse([]string{"three", "c"})
+	require.NoError(t, err)
+}
