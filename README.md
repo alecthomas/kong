@@ -230,7 +230,7 @@ eg.
 
 ```go
 // A flag with a hook that, if triggered, will set the debug loggers output to stdout.
-var debugFlag bool
+type debugFlag bool
 
 func (d debugFlag) BeforeApply(logger *log.Logger) error {
   logger.SetOutput(os.Stdout)
