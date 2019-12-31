@@ -13,6 +13,7 @@ linters:
     - wsl
     - funlen
     - gocognit
+    - gomnd
 
 linters-settings:
   govet:
