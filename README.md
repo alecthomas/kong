@@ -392,7 +392,11 @@ specifies the element type. For maps, the tag has the format
 <a id="markdown-custom-decoders-mappers" name="custom-decoders-mappers"></a>
 ## Custom decoders (mappers)
 
-If a field implements the [MapperValue](https://godoc.org/github.com/alecthomas/kong#MapperValue)
+Any field implementing `encoding.TextUnmarshaler` or `json.Unmarshaler` will use those interfaces
+for decoding values.
+
+For more fine-grained control, if a field implements the
+[MapperValue](https://godoc.org/github.com/alecthomas/kong#MapperValue)
 interface it will be used to decode arguments into the field.
 
 <a id="markdown-supported-tags" name="supported-tags"></a>

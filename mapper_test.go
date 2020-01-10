@@ -2,11 +2,13 @@ package kong_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +28,45 @@ func TestValueMapper(t *testing.T) {
 	_, err = k.Parse([]string{"--flag"})
 	require.NoError(t, err)
 	require.Equal(t, "MOO", cli.Flag)
+}
+
+type textUnmarshalerValue string
+
+func (m *textUnmarshalerValue) UnmarshalText(text []byte) error {
+	*m = textUnmarshalerValue(strings.ToUpper(string(text)))
+	return nil
+}
+
+func TestTextUnmarshaler(t *testing.T) {
+	var cli struct {
+		Value textUnmarshalerValue
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--value=hello"})
+	require.NoError(t, err)
+	require.Equal(t, "HELLO", string(cli.Value))
+}
+
+type jsonUnmarshalerValue string
+
+func (j *jsonUnmarshalerValue) UnmarshalJSON(text []byte) error {
+	var v string
+	err := json.Unmarshal(text, &v)
+	if err != nil {
+		return err
+	}
+	*j = jsonUnmarshalerValue(strings.ToUpper(v))
+	return nil
+}
+
+func TestJSONUnmarshaler(t *testing.T) {
+	var cli struct {
+		Value jsonUnmarshalerValue
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--value=hello"})
+	require.NoError(t, err)
+	require.Equal(t, "HELLO", string(cli.Value))
 }
 
 func TestNamedMapper(t *testing.T) {
