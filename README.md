@@ -222,7 +222,7 @@ var cli struct {
 func main() {
   ctx := kong.Parse(&cli)
   // Call the Run() method of the selected parsed command.
-  err = ctx.Run(&Context{Debug: cli.Debug})
+  err := ctx.Run(&Context{Debug: cli.Debug})
   ctx.FatalIfErrorf(err)
 }
 
