@@ -815,3 +815,38 @@ func TestIssue40EnumAcrossCommands(t *testing.T) {
 	_, err = p.Parse([]string{"three", "c"})
 	require.NoError(t, err)
 }
+
+func TestEnumArg(t *testing.T) {
+	var cli struct {
+		Nested struct {
+			One string `arg:"" enum:"a,b,c"`
+			Two string `arg:""`
+		} `cmd:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"nested", "a", "b"})
+	require.NoError(t, err)
+	require.Equal(t, "a", cli.Nested.One)
+	require.Equal(t, "b", cli.Nested.Two)
+}
+
+func TestDefaultCommand(t *testing.T) {
+	var cli struct {
+		One struct{} `cmd:"" default:"1"`
+		Two struct{} `cmd:""`
+	}
+	p := mustNew(t, &cli)
+	ctx, err := p.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "one", ctx.Command())
+}
+
+func TestMultipleDefaultCommands(t *testing.T) {
+	var cli struct {
+		One struct{} `cmd:"" default:"1"`
+		Two struct{} `cmd:"" default:"1"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	require.EqualError(t, err, "can't have more than one default command under  <command>")
+}

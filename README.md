@@ -293,6 +293,8 @@ type CLI struct {
 }
 ```
 
+If a sub-command is tagged with `default:"1"` it will be selected if there are no further arguments.
+
 <a id="markdown-branching-positional-arguments" name="branching-positional-arguments"></a>
 ## Branching positional arguments
 
@@ -419,6 +421,7 @@ Tag                    | Description
 `type:"X"`             | Specify [named types](#custom-named-types) to use.
 `placeholder:"X"`      | Placeholder text.
 `default:"X"`          | Default value.
+`default:"1"`          | On a command, make it the default.
 `short:"X"`            | Short name, if flag.
 `required`             | If present, flag/arg is required.
 `optional`             | If present, flag/arg is optional.
