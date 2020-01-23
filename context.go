@@ -397,8 +397,17 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			return fmt.Errorf("unexpected token %s", token)
 		}
 	}
+	return c.maybeSelectDefault(flags, node)
+}
 
-	// End of the line, check for a default command.
+// End of the line, check for a default command, but only if we're not displaying help,
+// otherwise we'd only ever display the help for the default command.
+func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
+	for _, flag := range flags {
+		if flag.Name == "help" && flag.Set {
+			return nil
+		}
+	}
 	var defaultNode *Path
 	for _, child := range node.Children {
 		if child.Type == CommandNode && child.Tag.Default != "" {
