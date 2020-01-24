@@ -23,6 +23,7 @@ type context struct {
 	rl   *readline.Instance
 }
 
+// Handle a single SSH interactive connection.
 func handle(log *log.Logger, s ssh.Session) error {
 	log.Printf("New SSH")
 	sshPty, _, isPty := s.Pty()
@@ -132,7 +133,7 @@ func handlerWithError(handle func(log *log.Logger, s ssh.Session) error) ssh.Han
 }
 
 var cli struct {
-	HostKey string `type:"existingfile" help:"SSH host key to use." default:"./_examples/server/server_rsa_key"`
+	HostKey string `type:"existingfile" help:"SSH host key to use." default:"server_rsa_key"`
 	Bind    string `help:"Bind address for server." default:"127.0.0.1:6740"`
 }
 
