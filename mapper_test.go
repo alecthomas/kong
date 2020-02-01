@@ -30,10 +30,15 @@ func TestValueMapper(t *testing.T) {
 	require.Equal(t, "MOO", cli.Flag)
 }
 
-type textUnmarshalerValue string
+type textUnmarshalerValue int
 
 func (m *textUnmarshalerValue) UnmarshalText(text []byte) error {
-	*m = textUnmarshalerValue(strings.ToUpper(string(text)))
+	s := string(text)
+	if s == "hello" {
+		*m = 10
+	} else {
+		return fmt.Errorf("expected \"hello\"")
+	}
 	return nil
 }
 
@@ -44,7 +49,9 @@ func TestTextUnmarshaler(t *testing.T) {
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--value=hello"})
 	require.NoError(t, err)
-	require.Equal(t, "HELLO", string(cli.Value))
+	require.Equal(t, 10, int(cli.Value))
+	_, err = p.Parse([]string{"--value=other"})
+	require.Error(t, err)
 }
 
 type jsonUnmarshalerValue string

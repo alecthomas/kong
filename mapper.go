@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"encoding"
 	"encoding/json"
 	"io/ioutil"
 	"math/bits"
@@ -15,8 +16,10 @@ import (
 )
 
 var (
-	mapperValueType = reflect.TypeOf((*MapperValue)(nil)).Elem()
-	boolMapperType  = reflect.TypeOf((*BoolMapper)(nil)).Elem()
+	mapperValueType       = reflect.TypeOf((*MapperValue)(nil)).Elem()
+	boolMapperType        = reflect.TypeOf((*BoolMapper)(nil)).Elem()
+	textUnmarshalerType   = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	binaryUnmarshalerType = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
 
 // DecodeContext is passed to a Mapper's Decode().
@@ -55,6 +58,34 @@ func (m *mapperValueAdapter) Decode(ctx *DecodeContext, target reflect.Value) er
 
 func (m *mapperValueAdapter) IsBool() bool {
 	return m.isBool
+}
+
+type textUnmarshalerAdapter struct{}
+
+func (m *textUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
+	var value string
+	err := ctx.Scan.PopValueInto("value", &value)
+	if err != nil {
+		return err
+	}
+	if target.Type().Implements(textUnmarshalerType) {
+		return target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value))
+	}
+	return target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value))
+}
+
+type binaryUnmarshalerAdapter struct{}
+
+func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
+	var value string
+	err := ctx.Scan.PopValueInto("value", &value)
+	if err != nil {
+		return err
+	}
+	if target.Type().Implements(textUnmarshalerType) {
+		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
+	}
+	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
 }
 
 // A Mapper represents how a field is mapped from command-line values to Go.
@@ -137,11 +168,22 @@ func (r *Registry) ForType(typ reflect.Type) Mapper {
 			return &mapperValueAdapter{impl.Implements(boolMapperType)}
 		}
 	}
+	// Next, try explicitly registered types.
 	var mapper Mapper
 	var ok bool
 	if mapper, ok = r.types[typ]; ok {
 		return mapper
-	} else if mapper, ok = r.kinds[typ.Kind()]; ok {
+	}
+	// Next try stdlib unmarshaler interfaces.
+	for _, impl := range []reflect.Type{typ, reflect.PtrTo(typ)} {
+		if impl.Implements(textUnmarshalerType) {
+			return &textUnmarshalerAdapter{}
+		} else if impl.Implements(binaryUnmarshalerType) {
+			return &binaryUnmarshalerAdapter{}
+		}
+	}
+	// Finally try registered kinds.
+	if mapper, ok = r.kinds[typ.Kind()]; ok {
 		return mapper
 	}
 	return nil

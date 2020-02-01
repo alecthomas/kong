@@ -14,6 +14,7 @@ linters:
     - funlen
     - gocognit
     - gomnd
+    - goprintffuncname
 
 linters-settings:
   govet:
