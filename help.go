@@ -47,6 +47,12 @@ type HelpOptions struct {
 	Indenter HelpIndenter
 }
 
+// Apply options to Kong as a configuration option.
+func (h HelpOptions) Apply(k *Kong) error {
+	k.helpOptions = h
+	return nil
+}
+
 // HelpProvider can be implemented by commands/args to provide detailed help.
 type HelpProvider interface {
 	// This string is formatted by go/doc and thus has the same formatting rules.
@@ -344,7 +350,7 @@ func formatFlag(haveShort bool, flag *Flag) string {
 }
 
 // commandTree creates a tree with the given node name as root and its children's arguments and sub commands as leaves.
-func (w *HelpOptions) commandTree(node *Node, prefix string) (rows [][2]string) {
+func (h *HelpOptions) commandTree(node *Node, prefix string) (rows [][2]string) {
 	var nodeName string
 	switch node.Type {
 	default:
@@ -353,16 +359,16 @@ func (w *HelpOptions) commandTree(node *Node, prefix string) (rows [][2]string) 
 		nodeName += prefix + "<" + node.Name + ">"
 	}
 	rows = append(rows, [2]string{nodeName, node.Help})
-	if w.Indenter == nil {
+	if h.Indenter == nil {
 		prefix = SpaceIndenter(prefix)
 	} else {
-		prefix = w.Indenter(prefix)
+		prefix = h.Indenter(prefix)
 	}
 	for _, arg := range node.Positional {
 		rows = append(rows, [2]string{prefix + arg.Summary(), arg.Help})
 	}
 	for _, subCmd := range node.Children {
-		rows = append(rows, w.commandTree(subCmd, prefix)...)
+		rows = append(rows, h.commandTree(subCmd, prefix)...)
 	}
 	return
 }
