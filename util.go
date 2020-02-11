@@ -33,3 +33,20 @@ func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
 	app.Exit(0)
 	return nil
 }
+
+// DebugConfigFlag displays the parsed configuration files defined via kong.Configuration(loader).
+//
+// Use this flag to determine which files got parsed in which order.
+type DebugConfigFlag bool
+
+// BeforeApply writes the parsed configuration files to stderr.
+func (d DebugConfigFlag) BeforeApply(app *Kong, ctx *Context, path *Path) error {
+	show := bool(ctx.FlagValue(path.Flag).(DebugConfigFlag))
+	if show {
+		fmt.Fprintln(app.Stderr, "Parsed configuration files:")
+		for _, p := range app.configs {
+			fmt.Fprintln(app.Stderr, SpaceIndenter("")+p)
+		}
+	}
+	return nil
+}

@@ -46,6 +46,7 @@ type Kong struct {
 	loader    ConfigurationLoader
 	resolvers []Resolver
 	registry  *Registry
+	configs   []string
 
 	noDefaultHelp bool
 	usageOnError  bool
@@ -343,6 +344,7 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
+	k.configs = append(k.configs, path)
 	defer r.Close()
 
 	return k.loader(r)

@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -41,4 +42,29 @@ func TestVersionFlag(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "0.1.1", strings.TrimSpace(w.String()))
 	require.Equal(t, 0, called)
+}
+
+func TestDebugConfigFlag(t *testing.T) {
+	var cli struct {
+		DebugConfig DebugConfigFlag
+		Flag        string
+	}
+
+	w, err := ioutil.TempFile("", "config-")
+	require.NoError(t, err)
+	defer os.Remove(w.Name())
+	p := Must(&cli, Configuration(JSON, w.Name(), "/does/not/exist.yaml"))
+	stderr := &strings.Builder{}
+	p.Stderr = stderr
+	w.WriteString(`{"flag": "hello world"}`) // nolint: errcheck
+	w.Close()
+
+	_, err = p.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "", stderr.String())
+
+	_, err = p.Parse([]string{"--debug-config"})
+	require.NoError(t, err)
+	expectedOut := fmt.Sprintf("Parsed configuration files:\n%s%s\n", SpaceIndenter(""), w.Name())
+	require.Equal(t, expectedOut, stderr.String())
 }
