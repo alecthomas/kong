@@ -25,6 +25,7 @@ type Tag struct {
 	Short       rune
 	Hidden      bool
 	Sep         rune
+	MapSep      rune
 	Enum        string
 	Group       string
 	Xor         string
@@ -151,6 +152,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetRune("sep")
+	t.MapSep, _ = t.GetRune("mapsep")
 	t.Group = t.Get("group")
 	t.Xor = t.Get("xor")
 	t.Prefix = t.Get("prefix")
@@ -160,6 +162,13 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 			t.Sep = -1
 		} else {
 			t.Sep = ','
+		}
+	}
+	if t.MapSep == 0 {
+		if t.Get("mapsep") == "none" {
+			t.MapSep = -1
+		} else {
+			t.MapSep = ';'
 		}
 	}
 	t.Vars = Vars{}
