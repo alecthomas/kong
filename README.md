@@ -370,7 +370,7 @@ var CLI struct {
 }
 ```
 
-For flags, multiple key+value pairs should be separated by `;` eg. `--set="key1=value1;key2=value2"`.
+For flags, multiple key+value pairs should be separated by `mapsep:"rune"` tag (defaults to `;`) eg. `--set="key1=value1;key2=value2"`.
 
 <a id="markdown-custom-named-decoders" name="custom-named-decoders"></a>
 ## Custom named decoders
@@ -428,6 +428,7 @@ Tag                    | Description
 `hidden`               | If present, command or flag is hidden.
 `format:"X"`           | Format for parsing input, if supported.
 `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
+`mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
 `enum:"X,Y,..."`       | Set of valid values allowed for this flag.
 `group:"X"`            | Logical group for a flag or command.
 `xor:"X"`              | Exclusive OR group for flags. Only one flag in the group can be used which is restricted within the same command.

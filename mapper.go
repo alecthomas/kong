@@ -408,6 +408,7 @@ func mapDecoder(r *Registry) MapperFunc {
 			target.Set(reflect.MakeMap(target.Type()))
 		}
 		el := target.Type()
+		sep := ctx.Value.Tag.MapSep
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
@@ -417,7 +418,7 @@ func mapDecoder(r *Registry) MapperFunc {
 			}
 			switch v := t.Value.(type) {
 			case string:
-				childScanner = Scan(SplitEscaped(v, ';')...)
+				childScanner = Scan(SplitEscaped(v, sep)...)
 
 			case []map[string]interface{}:
 				for _, m := range v {
