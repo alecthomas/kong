@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/doc"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -343,10 +344,15 @@ func formatFlag(haveShort bool, flag *Flag) string {
 			flagString += fmt.Sprintf("--%s", name)
 		}
 	}
-	if !isBool {
-		flagString += fmt.Sprintf("=%s", flag.FormatPlaceHolder())
+	// return flag value for bool when default value is true.
+	if isBool {
+		dfltValue, _ := strconv.ParseBool(flag.Default)
+		if dfltValue {
+			return flagString + fmt.Sprintf("=%s", flag.FormatPlaceHolder())
+		}
+		return flagString
 	}
-	return flagString
+	return flagString + fmt.Sprintf("=%s", flag.FormatPlaceHolder())
 }
 
 // commandTree creates a tree with the given node name as root and its children's arguments and sub commands as leaves.
