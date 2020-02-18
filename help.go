@@ -176,7 +176,7 @@ func writeCommandTree(w *helpWriter, node *Node) {
 		if cmd.Hidden {
 			continue
 		}
-		rows = append(rows, w.commandTree(cmd, "")...)
+		rows = append(rows, w.CommandTree(cmd, "")...)
 		if i != len(node.Children)-1 {
 			rows = append(rows, [2]string{"", ""})
 		}
@@ -349,8 +349,8 @@ func formatFlag(haveShort bool, flag *Flag) string {
 	return flagString
 }
 
-// commandTree creates a tree with the given node name as root and its children's arguments and sub commands as leaves.
-func (h *HelpOptions) commandTree(node *Node, prefix string) (rows [][2]string) {
+// CommandTree creates a tree with the given node name as root and its children's arguments and sub commands as leaves.
+func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) {
 	var nodeName string
 	switch node.Type {
 	default:
@@ -368,7 +368,7 @@ func (h *HelpOptions) commandTree(node *Node, prefix string) (rows [][2]string) 
 		rows = append(rows, [2]string{prefix + arg.Summary(), arg.Help})
 	}
 	for _, subCmd := range node.Children {
-		rows = append(rows, h.commandTree(subCmd, prefix)...)
+		rows = append(rows, h.CommandTree(subCmd, prefix)...)
 	}
 	return
 }
