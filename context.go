@@ -304,6 +304,9 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					}
 					c.scan.PushTyped(parts[0], FlagToken)
 
+				case v == "-":
+					return errors.New("expected short flag")
+
 				// Short flag.
 				case strings.HasPrefix(v, "-"):
 					c.scan.Pop()
