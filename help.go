@@ -23,7 +23,7 @@ func (h helpValue) BeforeApply(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	ctx.Kong.Exit(1)
+	ctx.Kong.Exit(0)
 	return nil
 }
 
