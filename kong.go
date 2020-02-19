@@ -153,6 +153,9 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		"default": value.Default,
 		"enum":    value.Enum,
 	})
+	if value.Tag.Env != "" {
+		vars["env"] = value.Tag.Env
+	}
 	if value.Help, err = interpolate(value.Help, vars); err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}
