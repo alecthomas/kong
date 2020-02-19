@@ -155,6 +155,19 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	})
 	if value.Tag.Env != "" {
 		vars["env"] = value.Tag.Env
+		if !interpolationHasVar(value.Help, "env") {
+			suffix := "($" + value.Tag.Env + ")"
+			switch {
+			case strings.HasSuffix(value.Help, "."):
+				value.Help = value.Help[:len(value.Help)-1] + " " + suffix + "."
+
+			case value.Help == "":
+				value.Help += suffix
+
+			default:
+				value.Help += " " + suffix
+			}
+		}
 	}
 	if value.Help, err = interpolate(value.Help, vars); err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)

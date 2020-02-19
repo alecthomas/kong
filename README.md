@@ -117,6 +117,10 @@ eg.
       -f, --force        Force removal.
       -r, --recursive    Recursively remove files.
 
+For flags with associated environment variables, the variable `${env}` can be
+interpolated into the help string. In the absence of this variable in the help, 
+
+
 <a id="markdown-command-handling" name="command-handling"></a>
 ## Command handling
 
@@ -459,6 +463,7 @@ are defined from the value itself:
 
     ${default}
     ${enum}
+    ${env}
 
 eg.
 
