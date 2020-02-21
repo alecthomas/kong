@@ -65,6 +65,25 @@ type HelpIndenter func(prefix string) string
 // HelpPrinter is used to print context-sensitive help.
 type HelpPrinter func(options HelpOptions, ctx *Context) error
 
+// HelpValueFormatter is used to format the help text of flags and positional arguments.
+type HelpValueFormatter func(value *Value) string
+
+// DefaultHelpValueFormatter is the default HelpValueFormatter.
+func DefaultHelpValueFormatter(value *Value) string {
+	if value.Tag.Env == "" {
+		return value.Help
+	}
+	suffix := "($" + value.Tag.Env + ")"
+	switch {
+	case strings.HasSuffix(value.Help, "."):
+		return value.Help[:len(value.Help)-1] + " " + suffix + "."
+	case value.Help == "":
+		return suffix
+	default:
+		return value.Help + " " + suffix
+	}
+}
+
 // DefaultHelpPrinter is the default HelpPrinter.
 func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 	if ctx.Empty() {
@@ -214,19 +233,21 @@ func printCommandSummary(w *helpWriter, cmd *Command) {
 }
 
 type helpWriter struct {
-	indent string
-	width  int
-	lines  *[]string
+	indent        string
+	width         int
+	lines         *[]string
+	helpFormatter HelpValueFormatter
 	HelpOptions
 }
 
 func newHelpWriter(ctx *Context, options HelpOptions) *helpWriter {
 	lines := []string{}
 	w := &helpWriter{
-		indent:      "",
-		width:       guessWidth(ctx.Stdout),
-		lines:       &lines,
-		HelpOptions: options,
+		indent:        "",
+		width:         guessWidth(ctx.Stdout),
+		lines:         &lines,
+		helpFormatter: ctx.Kong.helpFormatter,
+		HelpOptions:   options,
 	}
 	return w
 }
@@ -240,7 +261,7 @@ func (h *helpWriter) Print(text string) {
 }
 
 func (h *helpWriter) Indent() *helpWriter {
-	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, HelpOptions: h.HelpOptions}
+	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, HelpOptions: h.HelpOptions, helpFormatter: h.helpFormatter}
 }
 
 func (h *helpWriter) String() string {
@@ -268,7 +289,7 @@ func (h *helpWriter) Wrap(text string) {
 func writePositionals(w *helpWriter, args []*Positional) {
 	rows := [][2]string{}
 	for _, arg := range args {
-		rows = append(rows, [2]string{arg.Summary(), arg.Help})
+		rows = append(rows, [2]string{arg.Summary(), w.helpFormatter(arg)})
 	}
 	writeTwoColumns(w, rows)
 }
@@ -290,7 +311,7 @@ func writeFlags(w *helpWriter, groups [][]*Flag) {
 		}
 		for _, flag := range group {
 			if !flag.Hidden {
-				rows = append(rows, [2]string{formatFlag(haveShort, flag), flag.Help})
+				rows = append(rows, [2]string{formatFlag(haveShort, flag), w.helpFormatter(flag.Value)})
 			}
 		}
 	}

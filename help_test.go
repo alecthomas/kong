@@ -2,6 +2,7 @@ package kong_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -218,4 +219,32 @@ Commands:
 		}
 		require.Equal(t, expected, w.String())
 	})
+}
+
+func TestEnvarAutoHelp(t *testing.T) {
+	var cli struct {
+		Flag string `env:"FLAG" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, w.String(), "A flag ($FLAG).")
+}
+
+func TestCustomHelpFormatter(t *testing.T) {
+	var cli struct {
+		Flag string `env:"FLAG" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+		kong.HelpFormatter(func(value *kong.Value) string {
+			return value.Help
+		}),
+	)
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, w.String(), "A flag.")
 }

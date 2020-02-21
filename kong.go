@@ -50,6 +50,7 @@ type Kong struct {
 	noDefaultHelp bool
 	usageOnError  bool
 	help          HelpPrinter
+	helpFormatter HelpValueFormatter
 	helpOptions   HelpOptions
 	helpFlag      *Flag
 	vars          Vars
@@ -63,12 +64,13 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:     os.Exit,
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
-		registry: NewRegistry().RegisterDefaults(),
-		vars:     Vars{},
-		bindings: bindings{},
+		Exit:          os.Exit,
+		Stdout:        os.Stdout,
+		Stderr:        os.Stderr,
+		registry:      NewRegistry().RegisterDefaults(),
+		vars:          Vars{},
+		bindings:      bindings{},
+		helpFormatter: DefaultHelpValueFormatter,
 	}
 
 	options = append(options, Bind(k))
@@ -153,22 +155,6 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		"default": value.Default,
 		"enum":    value.Enum,
 	})
-	if value.Tag.Env != "" {
-		vars["env"] = value.Tag.Env
-		if !interpolationHasVar(value.Help, "env") {
-			suffix := "($" + value.Tag.Env + ")"
-			switch {
-			case strings.HasSuffix(value.Help, "."):
-				value.Help = value.Help[:len(value.Help)-1] + " " + suffix + "."
-
-			case value.Help == "":
-				value.Help += suffix
-
-			default:
-				value.Help += " " + suffix
-			}
-		}
-	}
 	if value.Help, err = interpolate(value.Help, vars); err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}
