@@ -27,7 +27,7 @@
     2. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
     3. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
     4. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    5. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    5. [`ConfigureHelp(HelpOptions)`, `Help(HelpFunc)` and `HelpFormatter(HelpValueFormatter)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
     6. [`Bind(...)` - bind values for callback hooks and Run() methods](#bind---bind-values-for-callback-hooks-and-run-methods)
     7. [Other options](#other-options)
 
@@ -116,10 +116,6 @@ eg.
 
       -f, --force        Force removal.
       -r, --recursive    Recursively remove files.
-
-For flags with associated environment variables, the variable `${env}` can be
-interpolated into the help string. In the absence of this variable in the help, 
-
 
 <a id="markdown-command-handling" name="command-handling"></a>
 ## Command handling
@@ -463,7 +459,6 @@ are defined from the value itself:
 
     ${default}
     ${enum}
-    ${env}
 
 eg.
 
@@ -546,6 +541,7 @@ The default help output is usually sufficient, but if not there are two solution
 
 1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
 2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
+3. Use `HelpFormatter(HelpValueFormatter)` if you want to just customize the help text that is accompanied by flags and arguments.
 
 <a id="markdown-bind---bind-values-for-callback-hooks-and-run-methods" name="bind---bind-values-for-callback-hooks-and-run-methods"></a>
 ### `Bind(...)` - bind values for callback hooks and Run() methods

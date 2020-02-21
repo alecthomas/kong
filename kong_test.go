@@ -750,17 +750,6 @@ func TestEnvarEnumValidated(t *testing.T) {
 	require.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }
 
-func TestEnvarAutoHelp(t *testing.T) {
-	var cli struct {
-		Flag string `env:"FLAG" help:"A flag."`
-	}
-	w := &strings.Builder{}
-	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
-	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, w.String(), "A flag ($FLAG).")
-}
-
 func TestXor(t *testing.T) {
 	var cli struct {
 		Hello bool   `xor:"another"`

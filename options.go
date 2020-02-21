@@ -158,6 +158,14 @@ func Help(help HelpPrinter) Option {
 	})
 }
 
+// HelpFormatter configures how the help text is formatted.
+func HelpFormatter(helpFormatter HelpValueFormatter) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.helpFormatter = helpFormatter
+		return nil
+	})
+}
+
 // ConfigureHelp sets the HelpOptions to use for printing help.
 func ConfigureHelp(options HelpOptions) Option {
 	return OptionFunc(func(k *Kong) error {
