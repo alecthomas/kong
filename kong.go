@@ -47,13 +47,14 @@ type Kong struct {
 	resolvers []Resolver
 	registry  *Registry
 
-	noDefaultHelp bool
-	usageOnError  bool
-	help          HelpPrinter
-	helpFormatter HelpValueFormatter
-	helpOptions   HelpOptions
-	helpFlag      *Flag
-	vars          Vars
+	noDefaultHelp        bool
+	usageOnError         bool
+	help                 HelpPrinter
+	helpFormatter        HelpValueFormatter
+	placeHolderFormatter PlaceHolderFormatter
+	helpOptions          HelpOptions
+	helpFlag             *Flag
+	vars                 Vars
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -64,13 +65,14 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:          os.Exit,
-		Stdout:        os.Stdout,
-		Stderr:        os.Stderr,
-		registry:      NewRegistry().RegisterDefaults(),
-		vars:          Vars{},
-		bindings:      bindings{},
-		helpFormatter: DefaultHelpValueFormatter,
+		Exit:                 os.Exit,
+		Stdout:               os.Stdout,
+		Stderr:               os.Stderr,
+		registry:             NewRegistry().RegisterDefaults(),
+		vars:                 Vars{},
+		bindings:             bindings{},
+		helpFormatter:        DefaultHelpValueFormatter,
+		placeHolderFormatter: DefaultPlaceHolderFormatter,
 	}
 
 	options = append(options, Bind(k))

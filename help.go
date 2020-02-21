@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"go/doc"
 	"io"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -67,6 +69,41 @@ type HelpPrinter func(options HelpOptions, ctx *Context) error
 
 // HelpValueFormatter is used to format the help text of flags and positional arguments.
 type HelpValueFormatter func(value *Value) string
+
+// PlaceHolderFormatter is used to format placeholders of flags and positional arguments.
+type PlaceHolderFormatter func(value *Value) string
+
+// DefaultPlaceHolderFormatter is the default HelpValueFormatter.
+func DefaultPlaceHolderFormatter(value *Value) string {
+	if value.Flag != nil {
+		tail := ""
+		if value.IsSlice() {
+			tail += ",..."
+		}
+		if value.Tag.Default != "" {
+			if value.Target.Kind() == reflect.String {
+				return strconv.Quote(value.Tag.Default) + tail
+			}
+			return value.Tag.Default + tail
+		}
+		if value.Tag.PlaceHolder != "" {
+			return value.Tag.PlaceHolder + tail
+		}
+		if value.IsMap() {
+			return "KEY=VALUE;..."
+		}
+		return strings.ToUpper(value.Name) + tail
+	}
+	// pos argument
+	argText := "<" + value.Name + ">"
+	if value.IsCumulative() {
+		argText += " ..."
+	}
+	if !value.Required {
+		argText = "[" + argText + "]"
+	}
+	return argText
+}
 
 // DefaultHelpValueFormatter is the default HelpValueFormatter.
 func DefaultHelpValueFormatter(value *Value) string {

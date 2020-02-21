@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -204,19 +203,25 @@ func (n *Node) Path() (out string) {
 
 // A Value is either a flag or a variable positional argument.
 type Value struct {
-	Flag         *Flag // Nil if positional argument.
-	Name         string
-	Help         string
-	Default      string
-	DefaultValue reflect.Value
-	Enum         string
-	Mapper       Mapper
-	Tag          *Tag
-	Target       reflect.Value
-	Required     bool
-	Set          bool   // Set to true when this value is set through some mechanism.
-	Format       string // Formatting directive, if applicable.
-	Position     int    // Position (for positional arguments).
+	Flag                 *Flag // Nil if positional argument.
+	Name                 string
+	Help                 string
+	Default              string
+	DefaultValue         reflect.Value
+	Enum                 string
+	Mapper               Mapper
+	Tag                  *Tag
+	Target               reflect.Value
+	Required             bool
+	Set                  bool   // Set to true when this value is set through some mechanism.
+	Format               string // Formatting directive, if applicable.
+	Position             int    // Position (for positional arguments).
+	placeholderFormatter PlaceHolderFormatter
+}
+
+// FormatPlaceHolder formats the placeholder string for a flag or positional argument.
+func (v *Value) FormatPlaceHolder() string {
+	return v.placeholderFormatter(v)
 }
 
 // EnumMap returns a map of the enums in this value.
@@ -234,14 +239,7 @@ func (v *Value) ShortSummary() string {
 	if v.Flag != nil {
 		return fmt.Sprintf("--%s", v.Name)
 	}
-	argText := "<" + v.Name + ">"
-	if v.IsCumulative() {
-		argText += " ..."
-	}
-	if !v.Required {
-		argText = "[" + argText + "]"
-	}
-	return argText
+	return v.FormatPlaceHolder()
 }
 
 // Summary returns a human-readable summary of the value.
@@ -252,14 +250,7 @@ func (v *Value) Summary() string {
 		}
 		return fmt.Sprintf("--%s=%s", v.Name, v.Flag.FormatPlaceHolder())
 	}
-	argText := "<" + v.Name + ">"
-	if v.IsCumulative() {
-		argText += " ..."
-	}
-	if !v.Required {
-		argText = "[" + argText + "]"
-	}
-	return argText
+	return v.FormatPlaceHolder()
 }
 
 // IsCumulative returns true if the type can be accumulated into.
@@ -371,23 +362,7 @@ func (f *Flag) String() string {
 
 // FormatPlaceHolder formats the placeholder string for a Flag.
 func (f *Flag) FormatPlaceHolder() string {
-	tail := ""
-	if f.Value.IsSlice() {
-		tail += ",..."
-	}
-	if f.Default != "" {
-		if f.Value.Target.Kind() == reflect.String {
-			return strconv.Quote(f.Default) + tail
-		}
-		return f.Default + tail
-	}
-	if f.PlaceHolder != "" {
-		return f.PlaceHolder + tail
-	}
-	if f.Value.IsMap() {
-		return "KEY=VALUE;..."
-	}
-	return strings.ToUpper(f.Name) + tail
+	return f.Value.FormatPlaceHolder()
 }
 
 // This is directly from the Go 1.13 source code.
