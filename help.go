@@ -65,7 +65,7 @@ type HelpIndenter func(prefix string) string
 // HelpPrinter is used to print context-sensitive help.
 type HelpPrinter func(options HelpOptions, ctx *Context) error
 
-// HelpValueFormatter is used to format help.
+// HelpValueFormatter is used to format the help text of flags and positional arguments.
 type HelpValueFormatter func(value *Value) string
 
 // DefaultHelpValueFormatter is the default HelpValueFormatter.
