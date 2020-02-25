@@ -55,6 +55,10 @@ type Kong struct {
 	helpFlag      *Flag
 	vars          Vars
 
+	completionOptions    CompletionOptions
+	instCompletionFlag   *Flag
+	uninstCompletionFlag *Flag
+
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
 }
@@ -163,24 +167,26 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 
 // Provide additional builtin flags, if any.
 func (k *Kong) extraFlags() []*Flag {
-	if k.noDefaultHelp {
-		return nil
+	var flags []*Flag
+	if !k.noDefaultHelp {
+		var helpTarget helpValue
+		value := reflect.ValueOf(&helpTarget).Elem()
+		helpFlag := &Flag{
+			Value: &Value{
+				Name:         "help",
+				Help:         "Show context-sensitive help.",
+				Target:       value,
+				Tag:          &Tag{},
+				Mapper:       k.registry.ForValue(value),
+				DefaultValue: reflect.ValueOf(false),
+			},
+		}
+		helpFlag.Flag = helpFlag
+		k.helpFlag = helpFlag
+		flags = append(flags, helpFlag)
 	}
-	var helpTarget helpValue
-	value := reflect.ValueOf(&helpTarget).Elem()
-	helpFlag := &Flag{
-		Value: &Value{
-			Name:         "help",
-			Help:         "Show context-sensitive help.",
-			Target:       value,
-			Tag:          &Tag{},
-			Mapper:       k.registry.ForValue(value),
-			DefaultValue: reflect.ValueOf(false),
-		},
-	}
-	helpFlag.Flag = helpFlag
-	k.helpFlag = helpFlag
-	return []*Flag{helpFlag}
+	flags = append(flags, completionFlags(k)...)
+	return flags
 }
 
 // Parse arguments into target.
@@ -193,6 +199,10 @@ func (k *Kong) extraFlags() []*Flag {
 func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	defer catch(&err)
 	ctx, err = Trace(k, args)
+	if err != nil {
+		return nil, err
+	}
+	err = runCompletion(ctx, k.completionOptions.Completer, k.Exit)
 	if err != nil {
 		return nil, err
 	}
