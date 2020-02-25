@@ -198,7 +198,7 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err != nil {
 		return nil, err
 	}
-	err = runCompletion(ctx, k.completionOptions.Completer, k.Exit)
+	err = k.runCompletion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -354,6 +354,25 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	defer r.Close()
 
 	return k.loader(r)
+}
+
+func (k *Kong) runCompletion(ctx *Context) error {
+	options := k.completionOptions
+	if !options.RunCompletion {
+		return nil
+	}
+	completer := options.Completer
+	if completer == nil {
+		completer = defaultCompleter
+	}
+	ran, err := completer(ctx)
+	if err != nil {
+		return err
+	}
+	if ran {
+		k.Exit(0)
+	}
+	return nil
 }
 
 func catch(err *error) {
