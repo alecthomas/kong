@@ -77,3 +77,95 @@ func TestRunCompletion(t *testing.T) {
 		require.True(t, ran)
 	})
 }
+
+// nolint: dupl
+func TestInstallCompletion(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		var ran bool
+		var cli struct {
+			InstallCompletion kong.InstallCompletion `kong:"cmd"`
+		}
+		installer := kong.NewCompletionInstaller(func(ctx *kong.Context) error {
+			ran = true
+			return nil
+		}, nil)
+		p := mustNew(t, &cli,
+			kong.CompletionOptions{
+				CompletionInstaller: installer,
+			},
+		)
+		k, err := p.Parse([]string{"install-completion"})
+		require.NoError(t, err)
+		err = k.Run()
+		require.NoError(t, err)
+		require.True(t, ran)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		var ran bool
+		errVal := fmt.Errorf("boo")
+		var cli struct {
+			InstallCompletion kong.InstallCompletion `kong:"cmd"`
+		}
+		installer := kong.NewCompletionInstaller(func(ctx *kong.Context) error {
+			ran = true
+			return errVal
+		}, nil)
+		p := mustNew(t, &cli,
+			kong.CompletionOptions{
+				CompletionInstaller: installer,
+			},
+		)
+		k, err := p.Parse([]string{"install-completion"})
+		require.NoError(t, err)
+		err = k.Run()
+		assert.EqualError(t, err, errVal.Error())
+		require.True(t, ran)
+	})
+}
+
+// nolint: dupl
+func TestUninstallCompletion(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		var ran bool
+		var cli struct {
+			UninstallCompletion kong.UninstallCompletion `kong:"cmd"`
+		}
+		installer := kong.NewCompletionInstaller(nil, func(ctx *kong.Context) error {
+			ran = true
+			return nil
+		})
+		p := mustNew(t, &cli,
+			kong.CompletionOptions{
+				CompletionInstaller: installer,
+			},
+		)
+		k, err := p.Parse([]string{"uninstall-completion"})
+		require.NoError(t, err)
+		err = k.Run()
+		require.NoError(t, err)
+		require.True(t, ran)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		var ran bool
+		errVal := fmt.Errorf("boo")
+		var cli struct {
+			UninstallCompletion kong.UninstallCompletion `kong:"cmd"`
+		}
+		installer := kong.NewCompletionInstaller(nil, func(ctx *kong.Context) error {
+			ran = true
+			return errVal
+		})
+		p := mustNew(t, &cli,
+			kong.CompletionOptions{
+				CompletionInstaller: installer,
+			},
+		)
+		k, err := p.Parse([]string{"uninstall-completion"})
+		require.NoError(t, err)
+		err = k.Run()
+		assert.EqualError(t, err, errVal.Error())
+		require.True(t, ran)
+	})
+}
