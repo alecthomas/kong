@@ -249,7 +249,8 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
-		RegisterName("existingdir", existingDirMapper(r))
+		RegisterName("existingdir", existingDirMapper(r)).
+		RegisterName("counter", counterMapper())
 }
 
 type boolMapper struct{}
@@ -589,6 +590,25 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return errors.Errorf("%q exists but is not a directory", path)
 		}
 		target.SetString(path)
+		return nil
+	}
+}
+
+func counterMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		switch target.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			target.SetInt(target.Int() + 1)
+
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			target.SetUint(target.Uint() + 1)
+
+		case reflect.Float32, reflect.Float64:
+			target.SetFloat(target.Float() + 1)
+
+		default:
+			return errors.Errorf("type:\"counter\" must be used with a numeric field")
+		}
 		return nil
 	}
 }

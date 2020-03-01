@@ -239,3 +239,24 @@ func TestNamedSliceTypesDontHaveEllipsis(t *testing.T) {
 	})
 	require.NotContains(t, b.String(), `--file=FILE-CONTENT-FLAG,...`)
 }
+
+func TestCounter(t *testing.T) {
+	var cli struct {
+		Int   int     `type:"counter" short:"i"`
+		Uint  uint    `type:"counter" short:"u"`
+		Float float64 `type:"counter" short:"f"`
+	}
+	p := mustNew(t, &cli)
+
+	_, err := p.Parse([]string{"-iii"})
+	require.NoError(t, err)
+	require.Equal(t, 3, cli.Int)
+
+	_, err = p.Parse([]string{"-uuu"})
+	require.NoError(t, err)
+	require.Equal(t, uint(3), cli.Uint)
+
+	_, err = p.Parse([]string{"-fff"})
+	require.NoError(t, err)
+	require.Equal(t, 3., cli.Float)
+}
