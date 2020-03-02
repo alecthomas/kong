@@ -176,6 +176,11 @@ func TestComplete(t *testing.T) {
 			line:  "myApp bar -b thing1 --omg gizzles ",
 			point: lenPtr("myApp bar -b thing1"),
 		},
+		{
+			want:  []string{"otherthing1", "otherthing2"},
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			point: lenPtr("myApp bar -b thing1 "),
+		},
 	}
 
 	for _, td := range tests {
