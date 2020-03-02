@@ -13,7 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setLineAndPoint(t *testing.T, line string) func() {
+func setLineAndPoint(t *testing.T, line string, point *int) func() {
+	pVal := len(line)
+	if point != nil {
+		pVal = *point
+	}
 	const (
 		envLine  = "COMP_LINE"
 		envPoint = "COMP_POINT"
@@ -22,7 +26,7 @@ func setLineAndPoint(t *testing.T, line string) func() {
 	origLine, hasOrigLine := os.LookupEnv(envLine)
 	origPoint, hasOrigPoint := os.LookupEnv(envPoint)
 	require.NoError(t, os.Setenv(envLine, line))
-	require.NoError(t, os.Setenv(envPoint, strconv.Itoa(len(line))))
+	require.NoError(t, os.Setenv(envPoint, strconv.Itoa(pVal)))
 	return func() {
 		t.Helper()
 		require.NoError(t, os.Unsetenv(envLine))
@@ -66,8 +70,14 @@ func TestComplete(t *testing.T) {
 	}
 
 	type completeTest struct {
-		want []string
-		line string
+		want  []string
+		line  string
+		point *int
+	}
+
+	lenPtr := func(val string) *int {
+		v := len(val)
+		return &v
 	}
 
 	tests := []completeTest{
@@ -143,7 +153,31 @@ func TestComplete(t *testing.T) {
 			want: []string{"otherthing1", "otherthing2"},
 			line: "myApp bar -b thing1 --omg gizzles ",
 		},
+		{
+			want: []string{"otherthing1", "otherthing2"},
+			line: "myApp bar -b thing1 --omg gizzles ",
+		},
+		{
+			want: []string{"gizzles"},
+			line: "myApp bar -b thing1 --omg gi",
+		},
+		{
+			want:  []string{"thing1", "thing2"},
+			line:  "myApp bar -b thing1 --omg gi",
+			point: lenPtr("myApp bar -b th"),
+		},
+		{
+			want:  []string{"thing1", "thing2"},
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			point: lenPtr("myApp bar -b th"),
+		},
+		{
+			want:  []string{"thing1"},
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			point: lenPtr("myApp bar -b thing1"),
+		},
 	}
+
 	for _, td := range tests {
 		td := td
 		t.Run(td.line, func(t *testing.T) {
@@ -159,7 +193,7 @@ func TestComplete(t *testing.T) {
 					Predictors:    predictors,
 				},
 			)
-			cleanup := setLineAndPoint(t, td.line)
+			cleanup := setLineAndPoint(t, td.line, td.point)
 			defer cleanup()
 			_, err := p.Parse([]string{})
 			require.Error(t, err)
