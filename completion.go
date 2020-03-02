@@ -25,7 +25,7 @@ type CompletionOptions struct {
 	Predictors map[string]Predictor
 }
 
-// CompletionInstaller contains functions to install completions from to a shell.
+// CompletionInstaller contains functions to install completions to a shell.
 type CompletionInstaller interface {
 	Install(ctx *Context) error
 	Uninstall(ctx *Context) error
