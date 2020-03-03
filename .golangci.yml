@@ -19,8 +19,6 @@ linters:
 linters-settings:
   govet:
     check-shadowing: true
-  gocyclo:
-    min-complexity: 10
   dupl:
     threshold: 100
   goconst:
@@ -41,3 +39,4 @@ issues:
     - 'composite literal uses unkeyed fields'
     - 'bad syntax for struct tag key'
     - 'bad syntax for struct tag pair'
+    - 'result .* \(error\) is always nil'

@@ -41,3 +41,29 @@ func TestBindTo(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "foo", saw)
 }
+
+type bindToProviderCLI struct {
+	Called bool
+	Cmd    bindToProviderCmd `cmd:""`
+}
+
+type boundThing struct {
+}
+
+type bindToProviderCmd struct{}
+
+func (*bindToProviderCmd) Run(cli *bindToProviderCLI, b *boundThing) error {
+	cli.Called = true
+	return nil
+}
+
+func TestBindToProvider(t *testing.T) {
+	var cli bindToProviderCLI
+	app, err := New(&cli, BindToProvider(func() (*boundThing, error) { return &boundThing{}, nil }))
+	require.NoError(t, err)
+	ctx, err := app.Parse([]string{"cmd"})
+	require.NoError(t, err)
+	err = ctx.Run()
+	require.NoError(t, err)
+	require.True(t, cli.Called)
+}

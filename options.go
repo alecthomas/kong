@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // An Option applies optional changes to the Kong application.
@@ -145,7 +147,33 @@ func Bind(args ...interface{}) Option {
 // 		BindTo(impl, (*iface)(nil))
 func BindTo(impl, iface interface{}) Option {
 	return OptionFunc(func(k *Kong) error {
-		k.bindings[reflect.TypeOf(iface).Elem()] = reflect.ValueOf(impl)
+		valueOf := reflect.ValueOf(impl)
+		k.bindings[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
+		return nil
+	})
+}
+
+// BindToProvider allows binding of provider functions.
+//
+// This is useful when the Run() function of different commands require different values that may
+// not all be initialisable from the main() function.
+func BindToProvider(provider interface{}) Option {
+	return OptionFunc(func(k *Kong) error {
+		pv := reflect.ValueOf(provider)
+		t := pv.Type()
+		if t.Kind() != reflect.Func || t.NumIn() != 0 || t.NumOut() != 2 || t.Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
+			return errors.Errorf("%T must be a function with the signature func()(T, error)", provider)
+		}
+		rt := pv.Type().Out(0)
+		k.bindings[rt] = func() (reflect.Value, error) {
+			out := pv.Call(nil)
+			errv := out[1]
+			var err error
+			if !errv.IsNil() {
+				err = errv.Interface().(error)
+			}
+			return out[0], err
+		}
 		return nil
 	})
 }

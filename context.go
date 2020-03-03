@@ -91,7 +91,8 @@ func (c *Context) Bind(args ...interface{}) {
 //
 //    BindTo(impl, (*MyInterface)(nil))
 func (c *Context) BindTo(impl, iface interface{}) {
-	c.bindings[reflect.TypeOf(iface).Elem()] = reflect.ValueOf(impl)
+	valueOf := reflect.ValueOf(impl)
+	c.bindings[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
 }
 
 // Value returns the value for a particular path element.

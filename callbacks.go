@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type bindings map[reflect.Type]reflect.Value
+type bindings map[reflect.Type]func() (reflect.Value, error)
 
 func (b bindings) String() string {
 	out := []string{}
@@ -18,7 +18,8 @@ func (b bindings) String() string {
 
 func (b bindings) add(values ...interface{}) bindings {
 	for _, v := range values {
-		b[reflect.TypeOf(v)] = reflect.ValueOf(v)
+		v := v
+		b[reflect.TypeOf(v)] = func() (reflect.Value, error) { return reflect.ValueOf(v), nil }
 	}
 	return b
 }
@@ -57,8 +58,12 @@ func callMethod(name string, v, f reflect.Value, bindings bindings) error {
 	}
 	for i := 0; i < t.NumIn(); i++ {
 		pt := t.In(i)
-		if arg, ok := bindings[pt]; ok {
-			in = append(in, arg)
+		if argf, ok := bindings[pt]; ok {
+			argv, err := argf()
+			if err != nil {
+				return err
+			}
+			in = append(in, argv)
 		} else {
 			return fmt.Errorf("couldn't find binding of type %s for parameter %d of %s.%s(), use kong.Bind(%s)", pt, i, v.Type(), name, pt)
 		}
