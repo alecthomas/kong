@@ -235,7 +235,7 @@ type ConfigurationLoader func(r io.Reader) (Resolver, error)
 //
 // Note: The JSON function is a ConfigurationLoader.
 //
-// ~ expansion will occur on the provided paths.
+// ~ and variable expansion will occur on the provided paths.
 func Configuration(loader ConfigurationLoader, paths ...string) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.loader = loader

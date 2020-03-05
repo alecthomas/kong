@@ -338,9 +338,14 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 
 // LoadConfig from path using the loader configured via Configuration(loader).
 //
-// "path" will have ~/ expanded.
+// "path" will have ~ and any variables expanded.
 func (k *Kong) LoadConfig(path string) (Resolver, error) {
+	var err error
 	path = ExpandPath(path)
+	path, err = interpolate(path, k.vars)
+	if err != nil {
+		return nil, err
+	}
 	r, err := os.Open(path) // nolint: gas
 	if err != nil {
 		return nil, err
