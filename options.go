@@ -202,14 +202,6 @@ func ConfigureHelp(options HelpOptions) Option {
 	})
 }
 
-// ConfigureCompletion sets options for shell completion.
-func ConfigureCompletion(options CompletionOptions) Option {
-	return OptionFunc(func(k *Kong) error {
-		k.completionOptions = options
-		return nil
-	})
-}
-
 // UsageOnError configures Kong to display context-sensitive usage if FatalIfErrorf is called with an error.
 func UsageOnError() Option {
 	return OptionFunc(func(k *Kong) error {

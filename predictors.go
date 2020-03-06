@@ -8,11 +8,13 @@ import (
 )
 
 // Predictor implements a predict method, in which given command line arguments returns a list of options it predicts.
-// Taken from github.com/posener/complete
+//
+// See https://github.com/posener/complete for details.
 type Predictor = complete.Predictor
 
 // PredictorArgs describes command line arguments used by a Predictor to predict options.
-// Taken from Args in github.com/posener/complete
+//
+// See https://github.com/posener/complete for details.
 type PredictorArgs = complete.Args
 
 // NewPredictor returns a Predictor that runs the provided function.
@@ -77,6 +79,18 @@ func (c *completePredictor) Predict(args complete.Args) []string {
 
 func tagPredictor(tag *Tag, predictors map[string]Predictor) (Predictor, error) {
 	if tag == nil || tag.Predictor == "" {
+		if tag != nil && tag.Type != "" {
+			switch tag.Type {
+			case "path":
+				return PredictOr(PredictFiles("*"), PredictDirs("*")), nil
+
+			case "existingfile":
+				return PredictFiles("*"), nil
+
+			case "existingdir":
+				return PredictDirs("*"), nil
+			}
+		}
 		return nil, nil
 	}
 	if predictors == nil {
@@ -104,12 +118,14 @@ func valuePredictor(value *Value, predictors map[string]Predictor) (Predictor, e
 	switch {
 	case value.IsBool():
 		return PredictNothing(), nil
+
 	case value.Enum != "":
 		enumVals := make([]string, 0, len(value.EnumMap()))
 		for enumVal := range value.EnumMap() {
 			enumVals = append(enumVals, enumVal)
 		}
 		return PredictSet(enumVals...), nil
+
 	default:
 		return PredictAnything(), nil
 	}

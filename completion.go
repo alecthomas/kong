@@ -7,89 +7,30 @@ import (
 
 // CompletionOptions options for shell completion.
 type CompletionOptions struct {
-	// RunCompletion determines whether to respond to shell completion requests. default: false
-	// When RunCompletion is false, all other options in CompletionOptions are ignored.
-	RunCompletion bool
-
-	// Completer is the function to run for shell completions. If nil, a default completer based on github.com/posener/complete
-	// will be run.
-	Completer Completer
-
-	// CompletionInstaller determines the functions to run when running InstallCompletion and UninstallCompletion.
-	// By default, Install and Uninstall functions from github.com/posener/complete/cmd/install are used.
-	CompletionInstaller CompletionInstaller
-
 	// Predictors contains custom Predictors used to generate completion options.
 	// They can be used with an annotation like `predictor='myCustomPredictor'` where "myCustomPredictor" is a
 	// key in Predictors.
 	Predictors map[string]Predictor
 }
 
-// CompletionInstaller contains functions to install completions to a shell.
-type CompletionInstaller interface {
-	Install(ctx *Context) error
-	Uninstall(ctx *Context) error
-}
-
-// NewCompletionInstaller returns a CompletionInstaller with the given install and uninstall funcs
-// leaving either nil will cause it to defer to the default installer/uninstaller
-func NewCompletionInstaller(install, uninstall func(*Context) error) CompletionInstaller {
-	return &completionInstaller{
-		install:   install,
-		uninstall: uninstall,
-	}
-}
-
-// completionInstaller is an implementation of CompletionInstaller
-type completionInstaller struct {
-	install   func(ctx *Context) error
-	uninstall func(ctx *Context) error
-}
-
-func (c *completionInstaller) Install(ctx *Context) error {
-	if c.install != nil {
-		return c.install(ctx)
-	}
-	return defaultCompletionInstall(ctx)
-}
-
-func defaultCompletionInstall(ctx *Context) error {
-	return install.Install(ctx.Model.Name)
-}
-
-func (c *completionInstaller) Uninstall(ctx *Context) error {
-	if c.uninstall != nil {
-		return c.uninstall(ctx)
-	}
-	return defaultCompletionUninstall(ctx)
-}
-
-func defaultCompletionUninstall(ctx *Context) error {
-	return install.Uninstall(ctx.Model.Name)
-}
-
 // InstallCompletion will install completion to your shell
 type InstallCompletion struct{}
 
-//Run runs install
+func (c *InstallCompletion) IsBool() bool { return true }
+
+func (c *InstallCompletion) Decode(ctx *DecodeContext) error { return nil }
+
+// Run runs install.
 func (c *InstallCompletion) Run(ctx *Context) error {
-	inst := ctx.Kong.completionOptions.CompletionInstaller
-	if inst == nil {
-		inst = NewCompletionInstaller(nil, nil)
-	}
-	return inst.Install(ctx)
+	return install.Install(ctx.Model.Name)
 }
 
 // UninstallCompletion will uninstall completion from your shell (reverses InstallCompletion)
 type UninstallCompletion struct{}
 
-//Run runs uninstall
+// Run runs uninstall
 func (c *UninstallCompletion) Run(ctx *Context) error {
-	inst := ctx.Kong.completionOptions.CompletionInstaller
-	if inst == nil {
-		inst = NewCompletionInstaller(nil, nil)
-	}
-	return inst.Uninstall(ctx)
+	return install.Uninstall(ctx.Model.Name)
 }
 
 // Completer is a function to run shell completions. Returns true if this was a completion run. Kong will exit 0

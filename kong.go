@@ -362,15 +362,7 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 }
 
 func (k *Kong) runCompletion(ctx *Context) error {
-	options := k.completionOptions
-	if !options.RunCompletion {
-		return nil
-	}
-	completer := options.Completer
-	if completer == nil {
-		completer = defaultCompleter
-	}
-	ran, err := completer(ctx)
+	ran, err := defaultCompleter(ctx)
 	if err != nil {
 		return err
 	}
