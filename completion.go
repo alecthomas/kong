@@ -5,12 +5,16 @@ import (
 	"github.com/posener/complete/cmd/install"
 )
 
-// CompletionOptions options for shell completion.
-type CompletionOptions struct {
-	// Completers contains custom Completers used to generate completion options.
-	// They can be used with an annotation like `completer='myCustomCompleter'` where "myCustomCompleter" is a
-	// key in Completers.
-	Completers map[string]Completer
+// Completers contains custom Completers used to generate completion options.
+//
+// They can be used with an annotation like `completer='myCustomCompleter'` where "myCustomCompleter" is a
+// key in Completers.
+type Completers map[string]Completer
+
+// Apply completers to Kong as a configuration option.
+func (c Completers) Apply(k *Kong) error {
+	k.completers = c
+	return nil
 }
 
 // Install shell completion for the given command.
@@ -45,14 +49,8 @@ func (c *UninstallCompletionFlag) BeforeApply(ctx *Context) error {
 	return nil
 }
 
-// Apply options to Kong as a configuration option.
-func (c CompletionOptions) Apply(k *Kong) error {
-	k.completionOptions = c
-	return nil
-}
-
 func defaultCompleter(ctx *Context) (bool, error) {
-	cmd, err := nodeCompleteCommand(ctx.Model.Node, ctx.completionOptions.Completers)
+	cmd, err := nodeCompleteCommand(ctx.Model.Node, ctx.completers)
 	if err != nil {
 		return false, err
 	}

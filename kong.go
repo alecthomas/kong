@@ -55,7 +55,7 @@ type Kong struct {
 	helpFlag      *Flag
 	vars          Vars
 
-	completionOptions CompletionOptions
+	completers Completers
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option

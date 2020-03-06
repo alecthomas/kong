@@ -45,7 +45,7 @@ func TestComplete(t *testing.T) {
 		Lion string
 	}
 
-	completers := map[string]kong.Completer{
+	completers := kong.Completers{
 		"things":      kong.CompleteSet("thing1", "thing2"),
 		"otherthings": kong.CompleteSet("otherthing1", "otherthing2"),
 	}
@@ -193,9 +193,7 @@ func TestComplete(t *testing.T) {
 				kong.Exit(func(i int) {
 					exited = assert.Equal(t, 0, i)
 				}),
-				kong.CompletionOptions{
-					Completers: completers,
-				},
+				completers,
 			)
 			cleanup := setLineAndPoint(t, td.line, td.point)
 			defer cleanup()
