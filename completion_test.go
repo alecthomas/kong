@@ -45,15 +45,15 @@ func TestComplete(t *testing.T) {
 		Lion string
 	}
 
-	predictors := map[string]kong.Predictor{
-		"things":      kong.PredictSet("thing1", "thing2"),
-		"otherthings": kong.PredictSet("otherthing1", "otherthing2"),
+	completers := map[string]kong.Completer{
+		"things":      kong.CompleteSet("thing1", "thing2"),
+		"otherthings": kong.CompleteSet("otherthing1", "otherthing2"),
 	}
 
 	var cli struct {
 		Foo struct {
 			Embedded embed  `kong:"embed"`
-			Bar      string `kong:"predictor=things"`
+			Bar      string `kong:"completer=things"`
 			Baz      bool
 			Rabbit   struct {
 			} `kong:"cmd"`
@@ -61,8 +61,8 @@ func TestComplete(t *testing.T) {
 			} `kong:"cmd"`
 		} `kong:"cmd"`
 		Bar struct {
-			Tiger   string `kong:"arg,predictor=things"`
-			Bear    string `kong:"arg,predictor=otherthings"`
+			Tiger   string `kong:"arg,completer=things"`
+			Bear    string `kong:"arg,completer=otherthings"`
 			OMG     string `kong:"enum='oh,my,gizzles'"`
 			Number  int    `kong:"short=n,enum='1,2,3'"`
 			BooFlag bool   `kong:"name=boofl,short=b"`
@@ -194,7 +194,7 @@ func TestComplete(t *testing.T) {
 					exited = assert.Equal(t, 0, i)
 				}),
 				kong.CompletionOptions{
-					Predictors: predictors,
+					Completers: completers,
 				},
 			)
 			cleanup := setLineAndPoint(t, td.line, td.point)

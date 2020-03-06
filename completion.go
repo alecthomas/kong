@@ -7,10 +7,10 @@ import (
 
 // CompletionOptions options for shell completion.
 type CompletionOptions struct {
-	// Predictors contains custom Predictors used to generate completion options.
-	// They can be used with an annotation like `predictor='myCustomPredictor'` where "myCustomPredictor" is a
-	// key in Predictors.
-	Predictors map[string]Predictor
+	// Completers contains custom Completers used to generate completion options.
+	// They can be used with an annotation like `completer='myCustomCompleter'` where "myCustomCompleter" is a
+	// key in Completers.
+	Completers map[string]Completer
 }
 
 // Install shell completion for the given command.
@@ -45,10 +45,6 @@ func (c *UninstallCompletionFlag) BeforeApply(ctx *Context) error {
 	return nil
 }
 
-// Completer is a function to run shell completions. Returns true if this was a completion run. Kong will exit 0
-// immediately when it returns true.
-type Completer func(*Context) (bool, error)
-
 // Apply options to Kong as a configuration option.
 func (c CompletionOptions) Apply(k *Kong) error {
 	k.completionOptions = c
@@ -56,7 +52,7 @@ func (c CompletionOptions) Apply(k *Kong) error {
 }
 
 func defaultCompleter(ctx *Context) (bool, error) {
-	cmd, err := nodeCompleteCommand(ctx.Model.Node, ctx.completionOptions.Predictors)
+	cmd, err := nodeCompleteCommand(ctx.Model.Node, ctx.completionOptions.Completers)
 	if err != nil {
 		return false, err
 	}
@@ -66,7 +62,7 @@ func defaultCompleter(ctx *Context) (bool, error) {
 }
 
 // nodeCompleteCommand recursively builds a *complete.Command for a node and all of its dear children.
-func nodeCompleteCommand(node *Node, predictors map[string]Predictor) (*complete.Command, error) {
+func nodeCompleteCommand(node *Node, completers map[string]Completer) (*complete.Command, error) {
 	if node == nil {
 		return nil, nil
 	}
@@ -79,7 +75,7 @@ func nodeCompleteCommand(node *Node, predictors map[string]Predictor) (*complete
 		if child == nil {
 			continue
 		}
-		childCmd, err := nodeCompleteCommand(child, predictors)
+		childCmd, err := nodeCompleteCommand(child, completers)
 		if err != nil {
 			return nil, err
 		}
@@ -89,42 +85,41 @@ func nodeCompleteCommand(node *Node, predictors map[string]Predictor) (*complete
 	}
 
 	var err error
-	cmd.GlobalFlags, err = nodeGlobalFlags(node, predictors)
+	cmd.GlobalFlags, err = nodeGlobalFlags(node, completers)
 	if err != nil {
 		return nil, err
 	}
 
-	pps, err := positionalPredictors(node.Positional, predictors)
+	pps, err := positionalCompleters(node.Positional, completers)
 	if err != nil {
 		return nil, err
 	}
-	cmd.Args = newCompletePredictor(&positionalPredictor{
-		Predictors: pps,
+	cmd.Args = &positionalCompleter{
+		Completers: pps,
 		Flags:      node.Flags,
-	})
+	}
 
 	return &cmd, nil
 }
 
-func nodeGlobalFlags(node *Node, predictors map[string]Predictor) (map[string]complete.Predictor, error) {
+func nodeGlobalFlags(node *Node, completers map[string]Completer) (map[string]Completer, error) {
 	if node == nil || node.Flags == nil {
-		return map[string]complete.Predictor{}, nil
+		return map[string]Completer{}, nil
 	}
-	globalFlags := make(map[string]complete.Predictor, len(node.Flags)*2)
+	globalFlags := make(map[string]Completer, len(node.Flags)*2)
 	for _, flag := range node.Flags {
 		if flag == nil {
 			continue
 		}
-		predictor, err := flagPredictor(flag, predictors)
+		completer, err := flagCompleter(flag, completers)
 		if err != nil {
 			return nil, err
 		}
-		cp := newCompletePredictor(predictor)
-		globalFlags["--"+flag.Name] = cp
+		globalFlags["--"+flag.Name] = completer
 		if flag.Short == 0 {
 			continue
 		}
-		globalFlags["-"+string(flag.Short)] = cp
+		globalFlags["-"+string(flag.Short)] = completer
 	}
 	return globalFlags, nil
 }

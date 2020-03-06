@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPositionalPredictor_position(t *testing.T) {
-	posPredictor := &positionalPredictor{
+func TestPositionalCompleter_position(t *testing.T) {
+	posCompleter := &positionalCompleter{
 		Flags: []*Flag{
 			{
 				Value: &Value{
@@ -51,17 +51,17 @@ func TestPositionalPredictor_position(t *testing.T) {
 		args := args
 		want := want
 		t.Run(args, func(t *testing.T) {
-			got := posPredictor.predictorIndex(newArgs("foo " + args))
+			got := posCompleter.completerIndex(newArgs("foo " + args))
 			assert.Equal(t, want, got)
 		})
 	}
 }
 
-func TestPositionalPredictor_Predict(t *testing.T) {
-	predictor1 := PredictSet("1")
-	predictor2 := PredictSet("2")
-	posPredictor := &positionalPredictor{
-		Predictors: []Predictor{predictor1, predictor2},
+func TestPositionalCompleter_Predict(t *testing.T) {
+	completer1 := CompleteSet("1")
+	completer2 := CompleteSet("2")
+	posCompleter := &positionalCompleter{
+		Completers: []Completer{completer1, completer2},
 	}
 
 	for args, want := range map[string][]string{
@@ -74,7 +74,7 @@ func TestPositionalPredictor_Predict(t *testing.T) {
 		args := args
 		want := want
 		t.Run(args, func(t *testing.T) {
-			got := posPredictor.Predict(newArgs("app " + args))
+			got := posCompleter.Predict(newArgs("app " + args))
 
 			assert.Equal(t, want, got)
 		})
@@ -84,7 +84,7 @@ func TestPositionalPredictor_Predict(t *testing.T) {
 // The code below is taken from https://github.com/posener/complete/blob/f6dd29e97e24f8cb51a8d4050781ce2b238776a4/args.go
 // to assist in tests.
 
-func newArgs(line string) PredictorArgs {
+func newArgs(line string) CompleterArgs {
 	var (
 		all       []string
 		completed []string
@@ -94,7 +94,7 @@ func newArgs(line string) PredictorArgs {
 		all = parts[1:]
 		completed = removeLast(parts[1:])
 	}
-	return PredictorArgs{
+	return CompleterArgs{
 		All:           all,
 		Completed:     completed,
 		Last:          last(parts),
