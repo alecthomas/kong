@@ -9,28 +9,11 @@ import (
 
 // Predictor implements a predict method, in which given command line arguments returns a list of options it predicts.
 // Taken from github.com/posener/complete
-type Predictor interface {
-	Predict(PredictorArgs) []string
-}
+type Predictor = complete.Predictor
 
 // PredictorArgs describes command line arguments used by a Predictor to predict options.
 // Taken from Args in github.com/posener/complete
-type PredictorArgs struct {
-	// All lists of all arguments in command line (not including the command itself)
-	All []string
-	// Completed lists of all completed arguments in command line,
-	// If the last one is still being typed - no space after it,
-	// it won't appear in this list of arguments.
-	Completed []string
-	// Last argument in command line, the one being typed, if the last
-	// character in the command line is a space, this argument will be empty,
-	// otherwise this would be the last word.
-	Last string
-	// LastCompleted is the last argument that was fully typed.
-	// If the last character in the command line is space, this would be the
-	// last word, otherwise, it would be the word before that.
-	LastCompleted string
-}
+type PredictorArgs = complete.Args
 
 // NewPredictor returns a Predictor that runs the provided function.
 func NewPredictor(fn func(PredictorArgs) []string) Predictor {
@@ -47,23 +30,25 @@ func (p predictorFunc) Predict(args PredictorArgs) []string {
 }
 
 // PredictNothing returns a nil Predictor that indicates no prediction is to be made.
-func PredictNothing() Predictor {
-	return nil
-}
+func PredictNothing() Predictor { return complete.PredictNothing }
 
 // PredictAnything returns a Predictor that expects something, but nothing particular, such as a number or arbitrary name.
-func PredictAnything() Predictor {
-	return NewPredictor(func(PredictorArgs) []string {
-		return nil
-	})
-}
+func PredictAnything() Predictor { return complete.PredictAnything }
 
-//PredictSet returns a Predictor that predicts provided options
-func PredictSet(options ...string) Predictor {
-	return predictorFunc(func(args PredictorArgs) []string {
-		return options
-	})
-}
+// PredictSet returns a Predictor that predicts provided options
+func PredictSet(options ...string) Predictor { return complete.PredictSet(options...) }
+
+// PredictOr unions two predicate functions, so that the result predicate returns the union of their predication
+func PredictOr(predictors ...Predictor) Predictor { return complete.PredictOr(predictors...) }
+
+// PredictDirs will search for directories in the given started to be typed path,
+// if no path was started to be typed, it will complete to directories in the current working directory.
+func PredictDirs(pattern string) Predictor { return complete.PredictDirs(pattern) }
+
+// PredictFiles will search for files matching the given pattern in the started to be typed path,
+// if no path was started to be typed, it will complete to files that match the pattern in the
+// current working directory. To match any file, use "*" as pattern. To match go files use "*.go", and so on.
+func PredictFiles(pattern string) Predictor { return complete.PredictFiles(pattern) }
 
 // newCompletePredictor returns a completePredictor or nil.
 // this is needed because nil predictor's have special meaning to complete.Complete
@@ -146,13 +131,13 @@ func flagPredictor(flag *Flag, predictors map[string]Predictor) (Predictor, erro
 	return valuePredictor(flag.Value, predictors)
 }
 
-//positionalPredictor is a predictor for positional arguments
+// positionalPredictor is a predictor for positional arguments
 type positionalPredictor struct {
 	Predictors []Predictor
 	Flags      []*Flag
 }
 
-//Predict implements complete.Predict
+// Predict implements complete.Predict
 func (p *positionalPredictor) Predict(args PredictorArgs) []string {
 	predictor := p.predictor(args)
 	if predictor == nil {
@@ -169,7 +154,7 @@ func (p *positionalPredictor) predictor(args PredictorArgs) Predictor {
 	return p.Predictors[position]
 }
 
-//predictorIndex returns the index in predictors to use. Returns -1 if no predictor should be used.
+// predictorIndex returns the index in predictors to use. Returns -1 if no predictor should be used.
 func (p *positionalPredictor) predictorIndex(args PredictorArgs) int {
 	idx := 0
 	for i := 0; i < len(args.Completed); i++ {
@@ -180,7 +165,7 @@ func (p *positionalPredictor) predictorIndex(args PredictorArgs) int {
 	return idx
 }
 
-//nonPredictorPos returns true if the value at this position is either a flag or a flag's argument
+// nonPredictorPos returns true if the value at this position is either a flag or a flag's argument
 func (p *positionalPredictor) nonPredictorPos(args PredictorArgs, pos int) bool {
 	if pos < 0 || pos > len(args.All)-1 {
 		return false
@@ -196,7 +181,7 @@ func (p *positionalPredictor) nonPredictorPos(args PredictorArgs, pos int) bool 
 	return p.nextValueIsFlagArg(prev)
 }
 
-//valIsFlag returns true if the value matches a flag from the configuration
+// valIsFlag returns true if the value matches a flag from the configuration
 func (p *positionalPredictor) valIsFlag(val string) bool {
 	val = strings.Split(val, "=")[0]
 
@@ -217,7 +202,7 @@ func (p *positionalPredictor) valIsFlag(val string) bool {
 	return false
 }
 
-//nextValueIsFlagArg returns true if the value matches an ArgFlag and doesn't contain an equal sign.
+// nextValueIsFlagArg returns true if the value matches an ArgFlag and doesn't contain an equal sign.
 func (p *positionalPredictor) nextValueIsFlagArg(val string) bool {
 	if strings.Contains(val, "=") {
 		return false
