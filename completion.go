@@ -13,24 +13,36 @@ type CompletionOptions struct {
 	Predictors map[string]Predictor
 }
 
-// InstallCompletion will install completion to your shell
-type InstallCompletion struct{}
+// Install shell completion for the given command.
+func Install(app *Application) error { return install.Install(app.Name) }
 
-func (c *InstallCompletion) IsBool() bool { return true }
+// Uninstall complete command given: cmd: is the command name
+func Uninstall(app *Application) error { return install.Uninstall(app.Name) }
 
-func (c *InstallCompletion) Decode(ctx *DecodeContext) error { return nil }
+// InstallCompletionFlag will install completion to your shell
+type InstallCompletionFlag bool
 
-// Run runs install.
-func (c *InstallCompletion) Run(ctx *Context) error {
-	return install.Install(ctx.Model.Name)
+// BeforeApply uninstalls completion into the users shell.
+func (c *InstallCompletionFlag) BeforeApply(ctx *Context) error {
+	err := Install(ctx.Model)
+	if err != nil {
+		return err
+	}
+	ctx.Exit(0)
+	return nil
 }
 
-// UninstallCompletion will uninstall completion from your shell (reverses InstallCompletion)
-type UninstallCompletion struct{}
+// UninstallCompletionFlag will uninstall completion from your shell (reverses InstallCompletionFlag)
+type UninstallCompletionFlag bool
 
-// Run runs uninstall
-func (c *UninstallCompletion) Run(ctx *Context) error {
-	return install.Uninstall(ctx.Model.Name)
+// BeforeApply uninstalls completion from the users shell.
+func (c *UninstallCompletionFlag) BeforeApply(ctx *Context) error {
+	err := Uninstall(ctx.Model)
+	if err != nil {
+		return err
+	}
+	ctx.Exit(0)
+	return nil
 }
 
 // Completer is a function to run shell completions. Returns true if this was a completion run. Kong will exit 0
