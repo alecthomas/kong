@@ -3,6 +3,7 @@ package kong_test
 import (
 	"bytes"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -82,104 +83,112 @@ func TestComplete(t *testing.T) {
 
 	tests := []completeTest{
 		{
-			want: []string{"foo", "bar"},
 			line: "myApp ",
+			want: []string{"bar", "foo"},
 		},
 		{
-			want: []string{"foo"},
 			line: "myApp foo",
+			want: []string{"foo"},
 		},
 		{
-			want: []string{"rabbit", "duck"},
 			line: "myApp foo ",
+			want: []string{"duck", "rabbit"},
 		},
 		{
-			want: []string{"rabbit"},
 			line: "myApp foo r",
+			want: []string{"rabbit"},
 		},
 		{
-			want: []string{"--bar", "--baz", "--lion", "--help"},
 			line: "myApp foo -",
+			want: []string{"--bar", "--baz", "--help", "--lion"},
 		},
 		{
-			want: []string{},
 			line: "myApp foo --lion ",
+			want: []string{},
 		},
 		{
-			want: []string{"rabbit", "duck"},
 			line: "myApp foo --baz ",
+			want: []string{"duck", "rabbit"},
 		},
 		{
-			want: []string{"--bar", "--baz", "--lion", "--help"},
 			line: "myApp foo --baz -",
+			want: []string{"--bar", "--baz", "--help", "--lion"},
 		},
 		{
-			want: []string{"thing1", "thing2"},
 			line: "myApp foo --bar ",
+			want: []string{"thing1", "thing2"},
 		},
 		{
-			want: []string{"thing1", "thing2"},
 			line: "myApp bar ",
+			want: []string{"thing1", "thing2"},
 		},
 		{
-			want: []string{"thing1", "thing2"},
 			line: "myApp bar thing",
-		},
-		{
-			want: []string{"otherthing1", "otherthing2"},
-			line: "myApp bar thing1 ",
-		},
-		{
-			want: []string{"oh", "my", "gizzles"},
-			line: "myApp bar --omg ",
-		},
-		{
-			want: []string{"-n", "--number", "--omg", "--help", "--boofl", "-b"},
-			line: "myApp bar -",
-		},
-		{
 			want: []string{"thing1", "thing2"},
+		},
+		{
+			line: "myApp bar thing1 ",
+			want: []string{"otherthing1", "otherthing2"},
+		},
+		{
+			line: "myApp bar --omg ",
+			want: []string{"gizzles", "my", "oh"},
+		},
+		{
+			line: "myApp bar -",
+			want: []string{"--boofl", "--help", "--number", "--omg", "-b", "-n"},
+		},
+		{
 			line: "myApp bar -b ",
+			want: []string{"thing1", "thing2"},
 		},
 		{
-			want: []string{"-n", "--number", "--omg", "--help", "--boofl", "-b"},
 			line: "myApp bar -b thing1 -",
+			want: []string{"--boofl", "--help", "--number", "--omg", "-b", "-n"},
 		},
 		{
-			want: []string{"oh", "my", "gizzles"},
 			line: "myApp bar -b thing1 --omg ",
+			want: []string{"gizzles", "my", "oh"},
 		},
 		{
-			want: []string{"otherthing1", "otherthing2"},
 			line: "myApp bar -b thing1 --omg gizzles ",
-		},
-		{
 			want: []string{"otherthing1", "otherthing2"},
-			line: "myApp bar -b thing1 --omg gizzles ",
 		},
 		{
-			want: []string{"gizzles"},
+			line: "myApp bar -b thing1 --omg gizzles ",
+			want: []string{"otherthing1", "otherthing2"},
+		},
+		{
 			line: "myApp bar -b thing1 --omg gi",
+			want: []string{"gizzles"},
 		},
 		{
-			want:  []string{"thing1", "thing2"},
 			line:  "myApp bar -b thing1 --omg gi",
-			point: lenPtr("myApp bar -b th"),
-		},
-		{
 			want:  []string{"thing1", "thing2"},
-			line:  "myApp bar -b thing1 --omg gizzles ",
 			point: lenPtr("myApp bar -b th"),
 		},
 		{
-			want:  []string{"thing1"},
 			line:  "myApp bar -b thing1 --omg gizzles ",
+			want:  []string{"thing1", "thing2"},
+			point: lenPtr("myApp bar -b th"),
+		},
+		{
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			want:  []string{"thing1"},
 			point: lenPtr("myApp bar -b thing1"),
 		},
 		{
-			want:  []string{"otherthing1", "otherthing2"},
 			line:  "myApp bar -b thing1 --omg gizzles ",
+			want:  []string{"otherthing1", "otherthing2"},
 			point: lenPtr("myApp bar -b thing1 "),
+		},
+		{
+			line: "myApp bar --number ",
+			want: []string{"1", "2", "3"},
+		},
+		{
+			line: "myApp bar --number=",
+			want: []string{"1", "2", "3"},
 		},
 	}
 
@@ -203,13 +212,14 @@ func TestComplete(t *testing.T) {
 			require.True(t, exited)
 			require.Equal(t, "", stdErr.String())
 			gotLines := strings.Split(stdOut.String(), "\n")
+			sort.Strings(gotLines)
 			gotOpts := []string{}
 			for _, l := range gotLines {
 				if l != "" {
 					gotOpts = append(gotOpts, l)
 				}
 			}
-			require.ElementsMatch(t, td.want, gotOpts)
+			require.Equal(t, td.want, gotOpts)
 		})
 	}
 }
