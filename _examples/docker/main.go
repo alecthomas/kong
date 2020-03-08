@@ -8,18 +8,17 @@ import (
 )
 
 type Globals struct {
-	Config              string      `help:"Location of client config files" default:"~/.docker" type:"path"`
-	Debug               bool        `short:"D" help:"Enable debug mode"`
-	Host                []string    `short:"H" help:"Daemon socket(s) to connect to"`
-	LogLevel            string      `short:"l" help:"Set the logging level (debug|info|warn|error|fatal)" default:"info"`
-	TLS                 bool        `help:"Use TLS; implied by --tls-verify"`
-	TLSCACert           string      `name:"tls-ca-cert" help:"Trust certs signed only by this CA" default:"~/.docker/ca.pem" type:"path"`
-	TLSCert             string      `help:"Path to TLS certificate file" default:"~/.docker/cert.pem" type:"path"`
-	TLSKey              string      `help:"Path to TLS key file" default:"~/.docker/key.pem" type:"path"`
-	TLSVerify           bool        `help:"Use TLS and verify the remote"`
-	Version             VersionFlag `name:"version" help:"Print version information and quit"`
-	InstallCompletion   kong.InstallCompletionFlag
-	UninstallCompletion kong.UninstallCompletionFlag
+	Config            string      `help:"Location of client config files" default:"~/.docker" type:"path"`
+	Debug             bool        `short:"D" help:"Enable debug mode"`
+	Host              []string    `short:"H" help:"Daemon socket(s) to connect to"`
+	LogLevel          string      `short:"l" help:"Set the logging level (debug|info|warn|error|fatal)" default:"info"`
+	TLS               bool        `help:"Use TLS; implied by --tls-verify"`
+	TLSCACert         string      `name:"tls-ca-cert" help:"Trust certs signed only by this CA" default:"~/.docker/ca.pem" type:"path"`
+	TLSCert           string      `help:"Path to TLS certificate file" default:"~/.docker/cert.pem" type:"path"`
+	TLSKey            string      `help:"Path to TLS key file" default:"~/.docker/key.pem" type:"path"`
+	TLSVerify         bool        `help:"Use TLS and verify the remote"`
+	Version           VersionFlag `name:"version" help:"Print version information and quit"`
+	InstallCompletion kong.InstallCompletionFlag
 }
 
 type VersionFlag string

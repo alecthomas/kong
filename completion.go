@@ -2,7 +2,6 @@ package kong
 
 import (
 	"github.com/posener/complete"
-	"github.com/posener/complete/cmd/install"
 )
 
 // Completers contains custom Completers used to generate completion options.
@@ -14,38 +13,6 @@ type Completers map[string]Completer
 // Apply completers to Kong as a configuration option.
 func (c Completers) Apply(k *Kong) error {
 	k.completers = c
-	return nil
-}
-
-// Install shell completion for the given command.
-func Install(app *Application) error { return install.Install(app.Name) }
-
-// Uninstall complete command given: cmd: is the command name
-func Uninstall(app *Application) error { return install.Uninstall(app.Name) }
-
-// InstallCompletionFlag will install completion to your shell
-type InstallCompletionFlag bool
-
-// BeforeApply uninstalls completion into the users shell.
-func (c *InstallCompletionFlag) BeforeApply(ctx *Context) error {
-	err := Install(ctx.Model)
-	if err != nil {
-		return err
-	}
-	ctx.Exit(0)
-	return nil
-}
-
-// UninstallCompletionFlag will uninstall completion from your shell (reverses InstallCompletionFlag)
-type UninstallCompletionFlag bool
-
-// BeforeApply uninstalls completion from the users shell.
-func (c *UninstallCompletionFlag) BeforeApply(ctx *Context) error {
-	err := Uninstall(ctx.Model)
-	if err != nil {
-		return err
-	}
-	ctx.Exit(0)
 	return nil
 }
 

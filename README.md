@@ -23,6 +23,7 @@
 1. [Custom decoders (mappers)](#custom-decoders-mappers)
 1. [Supported tags](#supported-tags)
 1. [Variable interpolation](#variable-interpolation)
+1. [Completion](#completion)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
    1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
    1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
@@ -397,7 +398,7 @@ interface it will be used to decode arguments into the field.
 Tags can be in two forms:
 
 1. Standard Go syntax, eg. `kong:"required,name='foo'"`.
-2. Bare tags, eg. `required name:"foo"`
+2. Bare tags, eg. `required:"" name:"foo"`
 
 Both can coexist with standard Tag parsing.
 
@@ -425,6 +426,7 @@ Tag                    | Description
 `prefix:"X"`           | Prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
+`completer:"X"`        | Named completer to use for this flag/arg value.
 
 ## Variable interpolation
 
@@ -461,6 +463,34 @@ func main() {
     kong.Vars{
       "config_file": "~/.app.conf",
     })
+}
+```
+
+## Completion
+
+Thanks to [Will Roden](https://github.com/WillAbides), Kong now supports completion. Completion can be installed by adding
+the `kong.CompletionInstallFlag` to your CLI struct. This will output the appropriate
+shell fragment to enable completion for your shell.
+
+By default, commands, flags, enums, values of type `existingfile`, `existingdir`, and `path` will
+have completion automatically enabled. Individual values can customise how they are completed by using
+the tag `completer:"X"`, and passing the option map `kong.Completers{"X": <kong.Completer>}` to the
+Kong constructor.
+
+eg.
+
+```go
+type cli struct {
+  InstallCompletion kong.CompletionInstallFlag `help:"Install completion."`
+  Name string `completer:"name"`
+}
+
+func main() {
+  kong.Parse(&cli,
+    kong.Completers{
+      "name": kong.ComleteSet("alice", "bob"),
+    },
+  )
 }
 ```
 
