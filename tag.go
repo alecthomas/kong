@@ -234,3 +234,31 @@ func (t *Tag) GetRune(k string) (rune, error) {
 	}
 	return r, nil
 }
+
+func (t *Tag) completer(ctx *Context) (Completer, error) {
+	if t == nil || t.Completer == "" {
+		if t != nil && t.Type != "" {
+			switch t.Type {
+			case "path":
+				return CompleteOr(CompleteFiles("*"), CompleteDirs()), nil
+
+			case "existingfile":
+				return CompleteFiles("*"), nil
+
+			case "existingdir":
+				return CompleteDirs(), nil
+			}
+		}
+		return nil, nil
+	}
+	completers := ctx.completers
+	if completers == nil {
+		completers = map[string]Completer{}
+	}
+	completerName := t.Completer
+	completer, ok := completers[completerName]
+	if !ok {
+		return nil, fmt.Errorf("no completer with name %q", completerName)
+	}
+	return completer, nil
+}
