@@ -1,143 +1,229 @@
 package kong
 
 import (
+	"bytes"
+	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
-	"unicode"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestPositionalCompleter_position(t *testing.T) {
-	posCompleter := &positionalCompleter{
-		Flags: []*Flag{
-			{
-				Value: &Value{
-					Name:   "mybool",
-					Mapper: boolMapper{},
-				},
-				Short: 'b',
-			},
-			{
-				Value: &Value{
-					Name:   "mybool2",
-					Mapper: boolMapper{},
-				},
-				Short: 'c',
-			},
-			{
-				Value: &Value{
-					Name: "myarg",
-				},
-				Short: 'a',
-			},
+func setLineAndPoint(t *testing.T, line string, point *int) func() {
+	pVal := len(line)
+	if point != nil {
+		pVal = *point
+	}
+	const (
+		envLine  = "COMP_LINE"
+		envPoint = "COMP_POINT"
+	)
+	t.Helper()
+	origLine, hasOrigLine := os.LookupEnv(envLine)
+	origPoint, hasOrigPoint := os.LookupEnv(envPoint)
+	require.NoError(t, os.Setenv(envLine, line))
+	require.NoError(t, os.Setenv(envPoint, strconv.Itoa(pVal)))
+	return func() {
+		t.Helper()
+		require.NoError(t, os.Unsetenv(envLine))
+		require.NoError(t, os.Unsetenv(envPoint))
+		if hasOrigLine {
+			require.NoError(t, os.Setenv(envLine, origLine))
+		}
+		if hasOrigPoint {
+			require.NoError(t, os.Setenv(envPoint, origPoint))
+		}
+	}
+}
+
+func Test_runCompletion(t *testing.T) {
+	type embed struct {
+		Lion string
+	}
+
+	completers := Completers{
+		"things":      CompleteSet("thing1", "thing2"),
+		"otherthings": CompleteSet("otherthing1", "otherthing2"),
+	}
+
+	var cli struct {
+		Foo struct {
+			Embedded embed  `kong:"embed"`
+			Bar      string `kong:"completer=things"`
+			Baz      bool
+			Rabbit   struct {
+			} `kong:"cmd"`
+			Duck struct {
+			} `kong:"cmd"`
+		} `kong:"cmd"`
+		Bar struct {
+			Tiger   string `kong:"arg,completer=things"`
+			Bear    string `kong:"arg,completer=otherthings"`
+			OMG     string `kong:"enum='oh,my,gizzles'"`
+			Number  int    `kong:"short=n,enum='1,2,3'"`
+			BooFlag bool   `kong:"name=boofl,short=b"`
+		} `kong:"cmd"`
+	}
+
+	type completeTest struct {
+		want  []string
+		line  string
+		point *int
+	}
+
+	lenPtr := func(val string) *int {
+		v := len(val)
+		return &v
+	}
+
+	tests := []completeTest{
+		{
+			line: "myApp ",
+			want: []string{"bar", "foo"},
+		},
+		{
+			line: "myApp foo",
+			want: []string{"foo"},
+		},
+		{
+			line: "myApp foo ",
+			want: []string{"duck", "rabbit"},
+		},
+		{
+			line: "myApp foo r",
+			want: []string{"rabbit"},
+		},
+		{
+			line: "myApp -",
+			want: []string{"--help"},
+		},
+		{
+			line: "myApp foo -",
+			want: []string{"--bar", "--baz", "--help", "--lion"},
+		},
+		{
+			line: "myApp foo --lion ",
+			want: []string{},
+		},
+		{
+			line: "myApp foo --baz ",
+			want: []string{"duck", "rabbit"},
+		},
+		{
+			line: "myApp foo --baz -",
+			want: []string{"--bar", "--baz", "--help", "--lion"},
+		},
+		{
+			line: "myApp foo --bar ",
+			want: []string{"thing1", "thing2"},
+		},
+		{
+			line: "myApp bar ",
+			want: []string{"thing1", "thing2"},
+		},
+		{
+			line: "myApp bar thing",
+			want: []string{"thing1", "thing2"},
+		},
+		{
+			line: "myApp bar thing1 ",
+			want: []string{"otherthing1", "otherthing2"},
+		},
+		{
+			line: "myApp bar --omg ",
+			want: []string{"gizzles", "my", "oh"},
+		},
+		{
+			line: "myApp bar -",
+			want: []string{"--boofl", "--help", "--number", "--omg", "-b", "-n"},
+		},
+		{
+			line: "myApp bar -b ",
+			want: []string{"thing1", "thing2"},
+		},
+		{
+			line: "myApp bar -b thing1 -",
+			want: []string{"--boofl", "--help", "--number", "--omg", "-b", "-n"},
+		},
+		{
+			line: "myApp bar -b thing1 --omg ",
+			want: []string{"gizzles", "my", "oh"},
+		},
+		{
+			line: "myApp bar -b thing1 --omg gizzles ",
+			want: []string{"otherthing1", "otherthing2"},
+		},
+		{
+			line: "myApp bar -b thing1 --omg gizzles ",
+			want: []string{"otherthing1", "otherthing2"},
+		},
+		{
+			line: "myApp bar -b thing1 --omg gi",
+			want: []string{"gizzles"},
+		},
+		{
+			line:  "myApp bar -b thing1 --omg gi",
+			want:  []string{"thing1", "thing2"},
+			point: lenPtr("myApp bar -b th"),
+		},
+		{
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			want:  []string{"thing1", "thing2"},
+			point: lenPtr("myApp bar -b th"),
+		},
+		{
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			want:  []string{"thing1"},
+			point: lenPtr("myApp bar -b thing1"),
+		},
+		{
+			line:  "myApp bar -b thing1 --omg gizzles ",
+			want:  []string{"otherthing1", "otherthing2"},
+			point: lenPtr("myApp bar -b thing1 "),
+		},
+		{
+			line: "myApp bar --number ",
+			want: []string{"1", "2", "3"},
+		},
+		{
+			line: "myApp bar --number=",
+			want: []string{"1", "2", "3"},
 		},
 	}
 
-	for args, want := range map[string]int{
-		``:                 0,
-		`foo`:              0,
-		`foo `:             1,
-		`-b foo `:          1,
-		`-bc foo `:         1,
-		`-bd foo `:         1,
-		`-a foo `:          0,
-		`-a=omg foo `:      1,
-		`--myarg omg foo `: 1,
-		`--myarg=omg foo `: 1,
-		`foo bar`:          1,
-		`foo bar `:         2,
-	} {
-		args := args
-		want := want
-		t.Run(args, func(t *testing.T) {
-			got := posCompleter.completerIndex(newArgs("foo " + args))
-			assert.Equal(t, want, got)
+	for _, td := range tests {
+		td := td
+		t.Run(td.line, func(t *testing.T) {
+			var stdOut, stdErr bytes.Buffer
+			var exited bool
+			p, err := New(&cli,
+				Writers(&stdOut, &stdErr),
+				Exit(func(i int) {
+					exited = assert.Equal(t, 0, i)
+				}),
+				Name("test"),
+				completers,
+			)
+			require.NoError(t, err)
+			cleanup := setLineAndPoint(t, td.line, td.point)
+			defer cleanup()
+			_, err = p.Parse([]string{})
+			require.Error(t, err)
+			require.IsType(t, &ParseError{}, err)
+			require.True(t, exited)
+			require.Equal(t, "", stdErr.String())
+			gotLines := strings.Split(stdOut.String(), "\n")
+			sort.Strings(gotLines)
+			gotOpts := []string{}
+			for _, l := range gotLines {
+				if l != "" {
+					gotOpts = append(gotOpts, l)
+				}
+			}
+			require.Equal(t, td.want, gotOpts)
 		})
 	}
-}
-
-func TestPositionalCompleter_Predict(t *testing.T) {
-	completer1 := CompleteSet("1")
-	completer2 := CompleteSet("2")
-	posCompleter := &positionalCompleter{
-		Completers: []Completer{completer1, completer2},
-	}
-
-	for args, want := range map[string][]string{
-		``:         {"1"},
-		`foo`:      {"1"},
-		`foo `:     {"2"},
-		`foo bar`:  {"2"},
-		`foo bar `: {},
-	} {
-		args := args
-		want := want
-		t.Run(args, func(t *testing.T) {
-			got := posCompleter.Predict(newArgs("app " + args))
-
-			assert.Equal(t, want, got)
-		})
-	}
-}
-
-// The code below is taken from https://github.com/posener/complete/blob/f6dd29e97e24f8cb51a8d4050781ce2b238776a4/args.go
-// to assist in tests.
-
-func newArgs(line string) CompleterArgs {
-	var (
-		all       []string
-		completed []string
-	)
-	parts := splitFields(line)
-	if len(parts) > 0 {
-		all = parts[1:]
-		completed = removeLast(parts[1:])
-	}
-	return CompleterArgs{
-		All:           all,
-		Completed:     completed,
-		Last:          last(parts),
-		LastCompleted: last(completed),
-	}
-}
-
-// splitFields returns a list of fields from the given command line.
-// If the last character is space, it appends an empty field in the end
-// indicating that the field before it was completed.
-// If the last field is of the form "a=b", it splits it to two fields: "a", "b",
-// So it can be completed.
-func splitFields(line string) []string {
-	parts := strings.Fields(line)
-
-	// Add empty field if the last field was completed.
-	if len(line) > 0 && unicode.IsSpace(rune(line[len(line)-1])) {
-		parts = append(parts, "")
-	}
-
-	// Treat the last field if it is of the form "a=b"
-	parts = splitLastEqual(parts)
-	return parts
-}
-
-func splitLastEqual(line []string) []string {
-	if len(line) == 0 {
-		return line
-	}
-	parts := strings.Split(line[len(line)-1], "=")
-	return append(line[:len(line)-1], parts...)
-}
-
-func removeLast(a []string) []string {
-	if len(a) > 0 {
-		return a[:len(a)-1]
-	}
-	return a
-}
-
-func last(args []string) string {
-	if len(args) == 0 {
-		return ""
-	}
-	return args[len(args)-1]
 }

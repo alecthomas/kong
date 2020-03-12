@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -362,13 +363,32 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 }
 
 func (k *Kong) runCompletion(ctx *Context) error {
-	ran, err := defaultCompleter(ctx)
+	const envLine = "COMP_LINE"
+	const envPoint = "COMP_POINT"
+
+	line := os.Getenv(envLine)
+	if line == "" {
+		return nil
+	}
+	point, err := strconv.Atoi(os.Getenv(envPoint))
+	if err == nil && point < len(line) {
+		line = line[:point]
+	}
+	a := newCompleterArgs(line)
+	opts := &completionOptions{}
+	_, err = ctx.Model.Node.runCompletion(ctx, a, opts)
 	if err != nil {
 		return err
 	}
-	if ran {
-		k.Exit(0)
+	for _, option := range opts.slice() {
+		if strings.HasPrefix(option, a.Last()) {
+			_, err := fmt.Fprintln(k.Stdout, option)
+			if err != nil {
+				return err
+			}
+		}
 	}
+	k.Exit(0)
 	return nil
 }
 

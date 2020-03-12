@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -202,6 +203,135 @@ func (n *Node) Path() (out string) {
 	return strings.TrimSpace(out)
 }
 
+type completionOptions map[string]struct{}
+
+func (c completionOptions) add(option ...string) {
+	for _, opt := range option {
+		c[opt] = struct{}{}
+	}
+}
+
+func (c completionOptions) slice() []string {
+	options := make([]string, 0, len(c))
+	for s := range c {
+		options = append(options, s)
+	}
+	sort.Strings(options)
+	return options
+}
+
+func (n *Node) subCommandCompletion(ctx *Context, a CompleterArgs, opts *completionOptions) (found, stop bool, err error) {
+	var subCommand *Node
+	completedArgs := a.Completed()
+	for i := 0; i < len(completedArgs); i++ {
+		i := i
+		for _, sub := range n.Children {
+			if sub.Name == completedArgs[i] && sub.Type == CommandNode {
+				subCommand = sub
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+		// when there's a subCommand, run the subCommand's completion with the remaining args
+		if i < len(a) {
+			a = a[i+1:]
+		} else {
+			a = a[len(a):]
+		}
+		stop, err = subCommand.runCompletion(ctx, a, opts)
+		if err != nil {
+			return false, false, err
+		}
+		return found, stop, nil
+	}
+	return found, stop, nil
+}
+
+func (n *Node) runCompletion(ctx *Context, a CompleterArgs, opts *completionOptions) (bool, error) {
+	foundSub, _, err := n.subCommandCompletion(ctx, a, opts)
+	if err != nil {
+		return false, err
+	}
+
+	if foundSub {
+		return false, nil
+	}
+
+	stop, err := n.flagCompletion(ctx, a, opts)
+	if err != nil || stop {
+		return stop, err
+	}
+
+	err = n.positionalCompletion(ctx, a, opts)
+	if err != nil {
+		return false, err
+	}
+
+	for _, child := range n.Children {
+		if child.Type == CommandNode {
+			opts.add(child.Name)
+		}
+	}
+
+	return false, nil
+}
+
+func (n *Node) positionalCompletion(ctx *Context, a CompleterArgs, opts *completionOptions) error {
+	comp := &positionalCompleter{
+		Flags:      n.Flags,
+		Completers: make([]Completer, len(n.Positional)),
+	}
+	var err error
+	for i, pos := range n.Positional {
+		comp.Completers[i], err = pos.completer(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	opts.add(comp.Options(a)...)
+	return nil
+}
+
+func (n *Node) flagCompletion(ctx *Context, a CompleterArgs, opts *completionOptions) (bool, error) {
+	if n.Flags == nil {
+		return false, nil
+	}
+	completers := make(map[string]Completer, len(n.Flags)*2)
+	for _, flags := range n.AllFlags(true) {
+		for _, flag := range flags {
+			if flag == nil {
+				continue
+			}
+			completer, err := flag.completer(ctx)
+			if err != nil {
+				return false, err
+			}
+			completers["--"+flag.Name] = completer
+			if flag.Short == 0 {
+				continue
+			}
+			completers["-"+string(flag.Short)] = completer
+		}
+	}
+
+	completer, ok := completers[a.LastCompleted()]
+	if ok && completer != nil {
+		opts.add(completer.Options(a)...)
+		// stop further completions when a flag is being completed
+		return true, nil
+	}
+
+	if strings.HasPrefix(a.Last(), "-") {
+		for flag := range completers {
+			opts.add(flag)
+		}
+	}
+	return false, nil
+}
+
 // A Value is either a flag or a variable positional argument.
 type Value struct {
 	Flag         *Flag // Nil if positional argument.
@@ -343,6 +473,33 @@ func (v *Value) Reset() error {
 }
 
 func (*Value) node() {}
+
+func (v *Value) completer(ctx *Context) (Completer, error) {
+	if v == nil {
+		return nil, nil
+	}
+	completer, err := v.Tag.completer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if completer != nil {
+		return completer, nil
+	}
+	switch {
+	case v.IsBool():
+		return CompleteNothing(), nil
+
+	case v.Enum != "":
+		enumVals := make([]string, 0, len(v.EnumMap()))
+		for enumVal := range v.EnumMap() {
+			enumVals = append(enumVals, enumVal)
+		}
+		return CompleteSet(enumVals...), nil
+
+	default:
+		return CompleteAnything(), nil
+	}
+}
 
 // A Positional represents a non-branching command-line positional argument.
 type Positional = Value
