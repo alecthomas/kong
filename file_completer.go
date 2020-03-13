@@ -110,28 +110,24 @@ func subdirOptions(args CompleterArgs) (dir string, subDirs []string) {
 	return dir, CompleteFilesSet(append(subDirs, dir)).Options(args)
 }
 
-// CompleteFilesSet is like CompleteSet but for files
+// CompleteFilesSet is like CompleteSet but for files. It applies formatPathOption() before matching.
+//  see formatPathOption() for more details.
 func CompleteFilesSet(files []string) CompleterFunc {
 	return func(args CompleterArgs) []string {
 		options := make([]string, 0, len(files))
-		for _, f := range files {
-			lastArg := args.Last()
-			f = formatPathOption(lastArg, f)
+		for _, file := range files {
+			matchPrefix := args.Last()
+			file = formatPathOption(matchPrefix, file)
 
 			dotSlash := filepath.FromSlash("./")
-			if f == dotSlash && (lastArg == "." || lastArg == "") {
-				options = append(options, f)
-				continue
+
+			// for matching purposes, "." and "" are equivalent to "./"
+			if matchPrefix == "." || matchPrefix == "" {
+				matchPrefix = dotSlash
 			}
 
-			if lastArg == "." && strings.HasPrefix(f, ".") {
-				options = append(options, f)
-				continue
-			}
-
-			if strings.HasPrefix(strings.TrimPrefix(f, dotSlash), strings.TrimPrefix(lastArg, dotSlash)) {
-				options = append(options, f)
-				continue
+			if strings.HasPrefix(strings.TrimPrefix(file, dotSlash), strings.TrimPrefix(matchPrefix, dotSlash)) {
+				options = append(options, file)
 			}
 		}
 		return options
