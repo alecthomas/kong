@@ -281,12 +281,14 @@ func (n *Node) runCompletion(ctx *Context, a CompleterArgs, opts *completionOpti
 
 func (n *Node) positionalCompletion(ctx *Context, a CompleterArgs, opts *completionOptions) error {
 	comp := &positionalCompleter{
-		Flags:      n.Flags,
-		Completers: make([]Completer, len(n.Positional)),
+		flags:      n.Flags,
+		completers: make([]Completer, len(n.Positional)),
 	}
+	// make the final completer repeat if the last positional is cumulative (slice or map)
+	comp.repeatFinal = len(n.Positional) > 0 && n.Positional[len(n.Positional)-1].IsCumulative()
 	var err error
 	for i, pos := range n.Positional {
-		comp.Completers[i], err = pos.completer(ctx)
+		comp.completers[i], err = pos.completer(ctx)
 		if err != nil {
 			return err
 		}
