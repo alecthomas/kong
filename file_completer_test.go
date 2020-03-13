@@ -40,6 +40,71 @@ func setupTestFilesDir(t *testing.T) (teardown func()) {
 	}
 }
 
+func TestCompleteFilesSet(t *testing.T) {
+	set := CompleteFilesSet([]string{
+		"foo/bar", "baz", "foo/qux", ".", "./one", "./flood",
+	})
+
+	for _, td := range []struct {
+		input string
+		want  []string
+	}{
+		{
+			input: "f",
+			want:  []string{"flood", "foo/bar", "foo/qux"},
+		},
+		{
+			input: "./f",
+			want:  []string{"./flood", "./foo/bar", "./foo/qux"},
+		},
+		{
+			input: "foo/",
+			want:  []string{"foo/bar", "foo/qux"},
+		},
+		{
+			input: "./foo/",
+			want:  []string{"./foo/bar", "./foo/qux"},
+		},
+		{
+			input: "",
+			want:  []string{"./", "baz", "flood", "foo/bar", "foo/qux", "one"},
+		},
+		{
+			input: ".",
+			want:  []string{"./", "./baz", "./flood", "./foo/bar", "./foo/qux", "./one"},
+		},
+		{
+			input: "./",
+			want:  []string{"./", "./baz", "./flood", "./foo/bar", "./foo/qux", "./one"},
+		},
+		{
+			input: "./q",
+			want:  []string{},
+		},
+		{
+			input: "q",
+			want:  []string{},
+		},
+		{
+			input: "foo/q",
+			want:  []string{"foo/qux"},
+		},
+		{
+			input: "./foo/q",
+			want:  []string{"./foo/qux"},
+		},
+	} {
+		td := td
+		t.Run(fmt.Sprintf("input:%q", td.input), func(t *testing.T) {
+			input := filepath.FromSlash(td.input)
+			got := set.Options(newCompleterArgs(input))
+			sort.Strings(got)
+			sort.Strings(td.want)
+			require.Equal(t, td.want, got)
+		})
+	}
+}
+
 func TestCompleteDirs(t *testing.T) {
 	teardown := setupTestFilesDir(t)
 	defer teardown()
