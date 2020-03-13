@@ -6,8 +6,9 @@ import (
 
 // positionalCompleter is a completer for positional arguments
 type positionalCompleter struct {
-	Completers []Completer
-	Flags      []*Flag
+	completers  []Completer
+	flags       []*Flag
+	repeatFinal bool
 }
 
 func (p *positionalCompleter) Options(args CompleterArgs) []string {
@@ -20,10 +21,16 @@ func (p *positionalCompleter) Options(args CompleterArgs) []string {
 
 func (p *positionalCompleter) completer(args CompleterArgs) Completer {
 	position := p.completerIndex(args)
-	if position < 0 || position > len(p.Completers)-1 {
+	if position < 0 {
 		return nil
 	}
-	return p.Completers[position]
+	if position > len(p.completers)-1 {
+		if !p.repeatFinal {
+			return nil
+		}
+		position = len(p.completers) - 1
+	}
+	return p.completers[position]
 }
 
 // completerIndex returns the index in completers to use. Returns -1 if no completer should be used.
@@ -59,7 +66,7 @@ func (p *positionalCompleter) nonCompleterPos(args CompleterArgs, pos int) bool 
 func (p *positionalCompleter) valIsFlag(val string) bool {
 	val = strings.Split(val, "=")[0]
 
-	for _, flag := range p.Flags {
+	for _, flag := range p.flags {
 		if flag == nil {
 			continue
 		}
@@ -81,7 +88,7 @@ func (p *positionalCompleter) nextValueIsFlagArg(val string) bool {
 	if strings.Contains(val, "=") {
 		return false
 	}
-	for _, flag := range p.Flags {
+	for _, flag := range p.flags {
 		if flag.IsBool() {
 			continue
 		}

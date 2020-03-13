@@ -10,7 +10,7 @@ func TestPositionalCompleter_Predict(t *testing.T) {
 	completer1 := CompleteSet("1")
 	completer2 := CompleteSet("2")
 	posCompleter := &positionalCompleter{
-		Completers: []Completer{completer1, completer2},
+		completers: []Completer{completer1, completer2},
 	}
 
 	for args, want := range map[string][]string{
@@ -32,7 +32,7 @@ func TestPositionalCompleter_Predict(t *testing.T) {
 
 func TestPositionalCompleter_completerIndex(t *testing.T) {
 	posCompleter := &positionalCompleter{
-		Flags: []*Flag{
+		flags: []*Flag{
 			{
 				Value: &Value{
 					Name:   "mybool",
