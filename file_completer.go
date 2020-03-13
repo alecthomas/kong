@@ -121,12 +121,14 @@ func CompleteFilesSet(files []string) CompleterFunc {
 
 			dotSlash := filepath.FromSlash("./")
 
-			// for matching purposes, "." and "" are equivalent to "./"
-			if matchPrefix == "." || matchPrefix == "" {
+			// for matching purposes, "." is equivalent to "./"
+			if matchPrefix == "." {
 				matchPrefix = dotSlash
 			}
 
-			if strings.HasPrefix(strings.TrimPrefix(file, dotSlash), strings.TrimPrefix(matchPrefix, dotSlash)) {
+			// strip "./" from the front of both strings before doing the prefix match
+			matchPrefix = strings.TrimPrefix(matchPrefix, dotSlash)
+			if strings.HasPrefix(strings.TrimPrefix(file, dotSlash), matchPrefix) {
 				options = append(options, file)
 			}
 		}
