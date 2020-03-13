@@ -189,10 +189,6 @@ func Test_runCompletion(t *testing.T) {
 			want: []string{"otherthing1", "otherthing2"},
 		},
 		{
-			line: "myApp bar -b thing1 --omg gizzles ",
-			want: []string{"otherthing1", "otherthing2"},
-		},
-		{
 			line: "myApp bar -b thing1 --omg gi",
 			want: []string{"gizzles"},
 		},

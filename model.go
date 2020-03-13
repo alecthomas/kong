@@ -280,20 +280,64 @@ func (n *Node) runCompletion(ctx *Context, a CompleterArgs, opts *completionOpti
 }
 
 func (n *Node) positionalCompletion(ctx *Context, a CompleterArgs, opts *completionOptions) error {
-	comp := &positionalCompleter{
-		flags:      n.Flags,
-		completers: make([]Completer, len(n.Positional)),
-	}
-	// make the final completer repeat if the last positional is cumulative (slice or map)
-	comp.repeatFinal = len(n.Positional) > 0 && n.Positional[len(n.Positional)-1].IsCumulative()
-	var err error
-	for i, pos := range n.Positional {
-		comp.completers[i], err = pos.completer(ctx)
-		if err != nil {
-			return err
+	lookupFlag := func(str string) *Flag {
+		if !strings.HasPrefix(str, "-") {
+			return nil
 		}
+		for _, flags := range n.AllFlags(true) {
+			for _, flag := range flags {
+				if flag == nil {
+					continue
+				}
+				if str == "--"+flag.Name {
+					return flag
+				}
+				if flag.Short == 0 {
+					continue
+				}
+				if strings.HasPrefix(str, "-"+string(flag.Short)) {
+					return flag
+				}
+			}
+		}
+		return nil
 	}
-	opts.add(comp.Options(a)...)
+
+	var position int
+	for i := 0; i < len(a.Completed()); i++ {
+		allArgs := a.All()
+		if i > len(allArgs)-1 {
+			position++
+			continue
+		}
+		val := allArgs[i]
+		if lookupFlag(val) != nil {
+			continue
+		}
+		if i == 0 {
+			position++
+			continue
+		}
+		prev := allArgs[i-1]
+		flag := lookupFlag(prev)
+		if flag != nil && !flag.IsBool() {
+			continue
+		}
+		position++
+	}
+
+	var completer Completer
+	var err error
+	if position < len(n.Positional) {
+		completer, err = n.Positional[position].completer(ctx)
+	} else if len(n.Positional) > 0 && n.Positional[len(n.Positional)-1].IsCumulative() {
+		completer, err = n.Positional[len(n.Positional)-1].completer(ctx)
+	}
+	if err != nil || completer == nil {
+		return err
+	}
+
+	opts.add(completer.Options(a)...)
 	return nil
 }
 
