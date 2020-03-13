@@ -77,6 +77,11 @@ func Test_formatPathOption(t *testing.T) {
 			path: "readme.md",
 			want: filepath.Join(wd, "readme.md"),
 		},
+		{
+			base: "/",
+			path: "dir",
+			want: filepath.Join(wd, "dir") + string(filepath.Separator),
+		},
 	} {
 		td := td
 		t.Run(fmt.Sprintf("(%q, %q)", td.base, td.path), func(t *testing.T) {
@@ -95,6 +100,10 @@ func TestCompleteFilesSet(t *testing.T) {
 		input string
 		want  []string
 	}{
+		{
+			input: "fl",
+			want:  []string{"flood"},
+		},
 		{
 			input: "f",
 			want:  []string{"flood", "foo/bar", "foo/qux"},
