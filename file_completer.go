@@ -134,7 +134,11 @@ func CompleteFilesSet(files []string) CompleterFunc {
 	}
 }
 
-// formatPathOption returns path in the form needed for a completion option
+// formatPathOption returns path in the form needed for a path completion
+//  - when base is an absolute path, the returned value is an absolute path
+//  - when base starts with ".", the returned value starts with "./"
+//  - when base is a relative path, the retuned value is a relative path to the current working directory (not base)
+//  - when path points to a directory, the returned value ends with "/"
 func formatPathOption(base string, path string) string {
 	abs, err := filepath.Abs(path)
 	if err != nil {

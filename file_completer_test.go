@@ -40,6 +40,52 @@ func setupTestFilesDir(t *testing.T) (teardown func()) {
 	}
 }
 
+func Test_formatPathOption(t *testing.T) {
+	teardown := setupTestFilesDir(t)
+	defer teardown()
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	for _, td := range []struct {
+		base string
+		path string
+		want string
+	}{
+		{
+			base: ".",
+			path: "dir",
+			want: "./dir/",
+		},
+		{
+			base: "",
+			path: "dir",
+			want: "dir/",
+		},
+		{
+			base: "read",
+			path: "readme.md",
+			want: "readme.md",
+		},
+		{
+			base: "/",
+			path: "readme.md",
+			want: filepath.Join(wd, "readme.md"),
+		},
+		{
+			base: wd,
+			path: "readme.md",
+			want: filepath.Join(wd, "readme.md"),
+		},
+	} {
+		td := td
+		t.Run(fmt.Sprintf("(%q, %q)", td.base, td.path), func(t *testing.T) {
+			got := formatPathOption(td.base, td.path)
+			require.Equal(t, td.want, got)
+		})
+	}
+}
+
 func TestCompleteFilesSet(t *testing.T) {
 	set := CompleteFilesSet([]string{
 		"foo/bar", "baz", "foo/qux", ".", "./one", "./flood",
