@@ -66,6 +66,10 @@ func Test_runCompletion(t *testing.T) {
 			Number  int    `kong:"short=n,enum='1,2,3'"`
 			BooFlag bool   `kong:"name=boofl,short=b"`
 		} `kong:"cmd"`
+		Baz struct {
+			RepeatingArg  []string `kong:"arg,completer=things"`
+			RepeatingFlag []int    `kong:"short=r,enum='11,12,13,20'"`
+		} `kong:"cmd"`
 	}
 
 	type completeTest struct {
@@ -82,7 +86,35 @@ func Test_runCompletion(t *testing.T) {
 	tests := []completeTest{
 		{
 			line: "myApp ",
-			want: []string{"bar", "foo"},
+			want: []string{"bar", "baz", "foo"},
+		},
+		{
+			line: "myApp baz -",
+			want: []string{"--help", "--repeating-flag", "-r"},
+		},
+		{
+			line: "myApp baz -r",
+			want: []string{"-r"},
+		},
+		{
+			line: "myApp baz -r ",
+			want: []string{"11", "12", "13", "20"},
+		},
+		{
+			line: "myApp baz -r 11 -r 1",
+			want: []string{"11", "12", "13"},
+		},
+		{
+			line: "myApp baz -r 11 -r 12 ",
+			want: []string{"thing1", "thing2"},
+		},
+		{
+			line: "myApp baz thing1 thing2 -r 11 -r 12 -r ",
+			want: []string{"11", "12", "13", "20"},
+		},
+		{
+			line: "myApp baz thing1 ",
+			want: []string{"thing1", "thing2"},
 		},
 		{
 			line: "myApp foo",
