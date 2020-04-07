@@ -425,6 +425,7 @@ Tag                    | Description
 `prefix:"X"`           | Prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
+`-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct.
 
 ## Variable interpolation
 
