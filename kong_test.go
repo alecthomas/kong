@@ -675,6 +675,19 @@ func TestHooksCalledForDefault(t *testing.T) {
 	require.Equal(t, []string{"before:default", "after:default"}, ctx.values)
 }
 
+func TestHooksCalledForEnv(t *testing.T) {
+	var cli struct {
+		Flag hookValue `env:"FLAG"`
+	}
+	defer tempEnv(envMap{"FLAG": "flagged"})()
+
+	ctx := &hookContext{}
+	_, err := mustNew(t, &cli, kong.Bind(ctx)).Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, "flagged", string(cli.Flag))
+	require.Equal(t, []string{"before:", "after:flagged"}, ctx.values)
+}
+
 func TestEnum(t *testing.T) {
 	var cli struct {
 		Flag string `enum:"a,b,c"`
