@@ -370,12 +370,12 @@ Kong includes a number of builtin custom type mappers. These can be used by
 specifying the tag `type:"<type>"`. They are registered with the option
 function `NamedMapper(name, mapper)`.
 
-| Name              | Description                                       |
-|-------------------|---------------------------------------------------|
-| `path`            | A path. ~ expansion is applied.                   |
-| `existingfile`    | An existing file. ~ expansion is applied.         |
-| `existingdir`     | An existing directory. ~ expansion is applied.    |
-| `counter`         | Increment a numeric field. Useful for `-vvv`      |
+| Name              | Description                             
+|-------------------|---------------------------------------------------
+| `path`            | A path. ~ expansion is applied.          
+| `existingfile`    | An existing file. ~ expansion is applied. `-` is accepted for stdin.
+| `existingdir`     | An existing directory. ~ expansion is applied.   
+| `counter`         | Increment a numeric field. Useful for `-vvv`    
 
 
 Slices and maps treat type tags specially. For slices, the `type:""` tag
