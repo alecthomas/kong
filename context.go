@@ -567,16 +567,13 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
 }
 
-// Run executes the Run() method on the selected command, which must exist.
+// RunNode calls the Run() method on an arbitrary node.
+//
+// This is useful in conjunction with Visit(), for dynamically running commands.
 //
 // Any passed values will be bindable to arguments of the target Run() method. Additionally,
 // all parent nodes in the command structure will be bound.
-func (c *Context) Run(binds ...interface{}) (err error) {
-	defer catch(&err)
-	node := c.Selected()
-	if node == nil {
-		return fmt.Errorf("no command selected")
-	}
+func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 	type targetMethod struct {
 		node   *Node
 		method reflect.Value
@@ -608,6 +605,19 @@ func (c *Context) Run(binds ...interface{}) (err error) {
 		}
 	}
 	return nil
+}
+
+// Run executes the Run() method on the selected command, which must exist.
+//
+// Any passed values will be bindable to arguments of the target Run() method. Additionally,
+// all parent nodes in the command structure will be bound.
+func (c *Context) Run(binds ...interface{}) (err error) {
+	defer catch(&err)
+	node := c.Selected()
+	if node == nil {
+		return fmt.Errorf("no command selected")
+	}
+	return c.RunNode(node, binds...)
 }
 
 // PrintUsage to Kong's stdout.
