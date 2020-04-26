@@ -555,13 +555,15 @@ func existingFileMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
-		path = ExpandPath(path)
-		stat, err := os.Stat(path)
-		if err != nil {
-			return err
-		}
-		if stat.IsDir() {
-			return errors.Errorf("%q exists but is a directory", path)
+		if path != "-" {
+			path = ExpandPath(path)
+			stat, err := os.Stat(path)
+			if err != nil {
+				return err
+			}
+			if stat.IsDir() {
+				return errors.Errorf("%q exists but is a directory", path)
+			}
 		}
 		target.SetString(path)
 		return nil
