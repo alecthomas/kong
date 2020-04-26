@@ -863,3 +863,19 @@ func TestMultipleDefaultCommands(t *testing.T) {
 	_, err := p.Parse([]string{})
 	require.EqualError(t, err, "can't have more than one default command under  <command>")
 }
+
+func TestLoneHpyhen(t *testing.T) {
+	var cli struct {
+		Flag string
+		Arg  string `arg:"" optional:""`
+	}
+	p := mustNew(t, &cli)
+
+	_, err := p.Parse([]string{"-"})
+	require.NoError(t, err)
+	require.Equal(t, "-", cli.Arg)
+
+	_, err = p.Parse([]string{"--flag", "-"})
+	require.NoError(t, err)
+	require.Equal(t, "-", cli.Flag)
+}

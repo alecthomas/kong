@@ -279,6 +279,12 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			case string:
 
 				switch {
+				case v == "-":
+					fallthrough
+				default: // nolint
+					c.scan.Pop()
+					c.scan.PushTyped(token.Value, PositionalArgumentToken)
+
 				// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
 				case v == "--":
 					c.scan.Pop()
@@ -305,9 +311,6 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					}
 					c.scan.PushTyped(parts[0], FlagToken)
 
-				case v == "-":
-					return errors.New("expected short flag")
-
 				// Short flag.
 				case strings.HasPrefix(v, "-"):
 					c.scan.Pop()
@@ -316,10 +319,6 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 						c.scan.PushTyped(tail, ShortFlagTailToken)
 					}
 					c.scan.PushTyped(v[1:2], ShortFlagToken)
-
-				default:
-					c.scan.Pop()
-					c.scan.PushTyped(token.Value, PositionalArgumentToken)
 				}
 			default:
 				c.scan.Pop()

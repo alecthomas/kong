@@ -7,11 +7,13 @@ import (
 )
 
 func TestScannerTake(t *testing.T) {
-	s := Scan("a", "b", "c")
-	require.Equal(t, s.Pop().Value, "a")
-	require.Equal(t, s.Pop().Value, "b")
-	require.Equal(t, s.Pop().Value, "c")
-	require.Equal(t, s.Pop().Type, EOLToken)
+	s := Scan("a", "b", "c", "-")
+	require.Equal(t, "a", s.Pop().Value)
+	require.Equal(t, "b", s.Pop().Value)
+	require.Equal(t, "c", s.Pop().Value)
+	hyphen := s.Pop()
+	require.Equal(t, PositionalArgumentToken, hyphen.InferredType())
+	require.Equal(t, EOLToken, s.Pop().Type)
 }
 
 func TestScannerPeek(t *testing.T) {

@@ -78,13 +78,16 @@ func (t TokenType) IsAny(types ...TokenType) bool {
 
 // InferredType tries to infer the type of a token.
 func (t Token) InferredType() TokenType {
-	if t.Type == UntypedToken {
-		if v, ok := t.Value.(string); ok {
-			if strings.HasPrefix(v, "--") {
-				return FlagToken
-			} else if strings.HasPrefix(v, "-") {
-				return ShortFlagToken
-			}
+	if t.Type != UntypedToken {
+		return t.Type
+	}
+	if v, ok := t.Value.(string); ok {
+		if strings.HasPrefix(v, "--") { // nolint: gocritic
+			return FlagToken
+		} else if v == "-" {
+			return PositionalArgumentToken
+		} else if strings.HasPrefix(v, "-") {
+			return ShortFlagToken
 		}
 	}
 	return t.Type
