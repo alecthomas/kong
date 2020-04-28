@@ -3,6 +3,7 @@ package kong
 import (
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/bits"
 	"net/url"
@@ -325,23 +326,22 @@ func intDecoder(bits int) MapperFunc { // nolint: dupl
 		if err != nil {
 			return err
 		}
+		var sv string
 		switch v := t.Value.(type) {
 		case string:
-			n, err := strconv.ParseInt(v, 10, bits)
-			if err != nil {
-				return errors.Errorf("expected an int but got %q (%T)", t, t.Value)
-			}
-			target.SetInt(n)
+			sv = v
 
-		case float64:
-			target.SetInt(int64(v))
-
-		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-			target.Set(reflect.ValueOf(v))
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			sv = fmt.Sprintf("%v", v)
 
 		default:
 			return errors.Errorf("expected an int but got %q (%T)", t, t.Value)
 		}
+		n, err := strconv.ParseInt(sv, 10, bits)
+		if err != nil {
+			return errors.Errorf("expected a valid %d bit int but got %q", bits, sv)
+		}
+		target.SetInt(n)
 		return nil
 	}
 }
@@ -352,23 +352,22 @@ func uintDecoder(bits int) MapperFunc { // nolint: dupl
 		if err != nil {
 			return err
 		}
+		var sv string
 		switch v := t.Value.(type) {
 		case string:
-			n, err := strconv.ParseUint(v, 10, bits)
-			if err != nil {
-				return errors.Errorf("expected a uint but got %q (%T)", t, t.Value)
-			}
-			target.SetUint(n)
+			sv = v
 
-		case float64:
-			target.SetUint(uint64(v))
-
-		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-			target.Set(reflect.ValueOf(v))
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			sv = fmt.Sprintf("%v", v)
 
 		default:
 			return errors.Errorf("expected an int but got %q (%T)", t, t.Value)
 		}
+		n, err := strconv.ParseUint(sv, 10, bits)
+		if err != nil {
+			return errors.Errorf("expected a valid %d bit uint but got %q", bits, sv)
+		}
+		target.SetUint(n)
 		return nil
 	}
 }

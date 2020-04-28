@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"os"
 	"reflect"
@@ -259,4 +260,67 @@ func TestCounter(t *testing.T) {
 	_, err = p.Parse([]string{"-fff"})
 	require.NoError(t, err)
 	require.Equal(t, 3., cli.Float)
+}
+
+func TestNumbers(t *testing.T) {
+	type CLI struct {
+		F32 float32
+		F64 float64
+		I8  int8
+		I16 int16
+		I32 int32
+		I64 int64
+		U8  uint8
+		U16 uint16
+		U32 uint32
+		U64 uint64
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	t.Run("Max", func(t *testing.T) {
+		_, err := p.Parse([]string{
+			"--f-32", fmt.Sprintf("%v", math.MaxFloat32),
+			"--f-64", fmt.Sprintf("%v", math.MaxFloat64),
+			"--i-8", fmt.Sprintf("%v", math.MaxInt8),
+			"--i-16", fmt.Sprintf("%v", math.MaxInt16),
+			"--i-32", fmt.Sprintf("%v", math.MaxInt32),
+			"--i-64", fmt.Sprintf("%v", math.MaxInt64),
+			"--u-8", fmt.Sprintf("%v", math.MaxUint8),
+			"--u-16", fmt.Sprintf("%v", math.MaxUint16),
+			"--u-32", fmt.Sprintf("%v", math.MaxUint32),
+			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)),
+		})
+		require.NoError(t, err)
+		require.Equal(t, CLI{
+			F32: math.MaxFloat32,
+			F64: math.MaxFloat64,
+			I8:  math.MaxInt8,
+			I16: math.MaxInt16,
+			I32: math.MaxInt32,
+			I64: math.MaxInt64,
+			U8:  math.MaxUint8,
+			U16: math.MaxUint16,
+			U32: math.MaxUint32,
+			U64: math.MaxUint64,
+		}, cli)
+	})
+	t.Run("Min", func(t *testing.T) {
+		_, err := p.Parse([]string{
+			fmt.Sprintf("--i-8=%v", math.MinInt8),
+			fmt.Sprintf("--i-16=%v", math.MinInt16),
+			fmt.Sprintf("--i-32=%v", math.MinInt32),
+			fmt.Sprintf("--i-64=%v", math.MinInt64),
+			fmt.Sprintf("--u-8=%v", 0),
+			fmt.Sprintf("--u-16=%v", 0),
+			fmt.Sprintf("--u-32=%v", 0),
+			fmt.Sprintf("--u-64=%v", 0),
+		})
+		require.NoError(t, err)
+		require.Equal(t, CLI{
+			I8:  math.MinInt8,
+			I16: math.MinInt16,
+			I32: math.MinInt32,
+			I64: math.MinInt64,
+		}, cli)
+	})
 }
