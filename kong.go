@@ -71,7 +71,6 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		vars:          Vars{},
 		bindings:      bindings{},
 		helpFormatter: DefaultHelpValueFormatter,
-		resolvers:     []Resolver{EnvarResolver()},
 	}
 
 	options = append(options, Bind(k))
