@@ -281,13 +281,13 @@ func TestNumbers(t *testing.T) {
 		_, err := p.Parse([]string{
 			"--f-32", fmt.Sprintf("%v", math.MaxFloat32),
 			"--f-64", fmt.Sprintf("%v", math.MaxFloat64),
-			"--i-8", fmt.Sprintf("%v", math.MaxInt8),
-			"--i-16", fmt.Sprintf("%v", math.MaxInt16),
-			"--i-32", fmt.Sprintf("%v", math.MaxInt32),
-			"--i-64", fmt.Sprintf("%v", math.MaxInt64),
-			"--u-8", fmt.Sprintf("%v", math.MaxUint8),
-			"--u-16", fmt.Sprintf("%v", math.MaxUint16),
-			"--u-32", fmt.Sprintf("%v", math.MaxUint32),
+			"--i-8", fmt.Sprintf("%v", int8(math.MaxInt8)),
+			"--i-16", fmt.Sprintf("%v", int16(math.MaxInt16)),
+			"--i-32", fmt.Sprintf("%v", int32(math.MaxInt32)),
+			"--i-64", fmt.Sprintf("%v", int64(math.MaxInt64)),
+			"--u-8", fmt.Sprintf("%v", uint8(math.MaxUint8)),
+			"--u-16", fmt.Sprintf("%v", uint16(math.MaxUint16)),
+			"--u-32", fmt.Sprintf("%v", uint32(math.MaxUint32)),
 			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)),
 		})
 		require.NoError(t, err)
@@ -306,10 +306,10 @@ func TestNumbers(t *testing.T) {
 	})
 	t.Run("Min", func(t *testing.T) {
 		_, err := p.Parse([]string{
-			fmt.Sprintf("--i-8=%v", math.MinInt8),
-			fmt.Sprintf("--i-16=%v", math.MinInt16),
-			fmt.Sprintf("--i-32=%v", math.MinInt32),
-			fmt.Sprintf("--i-64=%v", math.MinInt64),
+			fmt.Sprintf("--i-8=%v", int8(math.MinInt8)),
+			fmt.Sprintf("--i-16=%v", int16(math.MinInt16)),
+			fmt.Sprintf("--i-32=%v", int32(math.MinInt32)),
+			fmt.Sprintf("--i-64=%v", int64(math.MinInt64)),
 			fmt.Sprintf("--u-8=%v", 0),
 			fmt.Sprintf("--u-16=%v", 0),
 			fmt.Sprintf("--u-32=%v", 0),
