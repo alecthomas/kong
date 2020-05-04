@@ -61,6 +61,14 @@ func NoDefaultHelp() Option {
 	})
 }
 
+// PostBuild allows you to add post-build options to the Kong context.
+func (k *Kong) PostBuild(fn func(*Kong)error) Option {
+	return OptionFunc(func (k *Kong) error {
+		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(fn))
+		return nil
+	})
+}
+
 // Name overrides the application name.
 func Name(name string) Option {
 	return OptionFunc(func(k *Kong) error {
