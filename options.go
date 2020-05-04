@@ -61,6 +61,17 @@ func NoDefaultHelp() Option {
 	})
 }
 
+// PostBuild provides read/write access to kong.Kong after initial construction of the model is complete but before
+// parsing occurs.
+//
+// This is useful for, e.g., adding short options to flags, updating help, etc.
+func (k *Kong) PostBuild(fn func(*Kong)error) Option {
+	return OptionFunc(func (k *Kong) error {
+		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(fn))
+		return nil
+	})
+}
+
 // Name overrides the application name.
 func Name(name string) Option {
 	return OptionFunc(func(k *Kong) error {
