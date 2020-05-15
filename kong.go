@@ -144,17 +144,21 @@ func (k *Kong) interpolate(node *Node) (err error) {
 }
 
 func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
-	vars = vars.CloneWith(value.Tag.Vars)
+	if len(value.Tag.Vars) > 0 {
+		vars = vars.CloneWith(value.Tag.Vars)
+	}
 	if value.Default, err = interpolate(value.Default, vars); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}
 	if value.Enum, err = interpolate(value.Enum, vars); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
-	vars = vars.CloneWith(map[string]string{
-		"default": value.Default,
-		"enum":    value.Enum,
-	})
+	if vars["default"] != value.Default || vars["enum"] != value.Enum {
+		vars = vars.CloneWith(map[string]string{
+			"default": value.Default,
+			"enum":    value.Enum,
+		})
+	}
 	if value.Help, err = interpolate(value.Help, vars); err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}

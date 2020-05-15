@@ -35,7 +35,7 @@ func (v Vars) Apply(k *Kong) error {
 
 // CloneWith clones the current Vars and merges "vars" onto the clone.
 func (v Vars) CloneWith(vars Vars) Vars {
-	out := Vars{}
+	out := make(Vars, len(v)+len(vars))
 	for key, value := range v {
 		out[key] = value
 	}
