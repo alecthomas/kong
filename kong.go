@@ -128,7 +128,7 @@ func (k *Kong) interpolate(node *Node) (err error) {
 		switch node := node.(type) {
 		case *Node:
 			vars := stack.push(node.Vars())
-			node.Help, err = interpolate(node.Help, vars)
+			node.Help, err = interpolate(node.Help, vars, nil)
 			if err != nil {
 				return fmt.Errorf("help for %s: %s", node.Path(), err)
 			}
@@ -147,19 +147,17 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	if len(value.Tag.Vars) > 0 {
 		vars = vars.CloneWith(value.Tag.Vars)
 	}
-	if value.Default, err = interpolate(value.Default, vars); err != nil {
+	if value.Default, err = interpolate(value.Default, vars, nil); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}
-	if value.Enum, err = interpolate(value.Enum, vars); err != nil {
+	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
-	if vars["default"] != value.Default || vars["enum"] != value.Enum {
-		vars = vars.CloneWith(map[string]string{
-			"default": value.Default,
-			"enum":    value.Enum,
-		})
-	}
-	if value.Help, err = interpolate(value.Help, vars); err != nil {
+	value.Help, err = interpolate(value.Help, vars, map[string]string{
+		"default": value.Default,
+		"enum":    value.Enum,
+	})
+	if err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}
 	return nil
@@ -346,7 +344,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	var err error
 	path = ExpandPath(path)
-	path, err = interpolate(path, k.vars)
+	path, err = interpolate(path, k.vars, nil)
 	if err != nil {
 		return nil, err
 	}
