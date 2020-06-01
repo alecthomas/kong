@@ -636,6 +636,9 @@ func urlMapper() MapperFunc {
 //
 //     SplitEscaped(`hello\,there,bob`, ',') == []string{"hello,there", "bob"}
 func SplitEscaped(s string, sep rune) (out []string) {
+	if sep == -1 {
+		return []string{s}
+	}
 	escaped := false
 	token := ""
 	for _, ch := range s {
