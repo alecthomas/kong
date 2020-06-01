@@ -67,13 +67,13 @@ func TestHelp(t *testing.T) {
 A test app.
 
 Flags:
-  --help                 Show context-sensitive help.
-  --string=STRING        A string flag.
-  --bool                 A bool flag with very long help that wraps a lot and is
-                         verbose and is really verbose.
-  --slice=STR,...        A slice of strings.
-  --map=KEY=VALUE;...    A map of strings to ints.
-  --required             A required flag.
+  -h, --help                 Show context-sensitive help.
+      --string=STRING        A string flag.
+      --bool                 A bool flag with very long help that wraps a lot
+                             and is verbose and is really verbose.
+      --slice=STR,...        A slice of strings.
+      --map=KEY=VALUE;...    A map of strings to ints.
+      --required             A required flag.
 
 Commands:
   one --required
@@ -107,18 +107,18 @@ Sub-sub-arg.
 Detailed help provided through the HelpProvider interface.
 
 Flags:
-  --help                 Show context-sensitive help.
-  --string=STRING        A string flag.
-  --bool                 A bool flag with very long help that wraps a lot and is
-                         verbose and is really verbose.
-  --slice=STR,...        A slice of strings.
-  --map=KEY=VALUE;...    A map of strings to ints.
-  --required             A required flag.
+  -h, --help                 Show context-sensitive help.
+      --string=STRING        A string flag.
+      --bool                 A bool flag with very long help that wraps a lot
+                             and is verbose and is really verbose.
+      --slice=STR,...        A slice of strings.
+      --map=KEY=VALUE;...    A map of strings to ints.
+      --required             A required flag.
 
-  --flag=STRING          Nested flag under two.
-  --required-two
+      --flag=STRING          Nested flag under two.
+      --required-two
 
-  --required-three
+      --required-three
 `
 		t.Log(expected)
 		t.Log(w.String())
@@ -173,7 +173,7 @@ func TestHelpTree(t *testing.T) {
 A test app.
 
 Flags:
-  --help    Show context-sensitive help.
+  -h, --help    Show context-sensitive help.
 
 Commands:
   one          subcommand one
@@ -206,7 +206,7 @@ Run "test-app <command> --help" for more information on a command.
 subcommand one
 
 Flags:
-  --help    Show context-sensitive help.
+  -h, --help    Show context-sensitive help.
 
 Commands:
   thing      subcommand thing
