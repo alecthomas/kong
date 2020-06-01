@@ -171,6 +171,7 @@ func (k *Kong) extraFlags() []*Flag {
 	var helpTarget helpValue
 	value := reflect.ValueOf(&helpTarget).Elem()
 	helpFlag := &Flag{
+		Short: 'h',
 		Value: &Value{
 			Name:         "help",
 			Help:         "Show context-sensitive help.",
