@@ -130,6 +130,7 @@ func TestDurationMapper(t *testing.T) {
 func TestSplitEscaped(t *testing.T) {
 	require.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
 	require.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
+	require.Equal(t, []string{"a,b,c"}, kong.SplitEscaped(`a,b,c`, -1))
 }
 
 func TestJoinEscaped(t *testing.T) {
@@ -170,6 +171,18 @@ func TestMapWithDifferentSeparator(t *testing.T) {
 	_, err := k.Parse([]string{"--value=a=b,c=d"})
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{"a": "b", "c": "d"}, cli.Value)
+}
+
+func TestMapWithNoSeparator(t *testing.T) {
+	var cli struct {
+		Slice []string          `sep:"none"`
+		Value map[string]string `mapsep:"none"`
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--slice=a,n,c", "--value=a=b;n=d"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"a,n,c"}, cli.Slice)
+	require.Equal(t, map[string]string{"a": "b;n=d"}, cli.Value)
 }
 
 func TestURLMapper(t *testing.T) {

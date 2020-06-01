@@ -151,23 +151,23 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Short, _ = t.GetRune("short")
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
-	t.Sep, _ = t.GetRune("sep")
-	t.MapSep, _ = t.GetRune("mapsep")
 	t.Group = t.Get("group")
 	t.Xor = t.Get("xor")
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
-	if t.Sep == 0 {
-		if t.Get("sep") == "none" {
-			t.Sep = -1
-		} else {
+	if t.Get("sep") == "none" {
+		t.Sep = -1
+	} else {
+		t.Sep, _ = t.GetRune("sep")
+		if t.Sep == 0 {
 			t.Sep = ','
 		}
 	}
-	if t.MapSep == 0 {
-		if t.Get("mapsep") == "none" {
-			t.MapSep = -1
-		} else {
+	if t.Get("mapsep") == "none" {
+		t.MapSep = -1
+	} else {
+		t.MapSep, _ = t.GetRune("mapsep")
+		if t.MapSep == 0 {
 			t.MapSep = ';'
 		}
 	}
