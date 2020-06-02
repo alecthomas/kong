@@ -151,26 +151,12 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Short, _ = t.GetRune("short")
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
+	t.Sep, _ = t.GetSep("sep", ',')
+	t.MapSep, _ = t.GetSep("mapsep", ';')
 	t.Group = t.Get("group")
 	t.Xor = t.Get("xor")
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
-	if t.Get("sep") == "none" {
-		t.Sep = -1
-	} else {
-		t.Sep, _ = t.GetRune("sep")
-		if t.Sep == 0 {
-			t.Sep = ','
-		}
-	}
-	if t.Get("mapsep") == "none" {
-		t.MapSep = -1
-	} else {
-		t.MapSep, _ = t.GetRune("mapsep")
-		if t.MapSep == 0 {
-			t.MapSep = ';'
-		}
-	}
 	t.Vars = Vars{}
 	for _, set := range t.GetAll("set") {
 		parts := strings.SplitN(set, "=", 2)
@@ -229,6 +215,26 @@ func (t *Tag) GetRune(k string) (rune, error) {
 	r, _ := utf8.DecodeRuneInString(t.Get(k))
 	if r == utf8.RuneError {
 		return 0, fmt.Errorf("%v has a rune error", t.Get(k))
+	}
+	return r, nil
+}
+
+// GetSep parses the given tag as a rune separator, allowing for a default or none.
+// The separator is returned, or -1 if "none" is specified. If the tag value is an
+// invalid utf8 sequence, the default rune is returned as well as an error. If the
+// tag value is more than one rune, the first rune is returned as well as an error.
+func (t *Tag) GetSep(k string, dflt rune) (rune, error) {
+	tv := t.Get(k)
+	if tv == "none" {
+		return -1, nil
+	} else if tv == "" {
+		return dflt, nil
+	}
+	r, size := utf8.DecodeRuneInString(tv)
+	if r == utf8.RuneError {
+		return dflt, fmt.Errorf(`%v:"%v" has a rune error`, k, tv)
+	} else if size != len(tv) {
+		return r, fmt.Errorf(`%v:"%v" is more than a single rune`, k, tv)
 	}
 	return r, nil
 }
