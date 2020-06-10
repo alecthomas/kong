@@ -262,7 +262,15 @@ func TestCounter(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 
-	_, err := p.Parse([]string{"-iii"})
+	_, err := p.Parse([]string{"--int", "--int", "--int"})
+	require.NoError(t, err)
+	require.Equal(t, 3, cli.Int)
+
+	_, err = p.Parse([]string{"--int=5"})
+	require.NoError(t, err)
+	require.Equal(t, 5, cli.Int)
+
+	_, err = p.Parse([]string{"-iii"})
 	require.NoError(t, err)
 	require.Equal(t, 3, cli.Int)
 

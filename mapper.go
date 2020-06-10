@@ -597,6 +597,28 @@ func existingDirMapper(r *Registry) MapperFunc {
 
 func counterMapper() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
+		if ctx.Scan.Peek().Type == FlagValueToken {
+			t, err := ctx.Scan.PopValue("counter")
+			if err != nil {
+				return err
+			}
+			switch v := t.Value.(type) {
+			case string:
+				n, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return errors.Errorf("expected a counter but got %q (%T)", t, t.Value)
+				}
+				target.SetInt(n)
+
+			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+				target.Set(reflect.ValueOf(v))
+
+			default:
+				return errors.Errorf("expected a counter but got %q (%T)", t, t.Value)
+			}
+			return nil
+		}
+
 		switch target.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			target.SetInt(target.Int() + 1)

@@ -375,7 +375,7 @@ function `NamedMapper(name, mapper)`.
 | `path`            | A path. ~ expansion is applied.          
 | `existingfile`    | An existing file. ~ expansion is applied. `-` is accepted for stdin.
 | `existingdir`     | An existing directory. ~ expansion is applied.   
-| `counter`         | Increment a numeric field. Useful for `-vvv`    
+| `counter`         | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.
 
 
 Slices and maps treat type tags specially. For slices, the `type:""` tag
