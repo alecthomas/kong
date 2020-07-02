@@ -436,6 +436,7 @@ Tag                    | Description
 `default:"X"`          | Default value.
 `default:"1"`          | On a command, make it the default.
 `short:"X"`            | Short name, if flag.
+`aliases:"X,Y"`        | One or more aliases (for cmd).
 `required`             | If present, flag/arg is required.
 `optional`             | If present, flag/arg is optional.
 `hidden`               | If present, command or flag is hidden.

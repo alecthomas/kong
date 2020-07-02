@@ -143,6 +143,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	child.Help = tag.Help
 	child.Hidden = tag.Hidden
 	child.Group = tag.Group
+	child.Aliases = tag.Aliases
 
 	if provider, ok := fv.Addr().Interface().(HelpProvider); ok {
 		child.Detail = provider.Help()

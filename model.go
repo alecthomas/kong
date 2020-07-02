@@ -53,6 +53,7 @@ type Node struct {
 	Children   []*Node
 	Target     reflect.Value // Pointer to the value in the grammar that this Node is associated with.
 	Tag        *Tag
+	Aliases    []string
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
