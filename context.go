@@ -364,6 +364,24 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				break
 			}
 
+			// Assign token value to a branch name if tagged as an alias
+			// An alias will be ignored in the case of an existing command
+			cmds := make(map[string]bool)
+			for _, branch := range node.Children {
+				if branch.Type == CommandNode {
+					cmds[branch.Name] = true
+				}
+			}
+			for _, branch := range node.Children {
+				for _, a := range branch.Aliases {
+					_, ok := cmds[a]
+					if token.Value == a && !ok {
+						token.Value = branch.Name
+						break
+					}
+				}
+			}
+
 			// After positional arguments have been consumed, check commands next...
 			for _, branch := range node.Children {
 				if branch.Type == CommandNode && !branch.Hidden {
