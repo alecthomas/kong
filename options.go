@@ -2,6 +2,7 @@ package kong
 
 import (
 	"io"
+	"os"
 	"os/user"
 	"path/filepath"
 	"reflect"
@@ -251,7 +252,13 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.loader = loader
 		for _, path := range paths {
-			resolver, _ := k.LoadConfig(path)
+			if _, err := os.Stat(ExpandPath(path)); os.IsNotExist(err) {
+				continue
+			}
+			resolver, err := k.LoadConfig(path)
+			if err != nil {
+				return errors.Wrap(err, path)
+			}
 			if resolver != nil {
 				k.resolvers = append(k.resolvers, resolver)
 			}
