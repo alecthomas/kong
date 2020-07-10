@@ -444,26 +444,34 @@ func (c *Context) Resolve() error {
 			if _, ok := c.values[flag.Value]; ok {
 				continue
 			}
+
+			// Pick the last resolved value.
+			var selected interface{}
 			for _, resolver := range resolvers {
 				s, err := resolver.Resolve(c, path, flag)
 				if err != nil {
-					return err
+					return errors.Wrap(err, flag.ShortSummary())
 				}
 				if s == nil {
 					continue
 				}
-
-				scan := Scan().PushTyped(s, FlagValueToken)
-				delete(c.values, flag.Value)
-				err = flag.Parse(scan, c.getValue(flag.Value))
-				if err != nil {
-					return err
-				}
-				inserted = append(inserted, &Path{
-					Flag:     flag,
-					Resolved: true,
-				})
+				selected = s
 			}
+
+			if selected == nil {
+				continue
+			}
+
+			scan := Scan().PushTyped(selected, FlagValueToken)
+			delete(c.values, flag.Value)
+			err := flag.Parse(scan, c.getValue(flag.Value))
+			if err != nil {
+				return err
+			}
+			inserted = append(inserted, &Path{
+				Flag:     flag,
+				Resolved: true,
+			})
 		}
 	}
 	c.Path = append(inserted, c.Path...)
