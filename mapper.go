@@ -704,6 +704,11 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
 	if err != nil {
 		return err
 	}
+	// This allows unsetting of file content flags.
+	if filename == "" {
+		*f = nil
+		return nil
+	}
 	filename = ExpandPath(filename)
 	data, err := ioutil.ReadFile(filename) // nolint: gosec
 	if err != nil {
