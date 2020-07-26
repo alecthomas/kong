@@ -93,7 +93,7 @@ func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Val
 //
 // Mappers can be associated with concrete fields via pointer, reflect.Type, reflect.Kind, or via a "type" tag.
 //
-// Additionally, if a type implements the MappverValue interface, it will be used.
+// Additionally, if a type implements the MapperValue interface, it will be used.
 type Mapper interface {
 	// Decode ctx.Value with ctx.Scanner into target.
 	Decode(ctx *DecodeContext, target reflect.Value) error
