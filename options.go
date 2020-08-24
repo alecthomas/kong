@@ -66,7 +66,7 @@ func NoDefaultHelp() Option {
 // parsing occurs.
 //
 // This is useful for, e.g., adding short options to flags, updating help, etc.
-func (k *Kong) PostBuild(fn func(*Kong) error) Option {
+func PostBuild(fn func(*Kong) error) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(fn))
 		return nil
@@ -75,22 +75,16 @@ func (k *Kong) PostBuild(fn func(*Kong) error) Option {
 
 // Name overrides the application name.
 func Name(name string) Option {
-	return OptionFunc(func(k *Kong) error {
-		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(func(k *Kong) error {
-			k.Model.Name = name
-			return nil
-		}))
+	return PostBuild(func(k *Kong) error {
+		k.Model.Name = name
 		return nil
 	})
 }
 
 // Description sets the application description.
 func Description(description string) Option {
-	return OptionFunc(func(k *Kong) error {
-		k.postBuildOptions = append(k.postBuildOptions, OptionFunc(func(k *Kong) error {
-			k.Model.Help = description
-			return nil
-		}))
+	return PostBuild(func(k *Kong) error {
+		k.Model.Help = description
 		return nil
 	})
 }
