@@ -231,8 +231,8 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Int16, intDecoder(16)).
 		RegisterKind(reflect.Int32, intDecoder(32)).
 		RegisterKind(reflect.Int64, intDecoder(64)).
-		RegisterKind(reflect.Uint, uintDecoder(64)).
-		RegisterKind(reflect.Uint8, uintDecoder(bits.UintSize)).
+		RegisterKind(reflect.Uint, uintDecoder(bits.UintSize)).
+		RegisterKind(reflect.Uint8, uintDecoder(8)).
 		RegisterKind(reflect.Uint16, uintDecoder(16)).
 		RegisterKind(reflect.Uint32, uintDecoder(32)).
 		RegisterKind(reflect.Uint64, uintDecoder(64)).
@@ -248,6 +248,7 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterType(reflect.TypeOf(time.Time{}), timeDecoder()).
 		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
 		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
+		RegisterType(reflect.TypeOf(&os.File{}), fileMapper(r)).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
@@ -537,6 +538,31 @@ func pathMapper(r *Registry) MapperFunc {
 		}
 		path = ExpandPath(path)
 		target.SetString(path)
+		return nil
+	}
+}
+
+func fileMapper(r *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		if target.Kind() == reflect.Slice {
+			return sliceDecoder(r)(ctx, target)
+		}
+		var path string
+		err := ctx.Scan.PopValueInto("file", &path)
+		if err != nil {
+			return err
+		}
+		var file *os.File
+		if path == "-" {
+			file = os.Stdin
+		} else {
+			path = ExpandPath(path)
+			file, err = os.Open(path) // nolint: gosec
+			if err != nil {
+				return err
+			}
+		}
+		target.Set(reflect.ValueOf(file))
 		return nil
 	}
 }

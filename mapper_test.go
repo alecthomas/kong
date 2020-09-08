@@ -345,3 +345,21 @@ func TestNumbers(t *testing.T) {
 		}, cli)
 	})
 }
+
+func TestFileMapper(t *testing.T) {
+	type CLI struct {
+		File *os.File `arg:""`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"testdata/file.txt"})
+	require.NoError(t, err)
+	require.NotNil(t, cli.File)
+	_ = cli.File.Close()
+	_, err = p.Parse([]string{"testdata/missing.txt"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	_, err = p.Parse([]string{"-"})
+	require.NoError(t, err)
+	require.Equal(t, os.Stdin, cli.File)
+}

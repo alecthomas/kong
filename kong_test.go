@@ -743,7 +743,7 @@ func TestEnvarEnumValidated(t *testing.T) {
 	})
 	defer restore()
 	var cli struct {
-		Flag string `env:"FLAG" enum:"valid" default:"valid"`
+		Flag string `env:"FLAG" required:"" enum:"valid"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
@@ -798,7 +798,7 @@ func TestIssue40EnumAcrossCommands(t *testing.T) {
 			OneArg string `arg:"" required:""`
 		} `cmd:""`
 		Two struct {
-			TwoArg string `arg:"" enum:"a,b,c" required:""`
+			TwoArg string `arg:"" enum:"a,b,c" required:"" env:"FOO"`
 		} `cmd:""`
 		Three struct {
 			ThreeArg string `arg:"" optional:"" default:"a" enum:"a,b,c"`

@@ -2,6 +2,7 @@ package kong
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -136,7 +137,8 @@ func (c *Context) Empty() bool {
 func (c *Context) Validate() error { // nolint: gocyclo
 	err := Visit(c.Model, func(node Visitable, next Next) error {
 		if value, ok := node.(*Value); ok {
-			if value.Enum != "" && (!value.Required || value.Default != "") {
+			_, ok := os.LookupEnv(value.Tag.Env)
+			if value.Enum != "" && (!value.Required || value.Default != "" || (value.Tag.Env != "" && ok)) {
 				if err := checkEnum(value, value.Target); err != nil {
 					return err
 				}
