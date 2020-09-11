@@ -216,6 +216,14 @@ func UsageOnError() Option {
 	})
 }
 
+// UsageOnMissing configures Kong to display usage and exit successfully if command is missing a child argument.
+func UsageOnMissing() Option {
+	return OptionFunc(func(k *Kong) error {
+		k.usageOnMissing = true
+		return nil
+	})
+}
+
 // ClearResolvers clears all existing resolvers.
 func ClearResolvers() Option {
 	return OptionFunc(func(k *Kong) error {

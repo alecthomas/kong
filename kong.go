@@ -47,13 +47,14 @@ type Kong struct {
 	resolvers []Resolver
 	registry  *Registry
 
-	noDefaultHelp bool
-	usageOnError  bool
-	help          HelpPrinter
-	helpFormatter HelpValueFormatter
-	helpOptions   HelpOptions
-	helpFlag      *Flag
-	vars          Vars
+	noDefaultHelp  bool
+	usageOnError   bool
+	usageOnMissing bool
+	help           HelpPrinter
+	helpFormatter  HelpValueFormatter
+	helpOptions    HelpOptions
+	helpFlag       *Flag
+	vars           Vars
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
