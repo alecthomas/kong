@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+// Plugins are dynamically embedded command-line structures.
+//
+// Each element in the Plugins list *must* be a pointer to a structure.
+type Plugins []interface{}
+
 func build(k *Kong, ast interface{}) (app *Application, err error) {
 	defer catch(&err)
 	v := reflect.ValueOf(ast)
@@ -50,28 +55,34 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 		if tag.Ignored {
 			continue
 		}
-		if ft.Anonymous || tag.Embed {
-			if fv.Kind() == reflect.Interface {
-				fv = fv.Elem()
+		if !ft.Anonymous && !tag.Embed {
+			if fv.CanSet() {
+				out = append(out, flattenedField{field: ft, value: fv, tag: tag})
 			}
-			sub := flattenedFields(fv)
-			for _, subf := range sub {
-				// Assign parent if it's not already set.
-				if subf.tag.Group == "" {
-					subf.tag.Group = tag.Group
-				}
-				// Accumulate prefixes.
-				subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
-				// Combine parent vars.
-				subf.tag.Vars = tag.Vars.CloneWith(subf.tag.Vars)
-			}
-			out = append(out, sub...)
 			continue
 		}
-		if !fv.CanSet() {
+
+		// Embedded type.
+		if fv.Kind() == reflect.Interface {
+			fv = fv.Elem()
+		} else if fv.Type() == reflect.TypeOf(Plugins{}) {
+			for i := 0; i < fv.Len(); i++ {
+				out = append(out, flattenedFields(fv.Index(i).Elem())...)
+			}
 			continue
 		}
-		out = append(out, flattenedField{field: ft, value: fv, tag: tag})
+		sub := flattenedFields(fv)
+		for _, subf := range sub {
+			// Assign parent if it's not already set.
+			if subf.tag.Group == "" {
+				subf.tag.Group = tag.Group
+			}
+			// Accumulate prefixes.
+			subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
+			// Combine parent vars.
+			subf.tag.Vars = tag.Vars.CloneWith(subf.tag.Vars)
+		}
+		out = append(out, sub...)
 	}
 	return out
 }

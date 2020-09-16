@@ -4,34 +4,36 @@
 # Kong is a command-line parser for Go
 [![](https://godoc.org/github.com/alecthomas/kong?status.svg)](http://godoc.org/github.com/alecthomas/kong) [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong) [![Go Report Card](https://goreportcard.com/badge/github.com/alecthomas/kong)](https://goreportcard.com/report/github.com/alecthomas/kong) [![Slack chat](https://img.shields.io/static/v1?logo=slack&style=flat&label=slack&color=green&message=gophers)](https://gophers.slack.com/messages/CN9DS8YF3)
 
-[TOC levels=2-3 numbered]: # "#### Table of Contents"
+<!-- TOC depthFrom:2 updateOnSave:true withLinks:true -->
 
-#### Table of Contents
-1. [Introduction](#introduction)
-1. [Help](#help)
-1. [Command handling](#command-handling)
-   1. [Switch on the command string](#switch-on-the-command-string)
-   1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
-1. [Hooks: BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
-1. [Flags](#flags)
-1. [Commands and sub-commands](#commands-and-sub-commands)
-1. [Branching positional arguments](#branching-positional-arguments)
-1. [Terminating positional arguments](#terminating-positional-arguments)
-1. [Slices](#slices)
-1. [Maps](#maps)
-1. [Custom named decoders](#custom-named-decoders)
-1. [Custom decoders (mappers)](#custom-decoders-mappers)
-1. [Supported tags](#supported-tags)
-1. [Variable interpolation](#variable-interpolation)
-1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
-   1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
-   1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
-   1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
-   1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-   1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-   1. [`Bind(...)` - bind values for callback hooks and Run() methods](#bind---bind-values-for-callback-hooks-and-run-methods)
-   1. [Other options](#other-options)
+- [Introduction](#introduction)
+- [Help](#help)
+- [Command handling](#command-handling)
+    - [Switch on the command string](#switch-on-the-command-string)
+    - [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+- [Hooks: BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
+- [Flags](#flags)
+- [Commands and sub-commands](#commands-and-sub-commands)
+- [Branching positional arguments](#branching-positional-arguments)
+- [Terminating positional arguments](#terminating-positional-arguments)
+- [Slices](#slices)
+- [Maps](#maps)
+- [Custom named decoders](#custom-named-decoders)
+- [Supported field types](#supported-field-types)
+- [Custom decoders (mappers)](#custom-decoders-mappers)
+- [Supported tags](#supported-tags)
+- [Plugins](#plugins)
+- [Variable interpolation](#variable-interpolation)
+- [Modifying Kong's behaviour](#modifying-kongs-behaviour)
+    - [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
+    - [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    - [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+    - [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
+    - [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    - [`Bind(...)` - bind values for callback hooks and Run() methods](#bind---bind-values-for-callback-hooks-and-run-methods)
+    - [Other options](#other-options)
 
+<!-- /TOC -->
 
 ## Introduction
 
@@ -370,11 +372,11 @@ Kong includes a number of builtin custom type mappers. These can be used by
 specifying the tag `type:"<type>"`. They are registered with the option
 function `NamedMapper(name, mapper)`.
 
-| Name              | Description                             
+| Name              | Description
 |-------------------|---------------------------------------------------
-| `path`            | A path. ~ expansion is applied.          
+| `path`            | A path. ~ expansion is applied.
 | `existingfile`    | An existing file. ~ expansion is applied. `-` is accepted for stdin.
-| `existingdir`     | An existing directory. ~ expansion is applied.   
+| `existingdir`     | An existing directory. ~ expansion is applied.
 | `counter`         | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.
 
 
@@ -436,6 +438,26 @@ Tag                    | Description
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
 `-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct.
+
+## Plugins
+
+Kong CLI's can be extended by embedding the `kong.Plugin` type and populating it with pointers to Kong annotated structs. For example:
+
+```go
+var pluginOne struct {
+  PluginOneFlag string
+}
+var pluginTwo struct {
+  PluginTwoFlag string
+}
+var cli struct {
+  BaseFlag string
+  kong.Plugins
+}
+cli.Plugins = kong.Plugins{&pluginOne, &pluginTwo}
+```
+
+Additionally if an interface type is embedded, it can also be populated with a Kong annotated struct.
 
 ## Variable interpolation
 

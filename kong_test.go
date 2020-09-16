@@ -866,3 +866,24 @@ func TestLoneHpyhen(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "-", cli.Flag)
 }
+
+func TestPlugins(t *testing.T) {
+	var pluginOne struct {
+		One string
+	}
+	var pluginTwo struct {
+		Two string
+	}
+	var cli struct {
+		Base string
+		kong.Plugins
+	}
+	cli.Plugins = kong.Plugins{&pluginOne, &pluginTwo}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--base=base", "--one=one", "--two=two"})
+	require.NoError(t, err)
+	require.Equal(t, "base", cli.Base)
+	require.Equal(t, "one", pluginOne.One)
+	require.Equal(t, "two", pluginTwo.Two)
+}
