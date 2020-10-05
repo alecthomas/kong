@@ -187,9 +187,6 @@ func (c *Context) Validate() error { // nolint: gocyclo
 	}
 
 	if err := checkMissingChildren(node); err != nil {
-		if c.Kong.usageOnMissing {
-			return c.PrintUsage(false)
-		}
 		return err
 	}
 	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
@@ -628,9 +625,12 @@ func (c *Context) Run(binds ...interface{}) (err error) {
 	node := c.Selected()
 	if node == nil {
 		if c.Kong.usageOnMissing {
-			return nil
+			return c.PrintUsage(false)
 		}
 		return fmt.Errorf("no command selected")
+	}
+	if c.Kong.usageOnMissing && isMissingChildError(c.Error) {
+		return c.PrintUsage(false)
 	}
 	return c.RunNode(node, binds...)
 }
@@ -700,13 +700,7 @@ func checkMissingChildren(node *Node) error {
 		return nil
 	}
 
-	if len(missing) > 5 {
-		missing = append(missing[:5], "...")
-	}
-	if len(missing) == 1 {
-		return fmt.Errorf("expected %s", missing[0])
-	}
-	return fmt.Errorf("expected one of %s", strings.Join(missing, ",  "))
+	return newMissingChildError(missing)
 }
 
 // If we're missing any positionals and they're required, return an error.
