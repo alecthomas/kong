@@ -539,7 +539,7 @@ type Mapper interface {
   // Decode scan into target.
   //
   // "ctx" contains context about the value being decoded that may be useful
-  // to some mapperss.
+  // to some mappers.
   Decode(ctx *MapperContext, scan *Scanner, target reflect.Value) error
 }
 ```
