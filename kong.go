@@ -336,8 +336,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		_ = k.help(options, err.Context)
 		fmt.Fprintln(k.Stdout)
 	}
-	k.Errorf("%s", msg)
-	k.Exit(1)
+	k.Fatalf("%s", msg)
 }
 
 // LoadConfig from path using the loader configured via Configuration(loader).
