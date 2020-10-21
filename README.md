@@ -2,7 +2,6 @@
 <p align="center"><img width="90%" src="kong.png" /></p>
 
 # Kong is a command-line parser for Go
-
 [![](https://godoc.org/github.com/alecthomas/kong?status.svg)](http://godoc.org/github.com/alecthomas/kong) [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong) [![Go Report Card](https://goreportcard.com/badge/github.com/alecthomas/kong)](https://goreportcard.com/report/github.com/alecthomas/kong) [![Slack chat](https://img.shields.io/static/v1?logo=slack&style=flat&label=slack&color=green&message=gophers)](https://gophers.slack.com/messages/CN9DS8YF3)
 
 <!-- TOC depthFrom:2 updateOnSave:true withLinks:true -->
@@ -26,14 +25,6 @@
 - [Plugins](#plugins)
 - [Variable interpolation](#variable-interpolation)
 - [Validation](#validation)
-- [Modifying Kong's behaviour](#modifying-kongs-behaviour)
-    - [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
-    - [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
-    - [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
-    - [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    - [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-    - [`Bind(...)` - bind values for callback hooks and Run() methods](#bind---bind-values-for-callback-hooks-and-run-methods)
-    - [Other options](#other-options)
 
 <!-- /TOC -->
 
@@ -41,8 +32,7 @@
 
 Kong aims to support arbitrarily complex command-line structures with as little developer effort as possible.
 
-To achieve that, command-lines are expressed as Go types, with the structure and tags directing how the command line is
-mapped onto the struct.
+To achieve that, command-lines are expressed as Go types, with the structure and tags directing how the command line is mapped onto the struct.
 
 For example, the following command-line:
 
@@ -57,33 +47,32 @@ package main
 import "github.com/alecthomas/kong"
 
 var CLI struct {
-	Rm struct {
-		Force     bool `help:"Force removal."`
-		Recursive bool `help:"Recursively remove files."`
+  Rm struct {
+    Force     bool `help:"Force removal."`
+    Recursive bool `help:"Recursively remove files."`
 
-		Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
-	} `cmd help:"Remove files."`
+    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
+  } `cmd help:"Remove files."`
 
-	Ls struct {
-		Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
-	} `cmd help:"List paths."`
+  Ls struct {
+    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
+  } `cmd help:"List paths."`
 }
 
 func main() {
-	ctx := kong.Parse(&CLI)
-	switch ctx.Command() {
-	case "rm <path>":
-	case "ls":
-	default:
-		panic(ctx.Command())
-	}
+  ctx := kong.Parse(&CLI)
+  switch ctx.Command() {
+  case "rm <path>":
+  case "ls":
+  default:
+    panic(ctx.Command())
+  }
 }
 ```
 
 ## Help
 
-Help is automatically generated. With no other arguments provided, help will display a full summary of all available
-commands.
+Help is automatically generated. With no other arguments provided, help will display a full summary of all available commands.
 
 eg.
 
@@ -121,8 +110,9 @@ eg.
       -f, --force        Force removal.
       -r, --recursive    Recursively remove files.
 
-For flags with associated environment variables, the variable `${env}` can be interpolated into the help string. In the
-absence of this variable in the help,
+For flags with associated environment variables, the variable `${env}` can be
+interpolated into the help string. In the absence of this variable in the help,
+
 
 ## Command handling
 
@@ -130,9 +120,7 @@ There are two ways to handle commands in Kong.
 
 ### Switch on the command string
 
-When you call `kong.Parse()` it will return a unique string representation of the command. Each command branch in the
-hierarchy will be a bare word and each branching argument or required positional argument will be the name surrounded by
-angle brackets. Here's an example:
+When you call `kong.Parse()` it will return a unique string representation of the command. Each command branch in the hierarchy will be a bare word and each branching argument or required positional argument will be the name surrounded by angle brackets. Here's an example:
 
 There's an example of this pattern [here](https://github.com/alecthomas/kong/blob/master/_examples/shell/main.go).
 
@@ -144,31 +132,30 @@ package main
 import "github.com/alecthomas/kong"
 
 var CLI struct {
-	Rm struct {
-		Force     bool `help:"Force removal."`
-		Recursive bool `help:"Recursively remove files."`
+  Rm struct {
+    Force     bool `help:"Force removal."`
+    Recursive bool `help:"Recursively remove files."`
 
-		Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
-	} `cmd help:"Remove files."`
+    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
+  } `cmd help:"Remove files."`
 
-	Ls struct {
-		Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
-	} `cmd help:"List paths."`
+  Ls struct {
+    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
+  } `cmd help:"List paths."`
 }
 
 func main() {
-	ctx := kong.Parse(&CLI)
-	switch ctx.Command() {
-	case "rm <path>":
-	case "ls":
-	default:
-		panic(ctx.Command())
-	}
+  ctx := kong.Parse(&CLI)
+  switch ctx.Command() {
+  case "rm <path>":
+  case "ls":
+  default:
+    panic(ctx.Command())
+  }
 }
 ```
 
-This has the advantage that it is convenient, but the downside that if you modify your CLI structure, the strings may
-change. This can be fragile.
+This has the advantage that it is convenient, but the downside that if you modify your CLI structure, the strings may change. This can be fragile.
 
 ### Attach a `Run(...) error` method to each command
 
@@ -179,71 +166,69 @@ A more robust approach is to break each command out into their own structs:
 3. Call `kong.Kong.Parse()` to obtain a `kong.Context`.
 4. Call `kong.Context.Run(bindings...)` to call the selected parsed command.
 
-Once a command node is selected by Kong it will search from that node back to the root. Each encountered command node
-with a `Run(...) error` will be called in reverse order. This allows sub-trees to be re-used fairly conveniently.
+Once a command node is selected by Kong it will search from that node back to the root. Each
+encountered command node with a `Run(...) error` will be called in reverse order. This allows
+sub-trees to be re-used fairly conveniently.
 
-In addition to values bound with the `kong.Bind(...)` option, any values passed through to `kong.Context.Run(...)` are
-also bindable to the target's
+In addition to values bound with the `kong.Bind(...)` option, any values
+passed through to `kong.Context.Run(...)` are also bindable to the target's
 `Run()` arguments.
 
 Finally, hooks can also contribute bindings via `kong.Context.Bind()` and `kong.Context.BindTo()`.
 
-There's a full example emulating part of the Docker
-CLI [here](https://github.com/alecthomas/kong/tree/master/_examples/docker).
+There's a full example emulating part of the Docker CLI [here](https://github.com/alecthomas/kong/tree/master/_examples/docker).
 
 eg.
 
 ```go
 type Context struct {
-Debug bool
+  Debug bool
 }
 
 type RmCmd struct {
-Force     bool `help:"Force removal."`
-Recursive bool `help:"Recursively remove files."`
+  Force     bool `help:"Force removal."`
+  Recursive bool `help:"Recursively remove files."`
 
-Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
+  Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
 }
 
 func (r *RmCmd) Run(ctx *Context) error {
-fmt.Println("rm", r.Paths)
-return nil
+  fmt.Println("rm", r.Paths)
+  return nil
 }
 
 type LsCmd struct {
-Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
+  Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
 }
 
 func (l *LsCmd) Run(ctx *Context) error {
-fmt.Println("ls", l.Paths)
-return nil
+  fmt.Println("ls", l.Paths)
+  return nil
 }
 
 var cli struct {
-Debug bool `help:"Enable debug mode."`
+  Debug bool `help:"Enable debug mode."`
 
-Rm RmCmd `cmd help:"Remove files."`
-Ls LsCmd `cmd help:"List paths."`
+  Rm RmCmd `cmd help:"Remove files."`
+  Ls LsCmd `cmd help:"List paths."`
 }
 
 func main() {
-ctx := kong.Parse(&cli)
-// Call the Run() method of the selected parsed command.
-err := ctx.Run(&Context{Debug: cli.Debug})
-ctx.FatalIfErrorf(err)
+  ctx := kong.Parse(&cli)
+  // Call the Run() method of the selected parsed command.
+  err := ctx.Run(&Context{Debug: cli.Debug})
+  ctx.FatalIfErrorf(err)
 }
 
 ```
 
 ## Hooks: BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option
 
-If a node in the grammar has a `BeforeResolve(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method,
-those methods will be called before validation/assignment and after validation/assignment, respectively.
+If a node in the grammar has a `BeforeResolve(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those methods will be called before validation/assignment and after validation/assignment, respectively.
 
 The `--help` flag is implemented with a `BeforeApply` hook.
 
-Arguments to hooks are provided via the `Run(...)` method or `Bind(...)` option. `*Kong`, `*Context` and `*Path` are
-also bound and finally, hooks can also contribute bindings via `kong.Context.Bind()` and `kong.Context.BindTo()`.
+Arguments to hooks are provided via the `Run(...)` method or `Bind(...)` option. `*Kong`, `*Context` and `*Path` are also bound and finally, hooks can also contribute bindings via `kong.Context.Bind()` and `kong.Context.BindTo()`.
 
 eg.
 
@@ -252,34 +237,33 @@ eg.
 type debugFlag bool
 
 func (d debugFlag) BeforeApply(logger *log.Logger) error {
-logger.SetOutput(os.Stdout)
-return nil
+  logger.SetOutput(os.Stdout)
+  return nil
 }
 
 var cli struct {
-Debug debugFlag `help:"Enable debug logging."`
+  Debug debugFlag `help:"Enable debug logging."`
 }
 
 func main() {
-// Debug logger going to discard.
-logger := log.New(ioutil.Discard, "", log.LstdFlags)
+  // Debug logger going to discard.
+  logger := log.New(ioutil.Discard, "", log.LstdFlags)
 
-ctx := kong.Parse(&cli, kong.Bind(logger))
+  ctx := kong.Parse(&cli, kong.Bind(logger))
 
-// ...
+  // ...
 }
 ```
 
 ## Flags
 
-Any [mapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) field in the command structure *not*
-tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
+Any [mapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) field in the command structure *not* tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
 
 eg. The command-line `app [--flag="foo"]` can be represented by the following.
 
 ```go
 type CLI struct {
-Flag string
+  Flag string
 }
 ```
 
@@ -291,12 +275,12 @@ eg. The following struct represents the CLI structure `command [--flag="str"] su
 
 ```go
 type CLI struct {
-Command struct {
-Flag string
+  Command struct {
+    Flag string
 
-SubCommand struct {
-} `cmd`
-} `cmd`
+    SubCommand struct {
+    } `cmd`
+  } `cmd`
 }
 ```
 
@@ -306,9 +290,7 @@ If a sub-command is tagged with `default:"1"` it will be selected if there are n
 
 In addition to sub-commands, structs can also be configured as branching positional arguments.
 
-This is achieved by tagging an [unmapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) nested
-struct field with `arg`, then including a positional argument field inside that struct _with the same name_. For
-example, the following command structure:
+This is achieved by tagging an [unmapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) nested struct field with `arg`, then including a positional argument field inside that struct _with the same name_. For example, the following command structure:
 
     app rename <name> to <name>
 
@@ -316,16 +298,16 @@ Can be represented with the following:
 
 ```go
 var CLI struct {
-Rename struct {
-Name struct {
-Name string `arg` // <-- NOTE: identical name to enclosing struct field.
-To struct {
-Name struct {
-Name string `arg`
-} `arg`
-} `cmd`
-} `arg`
-} `cmd`
+  Rename struct {
+    Name struct {
+      Name string `arg` // <-- NOTE: identical name to enclosing struct field.
+      To struct {
+        Name struct {
+          Name string `arg`
+        } `arg`
+      } `cmd`
+    } `arg`
+  } `cmd`
 }
 ```
 
@@ -333,16 +315,13 @@ This looks a little verbose in this contrived example, but typically this will n
 
 ## Terminating positional arguments
 
-If a [mapped type](#mapper---customising-how-the-command-line-is-mapped-to-go-values) is tagged with `arg` it will be
-treated as the final positional values to be parsed on the command line.
+If a [mapped type](#mapper---customising-how-the-command-line-is-mapped-to-go-values) is tagged with `arg` it will be treated as the final positional values to be parsed on the command line.
 
 If a positional argument is a slice, all remaining arguments will be appended to that slice.
 
 ## Slices
 
-Slice values are treated specially. First the input is split on the `sep:"<rune>"` tag (defaults to `,`), then each
-element is parsed by the slice element type and appended to the slice. If the same value is encountered multiple times,
-elements continue to be appended.
+Slice values are treated specially. First the input is split on the `sep:"<rune>"` tag (defaults to `,`), then each element is parsed by the slice element type and appended to the slice. If the same value is encountered multiple times, elements continue to be appended.
 
 To represent the following command-line:
 
@@ -352,16 +331,15 @@ You would use the following:
 
 ```go
 var CLI struct {
-Ls struct {
-Files []string `arg type:"existingfile"`
-} `cmd`
+  Ls struct {
+    Files []string `arg type:"existingfile"`
+  } `cmd`
 }
 ```
 
 ## Maps
 
-Maps are similar to slices except that only one key/value pair can be assigned per value, and the `sep` tag denotes the
-assignment character and defaults to `=`.
+Maps are similar to slices except that only one key/value pair can be assigned per value, and the `sep` tag denotes the assignment character and defaults to `=`.
 
 To represent the following command-line:
 
@@ -371,21 +349,21 @@ You would use the following:
 
 ```go
 var CLI struct {
-Config struct {
-Set struct {
-Config map[string]float64 `arg type:"file:"`
-} `cmd`
-} `cmd`
+  Config struct {
+    Set struct {
+      Config map[string]float64 `arg type:"file:"`
+    } `cmd`
+  } `cmd`
 }
 ```
 
-For flags, multiple key+value pairs should be separated by `mapsep:"rune"` tag (defaults to `;`)
-eg. `--set="key1=value1;key2=value2"`.
+For flags, multiple key+value pairs should be separated by `mapsep:"rune"` tag (defaults to `;`) eg. `--set="key1=value1;key2=value2"`.
 
 ## Custom named decoders
 
-Kong includes a number of builtin custom type mappers. These can be used by specifying the tag `type:"<type>"`. They are
-registered with the option function `NamedMapper(name, mapper)`.
+Kong includes a number of builtin custom type mappers. These can be used by
+specifying the tag `type:"<type>"`. They are registered with the option
+function `NamedMapper(name, mapper)`.
 
 | Name              | Description
 |-------------------|---------------------------------------------------
@@ -394,16 +372,19 @@ registered with the option function `NamedMapper(name, mapper)`.
 | `existingdir`     | An existing directory. ~ expansion is applied.
 | `counter`         | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.
 
-Slices and maps treat type tags specially. For slices, the `type:""` tag specifies the element type. For maps, the tag
-has the format
+
+Slices and maps treat type tags specially. For slices, the `type:""` tag
+specifies the element type. For maps, the tag has the format
 `tag:"[<key>]:[<value>]"` where either may be omitted.
 
 ## Supported field types
 
+
 ## Custom decoders (mappers)
 
-Any field implementing `encoding.TextUnmarshaler` or `json.Unmarshaler` will use those interfaces for decoding values.
-Kong also includes builtin support for many common Go types:
+
+Any field implementing `encoding.TextUnmarshaler` or `json.Unmarshaler` will use those interfaces
+for decoding values. Kong also includes builtin support for many common Go types:
 
 | Type                | Description
 |---------------------|--------------------------------------------
@@ -453,19 +434,18 @@ Tag                    | Description
 
 ## Plugins
 
-Kong CLI's can be extended by embedding the `kong.Plugin` type and populating it with pointers to Kong annotated
-structs. For example:
+Kong CLI's can be extended by embedding the `kong.Plugin` type and populating it with pointers to Kong annotated structs. For example:
 
 ```go
 var pluginOne struct {
-PluginOneFlag string
+  PluginOneFlag string
 }
 var pluginTwo struct {
-PluginTwoFlag string
+  PluginTwoFlag string
 }
 var cli struct {
-BaseFlag string
-kong.Plugins
+  BaseFlag string
+  kong.Plugins
 }
 cli.Plugins = kong.Plugins{&pluginOne, &pluginTwo}
 ```
@@ -474,20 +454,23 @@ Additionally if an interface type is embedded, it can also be populated with a K
 
 ## Variable interpolation
 
-Kong supports limited variable interpolation into help strings, enum lists and default values.
+Kong supports limited variable interpolation into help strings, enum lists and
+default values.
 
 Variables are in the form:
 
     ${<name>}
     ${<name>=<default>}
 
-Variables are set with the `Vars{"key": "value", ...}` option. Undefined variable references in the grammar without a
-default will result in an error at construction time.
+Variables are set with the `Vars{"key": "value", ...}` option. Undefined
+variable references in the grammar without a default will result in an error at
+construction time.
 
-Variables can also be set via the `set:"K=V"` tag. In this case, those variables will be available for that node and all
-children. This is useful for composition by allowing the same struct to be reused.
+Variables can also be set via the `set:"K=V"` tag. In this case, those variables will be available for that
+node and all children. This is useful for composition by allowing the same struct to be reused.
 
-When interpolating into flag or argument help strings, some extra variables are defined from the value itself:
+When interpolating into flag or argument help strings, some extra variables
+are defined from the value itself:
 
     ${default}
     ${enum}
@@ -496,17 +479,16 @@ eg.
 
 ```go
 type cli struct {
-Config string `type:"path" default:"${config_file}"`
+  Config string `type:"path" default:"${config_file}"`
 }
 
 func main() {
-kong.Parse(&cli,
-kong.Vars{
-"config_file": "~/.app.conf",
-})
+  kong.Parse(&cli,
+    kong.Vars{
+      "config_file": "~/.app.conf",
+    })
 }
 ```
-
 ## Validation
 
 Kong does validation on the structure of a command-line, but also supports
@@ -516,11 +498,11 @@ interface:
 ```go
 type Validatable interface {
     Validate() error
-}
-```
+ }
+ ```
 
-If one of these nodes is in the active command-line it will be called during
-normal validation.
++If one of these nodes is in the active command-line it will be called during
++normal validation.
 
 ## Modifying Kong's behaviour
 
@@ -538,8 +520,7 @@ As with all help in Kong, text will be wrapped to the terminal.
 
 ### `Configuration(loader, paths...)` - load defaults from configuration files
 
-This option provides Kong with support for loading defaults from a set of configuration files. Each file is opened, if
-possible, and the loader called to create a resolver for that file.
+This option provides Kong with support for loading defaults from a set of configuration files. Each file is opened, if possible, and the loader called to create a resolver for that file.
 
 eg.
 
@@ -547,14 +528,11 @@ eg.
 kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json"))
 ```
 
-[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L103) for an example of how the JSON
-file is structured.
+[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L103) for an example of how the JSON file is structured.
 
 ### `Resolver(...)` - support for default values from external sources
 
-Resolvers are Kong's extension point for providing default values from external sources. As an example, support for
-environment variables via the `env` tag is provided by a resolver. There's also a builtin resolver for JSON
-configuration files.
+Resolvers are Kong's extension point for providing default values from external sources. As an example, support for environment variables via the `env` tag is provided by a resolver. There's also a builtin resolver for JSON configuration files.
 
 Example resolvers can be found in [resolver.go](https://github.com/alecthomas/kong/blob/master/resolver.go).
 
@@ -573,8 +551,7 @@ type Mapper interface {
 }
 ```
 
-All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`) have mappers registered by default.
-Mappers for custom types can be added using `kong.??Mapper(...)` options. Mappers are applied to fields in four ways:
+All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`) have mappers registered by default. Mappers for custom types can be added using `kong.??Mapper(...)` options. Mappers are applied to fields in four ways:
 
 1. `NamedMapper(string, Mapper)` and using the tag key `type:"<name>"`.
 2. `KindMapper(reflect.Kind, Mapper)`.
@@ -585,12 +562,9 @@ Mappers for custom types can be added using `kong.??Mapper(...)` options. Mapper
 
 The default help output is usually sufficient, but if not there are two solutions.
 
-1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (
-   see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
-2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which
-   contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
-3. Use `HelpFormatter(HelpValueFormatter)` if you want to just customize the help text that is accompanied by flags and
-   arguments.
+1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
+2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
+3. Use `HelpFormatter(HelpValueFormatter)` if you want to just customize the help text that is accompanied by flags and arguments.
 
 ### `Bind(...)` - bind values for callback hooks and Run() methods
 
