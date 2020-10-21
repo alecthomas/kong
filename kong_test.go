@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/alecthomas/kong"
@@ -886,4 +887,52 @@ func TestPlugins(t *testing.T) {
 	require.Equal(t, "base", cli.Base)
 	require.Equal(t, "one", pluginOne.One)
 	require.Equal(t, "two", pluginTwo.Two)
+}
+
+type validateCmd struct{}
+
+func (v *validateCmd) Validate() error { return errors.New("cmd error") }
+
+type validateCli struct {
+	Cmd validateCmd `cmd:""`
+}
+
+func (v *validateCli) Validate() error { return errors.New("app error") }
+
+type validateFlag string
+
+func (v *validateFlag) Validate() error { return errors.New("flag error") }
+
+func TestValidateApp(t *testing.T) {
+	cli := validateCli{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	require.EqualError(t, err, "test: app error")
+}
+
+func TestValidateCmd(t *testing.T) {
+	cli := struct {
+		Cmd validateCmd `cmd:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd"})
+	require.EqualError(t, err, "cmd: cmd error")
+}
+
+func TestValidateFlag(t *testing.T) {
+	cli := struct {
+		Flag validateFlag
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag=one"})
+	require.EqualError(t, err, "--flag: flag error")
+}
+
+func TestValidateArg(t *testing.T) {
+	cli := struct {
+		Arg validateFlag `arg:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"one"})
+	require.EqualError(t, err, "<arg>: flag error")
 }
