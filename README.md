@@ -4,14 +4,14 @@
 # Kong is a command-line parser for Go
 [![](https://godoc.org/github.com/alecthomas/kong?status.svg)](http://godoc.org/github.com/alecthomas/kong) [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong) [![Go Report Card](https://goreportcard.com/badge/github.com/alecthomas/kong)](https://goreportcard.com/report/github.com/alecthomas/kong) [![Slack chat](https://img.shields.io/static/v1?logo=slack&style=flat&label=slack&color=green&message=gophers)](https://gophers.slack.com/messages/CN9DS8YF3)
 
-<!-- TOC depthFrom:2 updateOnSave:true withLinks:true -->
+<!-- TOC depthfrom:2 updateonsave:true withlinks:true -->
 
 - [Introduction](#introduction)
 - [Help](#help)
 - [Command handling](#command-handling)
     - [Switch on the command string](#switch-on-the-command-string)
-    - [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
-- [Hooks: BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
+    - [Attach a Run... error method to each command](#attach-a-run-error-method-to-each-command)
+- [Hooks: BeforeResolve, BeforeApply, AfterApply and the Bind option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
 - [Flags](#flags)
 - [Commands and sub-commands](#commands-and-sub-commands)
 - [Branching positional arguments](#branching-positional-arguments)
@@ -20,11 +20,19 @@
 - [Maps](#maps)
 - [Custom named decoders](#custom-named-decoders)
 - [Supported field types](#supported-field-types)
-- [Custom decoders (mappers)](#custom-decoders-mappers)
+- [Custom decoders mappers](#custom-decoders-mappers)
 - [Supported tags](#supported-tags)
 - [Plugins](#plugins)
 - [Variable interpolation](#variable-interpolation)
 - [Validation](#validation)
+- [Modifying Kong's behaviour](#modifying-kongs-behaviour)
+    - [Namehelp and Descriptionhelp - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
+    - [Configurationloader, paths... - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    - [Resolver... - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+    - [*Mapper... - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
+    - [ConfigureHelpHelpOptions and HelpHelpFunc - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    - [Bind... - bind values for callback hooks and Run methods](#bind---bind-values-for-callback-hooks-and-run-methods)
+    - [Other options](#other-options)
 
 <!-- /TOC -->
 
@@ -489,6 +497,7 @@ func main() {
     })
 }
 ```
+
 ## Validation
 
 Kong does validation on the structure of a command-line, but also supports
