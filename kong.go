@@ -47,14 +47,13 @@ type Kong struct {
 	resolvers []Resolver
 	registry  *Registry
 
-	noDefaultHelp  bool
-	usageOnError   bool
-	usageOnMissing bool
-	help           HelpPrinter
-	helpFormatter  HelpValueFormatter
-	helpOptions    HelpOptions
-	helpFlag       *Flag
-	vars           Vars
+	noDefaultHelp bool
+	usageOnError  bool
+	help          HelpPrinter
+	helpFormatter HelpValueFormatter
+	helpOptions   HelpOptions
+	helpFlag      *Flag
+	vars          Vars
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -219,10 +218,7 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Validate(); err != nil {
-		if !k.usageOnError || !isMissingChildError(err) {
-			return nil, &ParseError{error: err, Context: ctx}
-		}
-		ctx.Error = err
+		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = k.applyHook(ctx, "AfterApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
