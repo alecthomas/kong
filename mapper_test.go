@@ -252,6 +252,7 @@ func TestNamedFileContentFlag(t *testing.T) {
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
 	require.NoError(t, err)
 	require.Equal(t, []byte("hello world"), cli.File.Contents)
+	require.Equal(t, f.Name(), cli.File.Filename)
 }
 
 func TestNamedSliceTypesDontHaveEllipsis(t *testing.T) {
