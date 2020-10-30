@@ -721,6 +721,33 @@ func JoinEscaped(s []string, sep rune) string {
 	return strings.Join(escaped, string(sep))
 }
 
+// NamedFileContentFlag is a flag value that loads a file's contents and filename into its value.
+type NamedFileContentFlag struct {
+	Filename string
+	Contents []byte
+}
+
+func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
+	var filename string
+	err := ctx.Scan.PopValueInto("filename", &filename)
+	if err != nil {
+		return err
+	}
+	// This allows unsetting of file content flags.
+	if filename == "" {
+		*f = NamedFileContentFlag{}
+		return nil
+	}
+	filename = ExpandPath(filename)
+	data, err := ioutil.ReadFile(filename) // nolint: gosec
+	if err != nil {
+		return errors.Errorf("failed to open %q: %s", filename, err)
+	}
+	f.Contents = data
+	f.Filename = filename
+	return nil
+}
+
 // FileContentFlag is a flag value that loads a file's contents into its value.
 type FileContentFlag []byte
 

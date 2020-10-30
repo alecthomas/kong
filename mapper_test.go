@@ -240,6 +240,20 @@ func TestFileContentFlag(t *testing.T) {
 	require.Equal(t, []byte("hello world"), []byte(cli.File))
 }
 
+func TestNamedFileContentFlag(t *testing.T) {
+	var cli struct {
+		File kong.NamedFileContentFlag
+	}
+	f, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+	fmt.Fprint(f, "hello world")
+	f.Close()
+	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
+	require.NoError(t, err)
+	require.Equal(t, []byte("hello world"), cli.File.Contents)
+}
+
 func TestNamedSliceTypesDontHaveEllipsis(t *testing.T) {
 	var cli struct {
 		File kong.FileContentFlag
