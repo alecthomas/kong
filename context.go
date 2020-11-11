@@ -694,8 +694,7 @@ func (c *Context) Run(binds ...interface{}) (err error) {
 func (c *Context) PrintUsage(summary bool) error {
 	options := c.helpOptions
 	options.Summary = summary
-	_ = c.help(options, c)
-	return nil
+	return c.help(options, c)
 }
 
 func checkMissingFlags(flags []*Flag) error {
