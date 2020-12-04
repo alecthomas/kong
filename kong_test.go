@@ -936,3 +936,17 @@ func TestValidateArg(t *testing.T) {
 	_, err := p.Parse([]string{"one"})
 	require.EqualError(t, err, "<arg>: flag error")
 }
+
+func TestPointers(t *testing.T) {
+	cli := struct {
+		Mapped *mappedValue
+		JSON   *jsonUnmarshalerValue
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--mapped=mapped", "--json=\"foo\""})
+	require.NoError(t, err)
+	require.NotNil(t, cli.Mapped)
+	require.Equal(t, "mapped", cli.Mapped.decoded)
+	require.NotNil(t, cli.JSON)
+	require.Equal(t, "FOO", string(*cli.JSON))
+}

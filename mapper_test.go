@@ -72,7 +72,7 @@ func TestJSONUnmarshaler(t *testing.T) {
 		Value jsonUnmarshalerValue
 	}
 	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{"--value=hello"})
+	_, err := p.Parse([]string{"--value=\"hello\""})
 	require.NoError(t, err)
 	require.Equal(t, "HELLO", string(cli.Value))
 }

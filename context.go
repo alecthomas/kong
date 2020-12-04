@@ -551,6 +551,14 @@ func (c *Context) getValue(value *Value) reflect.Value {
 	v, ok := c.values[value]
 	if !ok {
 		v = reflect.New(value.Target.Type()).Elem()
+		switch v.Kind() {
+		case reflect.Ptr:
+			v.Set(reflect.New(v.Type().Elem()))
+		case reflect.Slice:
+			v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+		case reflect.Map:
+			v.Set(reflect.MakeMap(v.Type()))
+		}
 		c.values[value] = v
 	}
 	return v

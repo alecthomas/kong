@@ -19,6 +19,7 @@ import (
 var (
 	mapperValueType       = reflect.TypeOf((*MapperValue)(nil)).Elem()
 	boolMapperType        = reflect.TypeOf((*BoolMapper)(nil)).Elem()
+	jsonUnmarshalerType   = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 	textUnmarshalerType   = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 	binaryUnmarshalerType = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
@@ -87,6 +88,20 @@ func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Val
 		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
 	}
 	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
+}
+
+type jsonUnmarshalerAdapter struct{}
+
+func (j *jsonUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
+	var value string
+	err := ctx.Scan.PopValueInto("value", &value)
+	if err != nil {
+		return err
+	}
+	if target.Type().Implements(jsonUnmarshalerType) {
+		return target.Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value))
+	}
+	return target.Addr().Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value))
 }
 
 // A Mapper represents how a field is mapped from command-line values to Go.
@@ -177,10 +192,13 @@ func (r *Registry) ForType(typ reflect.Type) Mapper {
 	}
 	// Next try stdlib unmarshaler interfaces.
 	for _, impl := range []reflect.Type{typ, reflect.PtrTo(typ)} {
-		if impl.Implements(textUnmarshalerType) {
+		switch {
+		case impl.Implements(textUnmarshalerType):
 			return &textUnmarshalerAdapter{}
-		} else if impl.Implements(binaryUnmarshalerType) {
+		case impl.Implements(binaryUnmarshalerType):
 			return &binaryUnmarshalerAdapter{}
+		case impl.Implements(jsonUnmarshalerType):
+			return &jsonUnmarshalerAdapter{}
 		}
 	}
 	// Finally try registered kinds.
