@@ -8,6 +8,8 @@
 
 - [Introduction](#introduction)
 - [Help](#help)
+    - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
+    - [Defining help in Kong](#defining-help-in-kong)
 - [Command handling](#command-handling)
     - [Switch on the command string](#switch-on-the-command-string)
     - [Attach a Run... error method to each command](#attach-a-run-error-method-to-each-command)
@@ -80,7 +82,9 @@ func main() {
 
 ## Help
 
-Help is automatically generated. With no other arguments provided, help will display a full summary of all available commands.
+### Help as a user of a Kong application
+
+Every Kong application includes a `--help` flag that will display auto-generated help.
 
 eg.
 
@@ -118,9 +122,15 @@ eg.
       -f, --force        Force removal.
       -r, --recursive    Recursively remove files.
 
-For flags with associated environment variables, the variable `${env}` can be
-interpolated into the help string. In the absence of this variable in the help,
+### Defining help in Kong
 
+Help is automatically generated from the command-line structure itself,
+including `help:""` and other tags. [Variables](#variable-interpolation) will
+also be interpolated into the help string.
+
+Finally, any command, argument, or flag type implementing the interface
+`Help() string` will have this function called to retrieve the help string.
+This allows for much more descriptive text than can fit in Go tags.
 
 ## Command handling
 
@@ -482,6 +492,10 @@ are defined from the value itself:
 
     ${default}
     ${enum}
+
+For flags with associated environment variables, the variable `${env}` can be
+interpolated into the help string. In the absence of this variable in the
+help string, Kong will append `($$${env})` to the help string.
 
 eg.
 
