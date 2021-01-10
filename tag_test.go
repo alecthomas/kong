@@ -171,7 +171,7 @@ func TestTagAliasesConflict(t *testing.T) {
 		Arg string `arg help:"Some arg"`
 	}
 	var cli struct {
-		Cmd Command `cmd hidden aliases:"other-cmd"`
+		Cmd      Command `cmd hidden aliases:"other-cmd"`
 		OtherCmd Command `cmd`
 	}
 	p := mustNew(t, &cli)

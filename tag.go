@@ -163,9 +163,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	}
 	aliases := t.Get("aliases")
 	if len(aliases) > 0 {
-		for _, a := range strings.FieldsFunc(aliases, splitFn) {
-			t.Aliases = append(t.Aliases, a)
-		}
+		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, splitFn)...)
 	}
 	t.Vars = Vars{}
 	for _, set := range t.GetAll("set") {
