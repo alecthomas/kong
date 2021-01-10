@@ -32,6 +32,7 @@ type Tag struct {
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 	Embed       bool
+	Aliases     []string
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string][]string
@@ -157,6 +158,13 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Xor = t.Get("xor")
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
+	splitFn := func(r rune) bool {
+		return r == ',' || r == ' '
+	}
+	aliases := t.Get("aliases")
+	if len(aliases) > 0 {
+		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, splitFn)...)
+	}
 	t.Vars = Vars{}
 	for _, set := range t.GetAll("set") {
 		parts := strings.SplitN(set, "=", 2)

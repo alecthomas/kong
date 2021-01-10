@@ -149,3 +149,49 @@ func TestTagSetOnFlag(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, buf.String(), `A key from somewhere.`)
 }
+
+func TestTagAliases(t *testing.T) {
+	type Command struct {
+		Arg string `arg help:"Some arg"`
+	}
+	var cli struct {
+		Cmd Command `cmd aliases:"alias1, alias2"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"alias1", "arg"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.Cmd.Arg)
+	_, err = p.Parse([]string{"alias2", "arg"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.Cmd.Arg)
+}
+
+func TestTagAliasesConflict(t *testing.T) {
+	type Command struct {
+		Arg string `arg help:"Some arg"`
+	}
+	var cli struct {
+		Cmd      Command `cmd hidden aliases:"other-cmd"`
+		OtherCmd Command `cmd`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"other-cmd", "arg"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.OtherCmd.Arg)
+}
+
+func TestTagAliasesSub(t *testing.T) {
+	type SubCommand struct {
+		Arg string `arg help:"Some arg"`
+	}
+	type Command struct {
+		SubCmd SubCommand `cmd aliases:"other-sub-cmd"`
+	}
+	var cli struct {
+		Cmd Command `cmd hidden`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd", "other-sub-cmd", "arg"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.Cmd.SubCmd.Arg)
+}
