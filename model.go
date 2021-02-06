@@ -203,6 +203,18 @@ func (n *Node) Path() (out string) {
 	return strings.TrimSpace(out)
 }
 
+// ClosestGroup finds the first non-empty group in this node and its ancestors.
+func (n *Node) ClosestGroup() string {
+	switch {
+	case n.Group != "":
+		return n.Group
+	case n.Parent != nil:
+		return n.Parent.ClosestGroup()
+	default:
+		return ""
+	}
+}
+
 // A Value is either a flag or a variable positional argument.
 type Value struct {
 	Flag         *Flag // Nil if positional argument.

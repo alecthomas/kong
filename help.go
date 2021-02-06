@@ -150,16 +150,22 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	}
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
-		w.Print("")
-		w.Print("Commands:")
+		iw := w.Indent()
 		if w.Tree {
-			writeCommandTree(w, node)
+			w.Print("")
+			w.Print("Commands:")
+			writeCommandTree(iw, node)
 		} else {
-			iw := w.Indent()
-			if w.Compact {
-				writeCompactCommandList(cmds, iw)
-			} else {
-				writeCommandList(cmds, iw)
+			groupedCmds := collectCommandGroups(cmds)
+			for _, group := range groupedCmds {
+				w.Print("")
+				w.Print(group.Name + ":")
+
+				if w.Compact {
+					writeCompactCommandList(group.Commands, iw)
+				} else {
+					writeCommandList(group.Commands, iw)
+				}
 			}
 		}
 	}
@@ -189,7 +195,6 @@ func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
 }
 
 func writeCommandTree(w *helpWriter, node *Node) {
-	iw := w.Indent()
 	rows := make([][2]string, 0, len(node.Children)*2)
 	for i, cmd := range node.Children {
 		if cmd.Hidden {
@@ -200,27 +205,35 @@ func writeCommandTree(w *helpWriter, node *Node) {
 			rows = append(rows, [2]string{"", ""})
 		}
 	}
-	writeTwoColumns(iw, rows)
+	writeTwoColumns(w, rows)
 }
 
-// nolint: unused
 type helpCommandGroup struct {
 	Name     string
 	Commands []*Node
 }
 
-// nolint: unused, deadcode
 func collectCommandGroups(nodes []*Node) []helpCommandGroup {
-	groups := map[string][]*Node{}
+	// Group names in order of appearance.
+	groups := []string{}
+	// Nodes grouped by their group name.
+	nodesByGroup := map[string][]*Node{}
+
 	for _, node := range nodes {
-		groups[node.Group] = append(groups[node.Group], node)
-	}
-	out := []helpCommandGroup{}
-	for name, nodes := range groups {
-		if name == "" {
-			name = "Commands"
+		group := node.ClosestGroup()
+		if _, ok := nodesByGroup[group]; !ok && group != "" {
+			groups = append(groups, group)
 		}
-		out = append(out, helpCommandGroup{Name: name, Commands: nodes})
+		nodesByGroup[group] = append(nodesByGroup[group], node)
+	}
+
+	out := []helpCommandGroup{}
+	// Ungrouped nodes are always displayed first.
+	if ungroupedNodes, ok := nodesByGroup[""]; ok {
+		out = append(out, helpCommandGroup{Name: "Commands", Commands: ungroupedNodes})
+	}
+	for _, name := range groups {
+		out = append(out, helpCommandGroup{Name: name, Commands: nodesByGroup[name]})
 	}
 	return out
 }
