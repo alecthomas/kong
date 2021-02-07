@@ -295,6 +295,16 @@ func TestHelpGrouping(t *testing.T) {
 	app := mustNew(t, &cli,
 		kong.Name("test-app"),
 		kong.Description("A test app."),
+		kong.Groups(map[string]kong.Group{
+			"Group A": {
+				Title:  "Group title taken from the kong.Groups option",
+				Header: "A group header",
+			},
+			"Group 1": {
+				Title: "Another group title, this time without header",
+			},
+			"Unknown key": {},
+		}),
 		kong.Writers(w, w),
 		kong.Exit(func(int) {
 			exited = true
@@ -324,7 +334,8 @@ Commands:
   two
     A non grouped subcommand.
 
-Group A:
+Group title taken from the kong.Groups option
+A group header
   one thing <arg>
     subcommand thing
 
@@ -334,7 +345,7 @@ Group A:
   three
     Another subcommand grouped in A.
 
-Group B:
+Group B
   one <stuff>
     subcommand stuff
 

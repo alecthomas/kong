@@ -208,6 +208,25 @@ func ConfigureHelp(options HelpOptions) Option {
 	})
 }
 
+// Group holds metadata about a node group used when printing help.
+type Group struct {
+	// Title is displayed above the grouped nodes.
+	Title string
+	// Header is optional and displayed under the Title when non empty.
+	// It can be used to introduce the group's purpose to the user.
+	Header string
+}
+
+// Groups associates `group` field tags with their metadata.
+//
+// It can be used to provide a title or header to a node group.
+func Groups(groups map[string]Group) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.groups = groups
+		return nil
+	})
+}
+
 // UsageOnError configures Kong to display context-sensitive usage if FatalIfErrorf is called with an error.
 func UsageOnError() Option {
 	return OptionFunc(func(k *Kong) error {

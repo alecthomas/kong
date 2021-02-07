@@ -90,20 +90,21 @@ func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 		options.Summary = false
 	}
 	w := newHelpWriter(ctx, options)
+	groups := ctx.Kong.groups
 	selected := ctx.Selected()
 	if selected == nil {
-		printApp(w, ctx.Model)
+		printApp(w, ctx.Model, groups)
 	} else {
-		printCommand(w, ctx.Model, selected)
+		printCommand(w, ctx.Model, selected, groups)
 	}
 	return w.Write(ctx.Stdout)
 }
 
-func printApp(w *helpWriter, app *Application) {
+func printApp(w *helpWriter, app *Application, groups map[string]Group) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s%s", app.Name, app.Summary())
 	}
-	printNodeDetail(w, app.Node, true)
+	printNodeDetail(w, app.Node, true, groups)
 	cmds := app.Leaves(true)
 	if len(cmds) > 0 && app.HelpFlag != nil {
 		w.Print("")
@@ -115,18 +116,18 @@ func printApp(w *helpWriter, app *Application) {
 	}
 }
 
-func printCommand(w *helpWriter, app *Application, cmd *Command) {
+func printCommand(w *helpWriter, app *Application, cmd *Command, groups map[string]Group) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
 	}
-	printNodeDetail(w, cmd, true)
+	printNodeDetail(w, cmd, true, groups)
 	if w.Summary && app.HelpFlag != nil {
 		w.Print("")
 		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
 	}
 }
 
-func printNodeDetail(w *helpWriter, node *Node, hide bool) {
+func printNodeDetail(w *helpWriter, node *Node, hide bool, groups map[string]Group) {
 	if node.Help != "" {
 		w.Print("")
 		w.Wrap(node.Help)
@@ -156,10 +157,15 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 			w.Print("Commands:")
 			writeCommandTree(iw, node)
 		} else {
-			groupedCmds := collectCommandGroups(cmds)
+			groupedCmds := collectCommandGroups(cmds, groups)
 			for _, group := range groupedCmds {
 				w.Print("")
-				w.Print(group.Name + ":")
+				if group.Metadata.Title != "" {
+					w.Print(group.Metadata.Title)
+				}
+				if group.Metadata.Header != "" {
+					w.Print(group.Metadata.Header)
+				}
 
 				if w.Compact {
 					writeCompactCommandList(group.Commands, iw)
@@ -209,11 +215,11 @@ func writeCommandTree(w *helpWriter, node *Node) {
 }
 
 type helpCommandGroup struct {
-	Name     string
+	Metadata Group
 	Commands []*Node
 }
 
-func collectCommandGroups(nodes []*Node) []helpCommandGroup {
+func collectCommandGroups(nodes []*Node, metadata map[string]Group) []helpCommandGroup {
 	// Group names in order of appearance.
 	groups := []string{}
 	// Nodes grouped by their group name.
@@ -230,10 +236,17 @@ func collectCommandGroups(nodes []*Node) []helpCommandGroup {
 	out := []helpCommandGroup{}
 	// Ungrouped nodes are always displayed first.
 	if ungroupedNodes, ok := nodesByGroup[""]; ok {
-		out = append(out, helpCommandGroup{Name: "Commands", Commands: ungroupedNodes})
+		out = append(out, helpCommandGroup{
+			Metadata: Group{Title: "Commands:"},
+			Commands: ungroupedNodes,
+		})
 	}
 	for _, name := range groups {
-		out = append(out, helpCommandGroup{Name: name, Commands: nodesByGroup[name]})
+		group, ok := metadata[name]
+		if !ok {
+			group = Group{Title: name}
+		}
+		out = append(out, helpCommandGroup{Metadata: group, Commands: nodesByGroup[name]})
 	}
 	return out
 }
