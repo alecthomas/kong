@@ -274,11 +274,11 @@ func TestHelpGrouping(t *testing.T) {
 		} `cmd help:"A subcommand grouped in A." group:"Group A"`
 
 		Two struct {
-			Grouped1String string `help:"A string flag grouped in A." group:"Group 1"`
-			AFreeString    string `help:"A non grouped string flag."`
-			Grouped2String string `help:"A string flag grouped in B." group:"Group 2"`
-			AFreeBool      bool   `help:"A non grouped bool flag."`
-			Grouped1Bool   bool   `help:"A bool flag grouped in A." group:"Group 1"`
+			Grouped1String  string `help:"A string flag grouped in 1." group:"Group 1"`
+			AFreeString     string `help:"A non grouped string flag."`
+			Grouped2String  string `help:"A string flag grouped in 2." group:"Group 2"`
+			AGroupedAString bool   `help:"A string flag grouped in A." group:"Group A"`
+			Grouped1Bool    bool   `help:"A bool flag grouped in 1." group:"Group 1"`
 		} `cmd help:"A non grouped subcommand."`
 
 		Four struct {
@@ -323,12 +323,17 @@ func TestHelpGrouping(t *testing.T) {
 A test app.
 
 Flags:
-  -h, --help                       Show context-sensitive help.
-      --grouped-a-string=STRING    A string flag grouped in A.
-      --free-string=STRING         A non grouped string flag.
-      --grouped-b-string=STRING    A string flag grouped in B.
-      --free-bool                  A non grouped bool flag.
-      --grouped-a-bool             A bool flag grouped in A.
+  -h, --help                  Show context-sensitive help.
+      --free-string=STRING    A non grouped string flag.
+      --free-bool             A non grouped bool flag.
+
+Group title taken from the kong.Groups option
+A group header
+  --grouped-a-string=STRING    A string flag grouped in A.
+  --grouped-a-bool             A bool flag grouped in A.
+
+Group B
+  --grouped-b-string=STRING    A string flag grouped in B.
 
 Commands:
   two
@@ -372,18 +377,28 @@ Run "test-app <command> --help" for more information on a command.
 A non grouped subcommand.
 
 Flags:
-  -h, --help                       Show context-sensitive help.
-      --grouped-a-string=STRING    A string flag grouped in A.
-      --free-string=STRING         A non grouped string flag.
-      --grouped-b-string=STRING    A string flag grouped in B.
-      --free-bool                  A non grouped bool flag.
-      --grouped-a-bool             A bool flag grouped in A.
+  -h, --help                    Show context-sensitive help.
+      --free-string=STRING      A non grouped string flag.
+      --free-bool               A non grouped bool flag.
 
-      --grouped-1-string=STRING    A string flag grouped in A.
-      --a-free-string=STRING       A non grouped string flag.
-      --grouped-2-string=STRING    A string flag grouped in B.
-      --a-free-bool                A non grouped bool flag.
-      --grouped-1-bool             A bool flag grouped in A.
+      --a-free-string=STRING    A non grouped string flag.
+
+Group title taken from the kong.Groups option
+A group header
+  --grouped-a-string=STRING    A string flag grouped in A.
+  --grouped-a-bool             A bool flag grouped in A.
+
+  --a-grouped-a-string         A string flag grouped in A.
+
+Group B
+  --grouped-b-string=STRING    A string flag grouped in B.
+
+Another group title, this time without header
+  --grouped-1-string=STRING    A string flag grouped in 1.
+  --grouped-1-bool             A bool flag grouped in 1.
+
+Group 2
+  --grouped-2-string=STRING    A string flag grouped in 2.
 `
 		t.Log(expected)
 		t.Log(w.String())

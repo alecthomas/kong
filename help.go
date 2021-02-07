@@ -145,9 +145,17 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool, groups map[string]Gro
 		writePositionals(w.Indent(), node.Positional)
 	}
 	if flags := node.AllFlags(true); len(flags) > 0 {
-		w.Print("")
-		w.Print("Flags:")
-		writeFlags(w.Indent(), flags)
+		groupedFlags := collectFlagGroups(flags, groups)
+		for _, group := range groupedFlags {
+			w.Print("")
+			if group.Metadata.Title != "" {
+				w.Print(group.Metadata.Title)
+			}
+			if group.Metadata.Header != "" {
+				w.Print(group.Metadata.Header)
+			}
+			writeFlags(w.Indent(), group.Flags)
+		}
 	}
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
@@ -212,6 +220,60 @@ func writeCommandTree(w *helpWriter, node *Node) {
 		}
 	}
 	writeTwoColumns(w, rows)
+}
+
+type helpFlagGroup struct {
+	Metadata Group
+	Flags    [][]*Flag
+}
+
+func collectFlagGroups(flags [][]*Flag, metadata map[string]Group) []helpFlagGroup {
+	// Group names in order of appearance.
+	groups := []string{}
+	// Flags grouped by their group name.
+	flagsByGroup := map[string][][]*Flag{}
+
+	for _, levelFlags := range flags {
+		levelFlagsByGroup := map[string][]*Flag{}
+
+		for _, flag := range levelFlags {
+			if flag.Group != "" {
+				groupAlreadySeen := false
+				for _, name := range groups {
+					if flag.Group == name {
+						groupAlreadySeen = true
+						break
+					}
+				}
+				if !groupAlreadySeen {
+					groups = append(groups, flag.Group)
+				}
+			}
+
+			levelFlagsByGroup[flag.Group] = append(levelFlagsByGroup[flag.Group], flag)
+		}
+
+		for name, flags := range levelFlagsByGroup {
+			flagsByGroup[name] = append(flagsByGroup[name], flags)
+		}
+	}
+
+	out := []helpFlagGroup{}
+	// Ungrouped flags are always displayed first.
+	if ungroupedFlags, ok := flagsByGroup[""]; ok {
+		out = append(out, helpFlagGroup{
+			Metadata: Group{Title: "Flags:"},
+			Flags:    ungroupedFlags,
+		})
+	}
+	for _, name := range groups {
+		group, ok := metadata[name]
+		if !ok {
+			group = Group{Title: name}
+		}
+		out = append(out, helpFlagGroup{Metadata: group, Flags: flagsByGroup[name]})
+	}
+	return out
 }
 
 type helpCommandGroup struct {
