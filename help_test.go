@@ -295,15 +295,19 @@ func TestHelpGrouping(t *testing.T) {
 	app := mustNew(t, &cli,
 		kong.Name("test-app"),
 		kong.Description("A test app."),
-		kong.Groups(map[string]kong.Group{
-			"Group A": {
+		kong.Groups([]kong.Group{
+			{
+				Key:    "Group A",
 				Title:  "Group title taken from the kong.Groups option",
 				Header: "A group header",
 			},
-			"Group 1": {
+			{
+				Key:   "Group 1",
 				Title: "Another group title, this time without header",
 			},
-			"Unknown key": {},
+			{
+				Key: "Unknown key",
+			},
 		}),
 		kong.Writers(w, w),
 		kong.Exit(func(int) {

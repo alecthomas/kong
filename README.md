@@ -589,7 +589,7 @@ The default help output is usually sufficient, but if not there are two solution
 1. Use `ConfigureHelp(HelpOptions)` to configure how help is formatted (see [HelpOptions](https://godoc.org/github.com/alecthomas/kong#HelpOptions) for details).
 2. Custom help can be wired into Kong via the `Help(HelpFunc)` option. The `HelpFunc` is passed a `Context`, which contains the parsed context for the current command-line. See the implementation of `PrintHelp` for an example.
 3. Use `HelpFormatter(HelpValueFormatter)` if you want to just customize the help text that is accompanied by flags and arguments.
-4. Use `Groups(map[string]Group)` if you want to customize group titles or add a header.
+4. Use `Groups([]Group)` if you want to customize group titles or add a header.
 
 ### `Bind(...)` - bind values for callback hooks and Run() methods
 

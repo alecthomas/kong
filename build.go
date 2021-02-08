@@ -142,7 +142,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	child.Parent = node
 	child.Help = tag.Help
 	child.Hidden = tag.Hidden
-	child.Group = tag.Group
+	child.Group = buildGroupForKey(k, tag.Group)
 	child.Aliases = tag.Aliases
 
 	if provider, ok := fv.Addr().Interface().(HelpProvider); ok {
@@ -213,11 +213,28 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			Short:       tag.Short,
 			PlaceHolder: tag.PlaceHolder,
 			Env:         tag.Env,
-			Group:       tag.Group,
+			Group:       buildGroupForKey(k, tag.Group),
 			Xor:         tag.Xor,
 			Hidden:      tag.Hidden,
 		}
 		value.Flag = flag
 		node.Flags = append(node.Flags, flag)
+	}
+}
+
+func buildGroupForKey(k *Kong, key string) *Group {
+	if key == "" {
+		return nil
+	}
+	for _, group := range k.groups {
+		if group.Key == key {
+			return &group
+		}
+	}
+
+	// No group provided with kong.Groups. We create one ad-hoc for this key.
+	return &Group{
+		Key:   key,
+		Title: key,
 	}
 }
