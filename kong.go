@@ -53,6 +53,7 @@ type Kong struct {
 	helpFormatter HelpValueFormatter
 	helpOptions   HelpOptions
 	helpFlag      *Flag
+	groups        []Group
 	vars          Vars
 
 	// Set temporarily by Options. These are applied after build().

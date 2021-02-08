@@ -136,7 +136,7 @@ func TestHelpTree(t *testing.T) {
 			Other struct {
 				Other string `arg help:"other arg"`
 			} `arg help:"subcommand other"`
-		} `cmd help:"subcommand one"`
+		} `cmd help:"subcommand one" group:"Group A"` // Groups are ignored in trees
 
 		Two struct {
 			Three threeArg `arg help:"Sub-sub-arg."`
@@ -247,4 +247,165 @@ func TestCustomHelpFormatter(t *testing.T) {
 	_, err := p.Parse([]string{"--help"})
 	require.NoError(t, err)
 	require.Contains(t, w.String(), "A flag.")
+}
+
+func TestHelpGrouping(t *testing.T) {
+	// nolint: govet
+	var cli struct {
+		GroupedAString string `help:"A string flag grouped in A." group:"Group A"`
+		FreeString     string `help:"A non grouped string flag."`
+		GroupedBString string `help:"A string flag grouped in B." group:"Group B"`
+		FreeBool       bool   `help:"A non grouped bool flag."`
+		GroupedABool   bool   `help:"A bool flag grouped in A." group:"Group A"`
+
+		One struct {
+			Flag string `help:"Nested flag."`
+			// Group is inherited from the parent command
+			Thing struct {
+				Arg string `arg help:"argument"`
+			} `cmd help:"subcommand thing"`
+			Other struct {
+				Other string `arg help:"other arg"`
+			} `arg help:"subcommand other"`
+			// ... but a subcommand can override it
+			Stuff struct {
+				Stuff string `arg help:"argument"`
+			} `arg help:"subcommand stuff" group:"Group B"`
+		} `cmd help:"A subcommand grouped in A." group:"Group A"`
+
+		Two struct {
+			Grouped1String  string `help:"A string flag grouped in 1." group:"Group 1"`
+			AFreeString     string `help:"A non grouped string flag."`
+			Grouped2String  string `help:"A string flag grouped in 2." group:"Group 2"`
+			AGroupedAString bool   `help:"A string flag grouped in A." group:"Group A"`
+			Grouped1Bool    bool   `help:"A bool flag grouped in 1." group:"Group 1"`
+		} `cmd help:"A non grouped subcommand."`
+
+		Four struct {
+			Flag string `help:"Nested flag."`
+		} `cmd help:"Another subcommand grouped in B." group:"Group B"`
+
+		Three struct {
+			Flag string `help:"Nested flag."`
+		} `cmd help:"Another subcommand grouped in A." group:"Group A"`
+	}
+
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Groups([]kong.Group{
+			{
+				Key:    "Group A",
+				Title:  "Group title taken from the kong.Groups option",
+				Header: "A group header",
+			},
+			{
+				Key:   "Group 1",
+				Title: "Another group title, this time without header",
+			},
+			{
+				Key: "Unknown key",
+			},
+		}),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true) // Panic to fake "exit".
+		}),
+	)
+
+	t.Run("Full", func(t *testing.T) {
+		require.PanicsWithValue(t, true, func() {
+			_, err := app.Parse([]string{"--help"})
+			require.True(t, exited)
+			require.NoError(t, err)
+		})
+		expected := `Usage: test-app <command>
+
+A test app.
+
+Flags:
+  -h, --help                  Show context-sensitive help.
+      --free-string=STRING    A non grouped string flag.
+      --free-bool             A non grouped bool flag.
+
+Group title taken from the kong.Groups option
+A group header
+  --grouped-a-string=STRING    A string flag grouped in A.
+  --grouped-a-bool             A bool flag grouped in A.
+
+Group B
+  --grouped-b-string=STRING    A string flag grouped in B.
+
+Commands:
+  two
+    A non grouped subcommand.
+
+Group title taken from the kong.Groups option
+A group header
+  one thing <arg>
+    subcommand thing
+
+  one <other>
+    subcommand other
+
+  three
+    Another subcommand grouped in A.
+
+Group B
+  one <stuff>
+    subcommand stuff
+
+  four
+    Another subcommand grouped in B.
+
+Run "test-app <command> --help" for more information on a command.
+`
+		t.Log(w.String())
+		t.Log(expected)
+		require.Equal(t, expected, w.String())
+	})
+
+	t.Run("Selected", func(t *testing.T) {
+		exited = false
+		w.Truncate(0)
+		require.PanicsWithValue(t, true, func() {
+			_, err := app.Parse([]string{"two", "--help"})
+			require.NoError(t, err)
+			require.True(t, exited)
+		})
+		expected := `Usage: test-app two
+
+A non grouped subcommand.
+
+Flags:
+  -h, --help                    Show context-sensitive help.
+      --free-string=STRING      A non grouped string flag.
+      --free-bool               A non grouped bool flag.
+
+      --a-free-string=STRING    A non grouped string flag.
+
+Group title taken from the kong.Groups option
+A group header
+  --grouped-a-string=STRING    A string flag grouped in A.
+  --grouped-a-bool             A bool flag grouped in A.
+
+  --a-grouped-a-string         A string flag grouped in A.
+
+Group B
+  --grouped-b-string=STRING    A string flag grouped in B.
+
+Another group title, this time without header
+  --grouped-1-string=STRING    A string flag grouped in 1.
+  --grouped-1-bool             A bool flag grouped in 1.
+
+Group 2
+  --grouped-2-string=STRING    A string flag grouped in 2.
+`
+		t.Log(expected)
+		t.Log(w.String())
+		require.Equal(t, expected, w.String())
+	})
 }

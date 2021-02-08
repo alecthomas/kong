@@ -46,7 +46,7 @@ type Node struct {
 	Name       string
 	Help       string // Short help displayed in summaries.
 	Detail     string // Detailed help displayed when describing command/arg alone.
-	Group      string
+	Group      *Group
 	Hidden     bool
 	Flags      []*Flag
 	Positional []*Positional
@@ -203,6 +203,18 @@ func (n *Node) Path() (out string) {
 	return strings.TrimSpace(out)
 }
 
+// ClosestGroup finds the first non-nil group in this node and its ancestors.
+func (n *Node) ClosestGroup() *Group {
+	switch {
+	case n.Group != nil:
+		return n.Group
+	case n.Parent != nil:
+		return n.Parent.ClosestGroup()
+	default:
+		return nil
+	}
+}
+
 // A Value is either a flag or a variable positional argument.
 type Value struct {
 	Flag         *Flag // Nil if positional argument.
@@ -351,7 +363,7 @@ type Positional = Value
 // A Flag represents a command-line flag.
 type Flag struct {
 	*Value
-	Group       string // Logical grouping when displaying. May also be used by configuration loaders to group options logically.
+	Group       *Group // Logical grouping when displaying. May also be used by configuration loaders to group options logically.
 	Xor         string
 	PlaceHolder string
 	Env         string
@@ -392,6 +404,17 @@ func (f *Flag) FormatPlaceHolder() string {
 		return "KEY=VALUE" + tail
 	}
 	return strings.ToUpper(f.Name) + tail
+}
+
+// Group holds metadata about a command or flag group used when printing help.
+type Group struct {
+	// Key is the `group` field tag value used to identify this group.
+	Key string
+	// Title is displayed above the grouped items.
+	Title string
+	// Header is optional and displayed under the Title when non empty.
+	// It can be used to introduce the group's purpose to the user.
+	Header string
 }
 
 // This is directly from the Go 1.13 source code.

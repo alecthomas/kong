@@ -208,6 +208,16 @@ func ConfigureHelp(options HelpOptions) Option {
 	})
 }
 
+// Groups associates `group` field tags with their metadata.
+//
+// It can be used to provide a title or header to a command or flag group.
+func Groups(groups []Group) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.groups = groups
+		return nil
+	})
+}
+
 // UsageOnError configures Kong to display context-sensitive usage if FatalIfErrorf is called with an error.
 func UsageOnError() Option {
 	return OptionFunc(func(k *Kong) error {

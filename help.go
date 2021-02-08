@@ -144,22 +144,41 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 		writePositionals(w.Indent(), node.Positional)
 	}
 	if flags := node.AllFlags(true); len(flags) > 0 {
-		w.Print("")
-		w.Print("Flags:")
-		writeFlags(w.Indent(), flags)
+		groupedFlags := collectFlagGroups(flags)
+		for _, group := range groupedFlags {
+			w.Print("")
+			if group.Metadata.Title != "" {
+				w.Print(group.Metadata.Title)
+			}
+			if group.Metadata.Header != "" {
+				w.Print(group.Metadata.Header)
+			}
+			writeFlags(w.Indent(), group.Flags)
+		}
 	}
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
-		w.Print("")
-		w.Print("Commands:")
+		iw := w.Indent()
 		if w.Tree {
-			writeCommandTree(w, node)
+			w.Print("")
+			w.Print("Commands:")
+			writeCommandTree(iw, node)
 		} else {
-			iw := w.Indent()
-			if w.Compact {
-				writeCompactCommandList(cmds, iw)
-			} else {
-				writeCommandList(cmds, iw)
+			groupedCmds := collectCommandGroups(cmds)
+			for _, group := range groupedCmds {
+				w.Print("")
+				if group.Metadata.Title != "" {
+					w.Print(group.Metadata.Title)
+				}
+				if group.Metadata.Header != "" {
+					w.Print(group.Metadata.Header)
+				}
+
+				if w.Compact {
+					writeCompactCommandList(group.Commands, iw)
+				} else {
+					writeCommandList(group.Commands, iw)
+				}
 			}
 		}
 	}
@@ -189,7 +208,6 @@ func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
 }
 
 func writeCommandTree(w *helpWriter, node *Node) {
-	iw := w.Indent()
 	rows := make([][2]string, 0, len(node.Children)*2)
 	for i, cmd := range node.Children {
 		if cmd.Hidden {
@@ -200,27 +218,93 @@ func writeCommandTree(w *helpWriter, node *Node) {
 			rows = append(rows, [2]string{"", ""})
 		}
 	}
-	writeTwoColumns(iw, rows)
+	writeTwoColumns(w, rows)
 }
 
-// nolint: unused
+type helpFlagGroup struct {
+	Metadata *Group
+	Flags    [][]*Flag
+}
+
+func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
+	// Group keys in order of appearance.
+	groups := []*Group{}
+	// Flags grouped by their group key.
+	flagsByGroup := map[string][][]*Flag{}
+
+	for _, levelFlags := range flags {
+		levelFlagsByGroup := map[string][]*Flag{}
+
+		for _, flag := range levelFlags {
+			key := ""
+			if flag.Group != nil {
+				key = flag.Group.Key
+				groupAlreadySeen := false
+				for _, group := range groups {
+					if key == group.Key {
+						groupAlreadySeen = true
+						break
+					}
+				}
+				if !groupAlreadySeen {
+					groups = append(groups, flag.Group)
+				}
+			}
+
+			levelFlagsByGroup[key] = append(levelFlagsByGroup[key], flag)
+		}
+
+		for key, flags := range levelFlagsByGroup {
+			flagsByGroup[key] = append(flagsByGroup[key], flags)
+		}
+	}
+
+	out := []helpFlagGroup{}
+	// Ungrouped flags are always displayed first.
+	if ungroupedFlags, ok := flagsByGroup[""]; ok {
+		out = append(out, helpFlagGroup{
+			Metadata: &Group{Title: "Flags:"},
+			Flags:    ungroupedFlags,
+		})
+	}
+	for _, group := range groups {
+		out = append(out, helpFlagGroup{Metadata: group, Flags: flagsByGroup[group.Key]})
+	}
+	return out
+}
+
 type helpCommandGroup struct {
-	Name     string
+	Metadata *Group
 	Commands []*Node
 }
 
-// nolint: unused, deadcode
 func collectCommandGroups(nodes []*Node) []helpCommandGroup {
-	groups := map[string][]*Node{}
+	// Groups in order of appearance.
+	groups := []*Group{}
+	// Nodes grouped by their group key.
+	nodesByGroup := map[string][]*Node{}
+
 	for _, node := range nodes {
-		groups[node.Group] = append(groups[node.Group], node)
-	}
-	out := []helpCommandGroup{}
-	for name, nodes := range groups {
-		if name == "" {
-			name = "Commands"
+		key := ""
+		if group := node.ClosestGroup(); group != nil {
+			key = group.Key
+			if _, ok := nodesByGroup[key]; !ok {
+				groups = append(groups, group)
+			}
 		}
-		out = append(out, helpCommandGroup{Name: name, Commands: nodes})
+		nodesByGroup[key] = append(nodesByGroup[key], node)
+	}
+
+	out := []helpCommandGroup{}
+	// Ungrouped nodes are always displayed first.
+	if ungroupedNodes, ok := nodesByGroup[""]; ok {
+		out = append(out, helpCommandGroup{
+			Metadata: &Group{Title: "Commands:"},
+			Commands: ungroupedNodes,
+		})
+	}
+	for _, group := range groups {
+		out = append(out, helpCommandGroup{Metadata: group, Commands: nodesByGroup[group.Key]})
 	}
 	return out
 }
