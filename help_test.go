@@ -323,8 +323,7 @@ Flags:
       --free-bool             A non grouped bool flag.
 
 Group title taken from the kong.ExplicitGroups option
-
-A group header
+  A group header
 
   --grouped-a-string=STRING    A string flag grouped in A.
   --grouped-a-bool             A bool flag grouped in A.
@@ -337,8 +336,7 @@ Commands:
     A non grouped subcommand.
 
 Group title taken from the kong.ExplicitGroups option
-
-A group header
+  A group header
 
   one thing <arg>
     subcommand thing
@@ -383,8 +381,7 @@ Flags:
       --a-free-string=STRING    A non grouped string flag.
 
 Group title taken from the kong.ExplicitGroups option
-
-A group header
+  A group header
 
   --grouped-a-string=STRING    A string flag grouped in A.
   --grouped-a-bool             A bool flag grouped in A.

@@ -151,8 +151,7 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 				w.Wrap(group.Metadata.Title)
 			}
 			if group.Metadata.Description != "" {
-				w.Print("")
-				w.Wrap(group.Metadata.Description)
+				w.Indent().Wrap(group.Metadata.Description)
 				w.Print("")
 			}
 			writeFlags(w.Indent(), group.Flags)
@@ -173,8 +172,7 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 					w.Wrap(group.Metadata.Title)
 				}
 				if group.Metadata.Description != "" {
-					w.Print("")
-					w.Wrap(group.Metadata.Description)
+					w.Indent().Wrap(group.Metadata.Description)
 					w.Print("")
 				}
 
@@ -348,6 +346,7 @@ func (h *helpWriter) Print(text string) {
 	*h.lines = append(*h.lines, strings.TrimRight(h.indent+text, " "))
 }
 
+// Indent returns a new helpWriter indented by two characters.
 func (h *helpWriter) Indent() *helpWriter {
 	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, HelpOptions: h.HelpOptions, helpFormatter: h.helpFormatter}
 }
