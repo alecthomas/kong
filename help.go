@@ -41,6 +41,9 @@ type HelpOptions struct {
 	// Tree writes command chains in a tree structure instead of listing them separately.
 	Tree bool
 
+	// Place the flags after the commands listing.
+	FlagsLast bool
+
 	// Indenter modulates the given prefix for the next layer in the tree view.
 	// The following exported templates can be used: kong.SpaceIndenter, kong.LineIndenter, kong.TreeIndenter
 	// The kong.SpaceIndenter will be used by default.
@@ -143,19 +146,24 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 		w.Print("Arguments:")
 		writePositionals(w.Indent(), node.Positional)
 	}
-	if flags := node.AllFlags(true); len(flags) > 0 {
-		groupedFlags := collectFlagGroups(flags)
-		for _, group := range groupedFlags {
-			w.Print("")
-			if group.Metadata.Title != "" {
-				w.Wrap(group.Metadata.Title)
-			}
-			if group.Metadata.Description != "" {
-				w.Indent().Wrap(group.Metadata.Description)
+	printFlags := func() {
+		if flags := node.AllFlags(true); len(flags) > 0 {
+			groupedFlags := collectFlagGroups(flags)
+			for _, group := range groupedFlags {
 				w.Print("")
+				if group.Metadata.Title != "" {
+					w.Wrap(group.Metadata.Title)
+				}
+				if group.Metadata.Description != "" {
+					w.Indent().Wrap(group.Metadata.Description)
+					w.Print("")
+				}
+				writeFlags(w.Indent(), group.Flags)
 			}
-			writeFlags(w.Indent(), group.Flags)
 		}
+	}
+	if !w.FlagsLast {
+		printFlags()
 	}
 	cmds := node.Leaves(hide)
 	if len(cmds) > 0 {
@@ -183,6 +191,9 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 				}
 			}
 		}
+	}
+	if w.FlagsLast {
+		printFlags()
 	}
 }
 
