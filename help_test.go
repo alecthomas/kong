@@ -295,20 +295,11 @@ func TestHelpGrouping(t *testing.T) {
 	app := mustNew(t, &cli,
 		kong.Name("test-app"),
 		kong.Description("A test app."),
-		kong.Groups([]kong.Group{
-			{
-				Key:    "Group A",
-				Title:  "Group title taken from the kong.Groups option",
-				Header: "A group header",
-			},
-			{
-				Key:   "Group 1",
-				Title: "Another group title, this time without header",
-			},
-			{
-				Key: "Unknown key",
-			},
-		}),
+		kong.Groups{
+			"Group A":     "Group title taken from the kong.ExplicitGroups option\nA group header",
+			"Group 1":     "Another group title, this time without header",
+			"Unknown key": "",
+		},
 		kong.Writers(w, w),
 		kong.Exit(func(int) {
 			exited = true
@@ -331,7 +322,7 @@ Flags:
       --free-string=STRING    A non grouped string flag.
       --free-bool             A non grouped bool flag.
 
-Group title taken from the kong.Groups option
+Group title taken from the kong.ExplicitGroups option
 A group header
   --grouped-a-string=STRING    A string flag grouped in A.
   --grouped-a-bool             A bool flag grouped in A.
@@ -343,7 +334,7 @@ Commands:
   two
     A non grouped subcommand.
 
-Group title taken from the kong.Groups option
+Group title taken from the kong.ExplicitGroups option
 A group header
   one thing <arg>
     subcommand thing
@@ -387,7 +378,7 @@ Flags:
 
       --a-free-string=STRING    A non grouped string flag.
 
-Group title taken from the kong.Groups option
+Group title taken from the kong.ExplicitGroups option
 A group header
   --grouped-a-string=STRING    A string flag grouped in A.
   --grouped-a-bool             A bool flag grouped in A.

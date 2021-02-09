@@ -208,10 +208,40 @@ func ConfigureHelp(options HelpOptions) Option {
 	})
 }
 
-// Groups associates `group` field tags with their metadata.
+// Groups associates `group` field tags with group metadata.
+//
+// This option is used to simplify Kong tags while providing
+// rich group information such as title and optional description.
+//
+// Each key in the "groups" map corresponds to the value of a
+// `group` Kong tag, while the first line of the value will be
+// the title, and subsequent lines if any will be the description of
+// the group.
+//
+// See also ExplicitGroups for a more structured alternative.
+type Groups map[string]string
+
+func (g Groups) Apply(k *Kong) error { // nolint: golint
+	for key, info := range g {
+		lines := strings.Split(info, "\n")
+		title := strings.TrimSpace(lines[0])
+		description := ""
+		if len(lines) > 1 {
+			description = strings.TrimSpace(strings.Join(lines[1:], "\n"))
+		}
+		k.groups = append(k.groups, Group{
+			Key:         key,
+			Title:       title,
+			Description: description,
+		})
+	}
+	return nil
+}
+
+// ExplicitGroups associates `group` field tags with their metadata.
 //
 // It can be used to provide a title or header to a command or flag group.
-func Groups(groups []Group) Option {
+func ExplicitGroups(groups []Group) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.groups = groups
 		return nil

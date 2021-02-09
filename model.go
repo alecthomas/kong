@@ -412,9 +412,9 @@ type Group struct {
 	Key string
 	// Title is displayed above the grouped items.
 	Title string
-	// Header is optional and displayed under the Title when non empty.
+	// Description is optional and displayed under the Title when non empty.
 	// It can be used to introduce the group's purpose to the user.
-	Header string
+	Description string
 }
 
 // This is directly from the Go 1.13 source code.

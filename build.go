@@ -232,7 +232,7 @@ func buildGroupForKey(k *Kong, key string) *Group {
 		}
 	}
 
-	// No group provided with kong.Groups. We create one ad-hoc for this key.
+	// No group provided with kong.ExplicitGroups. We create one ad-hoc for this key.
 	return &Group{
 		Key:   key,
 		Title: key,

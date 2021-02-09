@@ -150,8 +150,8 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 			if group.Metadata.Title != "" {
 				w.Print(group.Metadata.Title)
 			}
-			if group.Metadata.Header != "" {
-				w.Print(group.Metadata.Header)
+			if group.Metadata.Description != "" {
+				w.Print(group.Metadata.Description)
 			}
 			writeFlags(w.Indent(), group.Flags)
 		}
@@ -170,8 +170,8 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 				if group.Metadata.Title != "" {
 					w.Print(group.Metadata.Title)
 				}
-				if group.Metadata.Header != "" {
-					w.Print(group.Metadata.Header)
+				if group.Metadata.Description != "" {
+					w.Print(group.Metadata.Description)
 				}
 
 				if w.Compact {
