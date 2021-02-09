@@ -41,6 +41,9 @@ type HelpOptions struct {
 	// Tree writes command chains in a tree structure instead of listing them separately.
 	Tree bool
 
+	// Place the flags after the commands listing.
+	FlagsLast bool
+
 	// Indenter modulates the given prefix for the next layer in the tree view.
 	// The following exported templates can be used: kong.SpaceIndenter, kong.LineIndenter, kong.TreeIndenter
 	// The kong.SpaceIndenter will be used by default.
@@ -463,6 +466,9 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 	switch node.Type {
 	default:
 		nodeName += prefix + node.Name
+		if len(node.Aliases) != 0 {
+			nodeName += fmt.Sprintf(" (%s)", strings.Join(node.Aliases, ","))
+		}
 	case ArgumentNode:
 		nodeName += prefix + "<" + node.Name + ">"
 	}
