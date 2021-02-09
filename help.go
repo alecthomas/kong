@@ -148,10 +148,12 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 		for _, group := range groupedFlags {
 			w.Print("")
 			if group.Metadata.Title != "" {
-				w.Print(group.Metadata.Title)
+				w.Wrap(group.Metadata.Title)
 			}
 			if group.Metadata.Description != "" {
-				w.Print(group.Metadata.Description)
+				w.Print("")
+				w.Wrap(group.Metadata.Description)
+				w.Print("")
 			}
 			writeFlags(w.Indent(), group.Flags)
 		}
@@ -168,10 +170,12 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 			for _, group := range groupedCmds {
 				w.Print("")
 				if group.Metadata.Title != "" {
-					w.Print(group.Metadata.Title)
+					w.Wrap(group.Metadata.Title)
 				}
 				if group.Metadata.Description != "" {
-					w.Print(group.Metadata.Description)
+					w.Print("")
+					w.Wrap(group.Metadata.Description)
+					w.Print("")
 				}
 
 				if w.Compact {
