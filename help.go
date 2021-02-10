@@ -44,6 +44,9 @@ type HelpOptions struct {
 	// Place the flags after the commands listing.
 	FlagsLast bool
 
+	// Do not auto wrap text and respect user defined line breaks.
+	NoDocToText bool
+
 	// Indenter modulates the given prefix for the next layer in the tree view.
 	// The following exported templates can be used: kong.SpaceIndenter, kong.LineIndenter, kong.TreeIndenter
 	// The kong.SpaceIndenter will be used by default.
@@ -377,9 +380,12 @@ func (h *helpWriter) Write(w io.Writer) error {
 }
 
 func (h *helpWriter) Wrap(text string) {
-	w := bytes.NewBuffer(nil)
-	doc.ToText(w, strings.TrimSpace(text), "", "    ", h.width)
-	for _, line := range strings.Split(strings.TrimSpace(w.String()), "\n") {
+	if !h.HelpOptions.NoDocToText {
+		w := bytes.NewBuffer(nil)
+		doc.ToText(w, strings.TrimSpace(text), "", "    ", h.width)
+		text = w.String()
+	}
+	for _, line := range strings.Split(strings.TrimSpace(text), "\n") {
 		h.Print(line)
 	}
 }
