@@ -474,6 +474,9 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 	switch node.Type {
 	default:
 		nodeName += prefix + node.Name
+		if len(node.Aliases) != 0 {
+			nodeName += fmt.Sprintf(" (%s)", strings.Join(node.Aliases, ","))
+		}
 	case ArgumentNode:
 		nodeName += prefix + "<" + node.Name + ">"
 	}
