@@ -245,13 +245,13 @@ func TestHelpTree(t *testing.T) {
 			Other struct {
 				Other string `arg help:"other arg"`
 			} `arg help:"subcommand other"`
-		} `cmd help:"subcommand one" group:"Group A"` // Groups are ignored in trees
+		} `cmd help:"subcommand one" group:"Group A" aliases:"un,uno"` // Groups are ignored in trees
 
 		Two struct {
 			Three threeArg `arg help:"Sub-sub-arg."`
 
 			Four struct {
-			} `cmd help:"Sub-sub-command."`
+			} `cmd help:"Sub-sub-command." aliases:"for,fore"`
 		} `cmd help:"Another subcommand."`
 	}
 
@@ -285,14 +285,14 @@ Flags:
   -h, --help    Show context-sensitive help.
 
 Commands:
-  one          subcommand one
-  - thing      subcommand thing
-    - <arg>    argument
-  - <other>    subcommand other
+  one (un,uno)         subcommand one
+  - thing              subcommand thing
+    - <arg>            argument
+  - <other>            subcommand other
 
-  two          Another subcommand.
-  - <three>    Sub-sub-arg.
-  - four       Sub-sub-command.
+  two                  Another subcommand.
+  - <three>            Sub-sub-arg.
+  - four (for,fore)    Sub-sub-command.
 
 Run "test-app <command> --help" for more information on a command.
 `
