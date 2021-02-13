@@ -192,6 +192,17 @@ func Help(help HelpPrinter) Option {
 	})
 }
 
+// ShortHelp configures the short usage message.
+//
+// It should be used together with kong.ShortUsageOnError() to display a
+// custom short usage message on errors.
+func ShortHelp(shortHelp HelpPrinter) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.shortHelp = shortHelp
+		return nil
+	})
+}
+
 // HelpFormatter configures how the help text is formatted.
 func HelpFormatter(helpFormatter HelpValueFormatter) Option {
 	return OptionFunc(func(k *Kong) error {
@@ -251,7 +262,17 @@ func ExplicitGroups(groups []Group) Option {
 // UsageOnError configures Kong to display context-sensitive usage if FatalIfErrorf is called with an error.
 func UsageOnError() Option {
 	return OptionFunc(func(k *Kong) error {
-		k.usageOnError = true
+		k.usageOnError = fullUsage
+		return nil
+	})
+}
+
+// ShortUsageOnError configures Kong to display context-sensitive short
+// usage if FatalIfErrorf is called with an error. The default short
+// usage message can be overridden with kong.ShortHelp(...).
+func ShortUsageOnError() Option {
+	return OptionFunc(func(k *Kong) error {
+		k.usageOnError = shortUsage
 		return nil
 	})
 }
