@@ -31,6 +31,13 @@ func Must(ast interface{}, options ...Option) *Kong {
 	return k
 }
 
+type usageOnError int
+
+const (
+	shortUsage usageOnError = iota + 1
+	fullUsage
+)
+
 // Kong is the main parser type.
 type Kong struct {
 	// Grammar model.
@@ -48,8 +55,9 @@ type Kong struct {
 	registry  *Registry
 
 	noDefaultHelp bool
-	usageOnError  bool
+	usageOnError  usageOnError
 	help          HelpPrinter
+	shortHelp     HelpPrinter
 	helpFormatter HelpValueFormatter
 	helpOptions   HelpOptions
 	helpFlag      *Flag
@@ -84,6 +92,10 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	if k.help == nil {
 		k.help = DefaultHelpPrinter
+	}
+
+	if k.shortHelp == nil {
+		k.shortHelp = DefaultShortHelpPrinter
 	}
 
 	model, err := build(k, grammar)
@@ -331,10 +343,15 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error()
 	}
 	// Maybe display usage information.
-	if err, ok := err.(*ParseError); ok && k.usageOnError {
-		options := k.helpOptions
-		_ = k.help(options, err.Context)
-		fmt.Fprintln(k.Stdout)
+	if err, ok := err.(*ParseError); ok {
+		switch k.usageOnError {
+		case fullUsage:
+			_ = k.help(k.helpOptions, err.Context)
+			fmt.Fprintln(k.Stdout)
+		case shortUsage:
+			_ = k.shortHelp(k.helpOptions, err.Context)
+			fmt.Fprintln(k.Stdout)
+		}
 	}
 	k.Fatalf("%s", msg)
 }

@@ -87,6 +87,21 @@ func DefaultHelpValueFormatter(value *Value) string {
 	}
 }
 
+// DefaultShortHelpPrinter is the default HelpPrinter for short help on error.
+func DefaultShortHelpPrinter(options HelpOptions, ctx *Context) error {
+	w := newHelpWriter(ctx, options)
+	cmd := ctx.Selected()
+	app := ctx.Model
+	if cmd == nil {
+		w.Printf("Usage: %s%s", app.Name, app.Summary())
+		w.Printf(`Run "%s --help" for more information.`, app.Name)
+	} else {
+		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
+		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
+	}
+	return w.Write(ctx.Stdout)
+}
+
 // DefaultHelpPrinter is the default HelpPrinter.
 func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 	if ctx.Empty() {

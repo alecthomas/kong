@@ -2,6 +2,7 @@ package kong_test
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -511,4 +512,81 @@ Group 2
 		t.Log(w.String())
 		require.Equal(t, expected, w.String())
 	})
+}
+
+func TestUsageOnError(t *testing.T) {
+	var cli struct {
+		Flag string `help:"A required flag." required`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Description("Some description."),
+		kong.Exit(func(int) {}),
+		kong.UsageOnError(),
+	)
+	_, err := p.Parse([]string{})
+	p.FatalIfErrorf(err)
+
+	expected := `Usage: test --flag=STRING
+
+Some description.
+
+Flags:
+  -h, --help           Show context-sensitive help.
+      --flag=STRING    A required flag.
+
+test: error: missing flags: --flag=STRING
+`
+	require.Equal(t, expected, w.String())
+}
+
+func TestShortUsageOnError(t *testing.T) {
+	var cli struct {
+		Flag string `help:"A required flag." required`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Description("Some description."),
+		kong.Exit(func(int) {}),
+		kong.ShortUsageOnError(),
+	)
+	_, err := p.Parse([]string{})
+	require.Error(t, err)
+	p.FatalIfErrorf(err)
+
+	expected := `Usage: test --flag=STRING
+Run "test --help" for more information.
+
+test: error: missing flags: --flag=STRING
+`
+	require.Equal(t, expected, w.String())
+}
+
+func TestCustomShortUsageOnError(t *testing.T) {
+	var cli struct {
+		Flag string `help:"A required flag." required`
+	}
+	w := &strings.Builder{}
+	shortHelp := func(_ kong.HelpOptions, ctx *kong.Context) error {
+		fmt.Fprintln(ctx.Stdout, "🤷 wish I could help")
+		return nil
+	}
+	p := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Description("Some description."),
+		kong.Exit(func(int) {}),
+		kong.ShortHelp(shortHelp),
+		kong.ShortUsageOnError(),
+	)
+	_, err := p.Parse([]string{})
+	require.Error(t, err)
+	p.FatalIfErrorf(err)
+
+	expected := `🤷 wish I could help
+
+test: error: missing flags: --flag=STRING
+`
+	require.Equal(t, expected, w.String())
 }
