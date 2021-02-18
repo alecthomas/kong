@@ -579,6 +579,9 @@ func (c *Context) getValue(value *Value) reflect.Value {
 		}
 		c.values[value] = v
 	}
+	if value.Flag != nil && value.Flag.Negated {
+		v.SetBool(false)
+	}
 	return v
 }
 
@@ -639,15 +642,19 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	for _, flag := range flags {
 		long := "--" + flag.Name
 		short := "-" + string(flag.Short)
+		neg := "--no-" + flag.Name
 		candidates = append(candidates, long)
 		if flag.Short != 0 {
 			candidates = append(candidates, short)
 		}
-		if short != match && long != match {
+		if short != match && long != match && neg != match {
 			continue
 		}
 		// Found a matching flag.
 		c.scan.Pop()
+		if flag.Value.IsBool() && match == neg {
+			flag.Negated = true
+		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
 			if e, ok := errors.Cause(err).(*expectedError); ok && e.token.InferredType().IsAny(FlagToken, ShortFlagToken) {
