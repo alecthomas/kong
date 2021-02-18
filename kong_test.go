@@ -359,7 +359,7 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 func TestNegatedBooleanFlag(t *testing.T) {
 	var cli struct {
 		Cmd struct {
-			Flag bool `kong:"default='true'"`
+			Flag bool `kong:"default='true',negatable"`
 		} `kong:"cmd"`
 	}
 
@@ -367,6 +367,17 @@ func TestNegatedBooleanFlag(t *testing.T) {
 	_, err := p.Parse([]string{"cmd", "--no-flag"})
 	require.NoError(t, err)
 	require.Equal(t, false, cli.Cmd.Flag)
+}
+
+func TestInvalidNegatedNonBool(t *testing.T) {
+	var cli struct {
+		Cmd struct {
+			Flag string `kong:"negatable"`
+		} `kong:"cmd"`
+	}
+
+	_, err := kong.New(&cli)
+	require.Error(t, err)
 }
 
 type hookContext struct {

@@ -652,7 +652,7 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		}
 		// Found a matching flag.
 		c.scan.Pop()
-		if flag.Value.IsBool() && match == neg {
+		if match == neg && flag.Tag.Negatable {
 			flag.Negated = true
 		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
