@@ -579,9 +579,6 @@ func (c *Context) getValue(value *Value) reflect.Value {
 		}
 		c.values[value] = v
 	}
-	if value.Flag != nil && value.Flag.Negated {
-		v.SetBool(false)
-	}
 	return v
 }
 
@@ -629,7 +626,12 @@ func (c *Context) Apply() (string, error) {
 			panic("unsupported path ?!")
 		}
 		if value != nil {
-			value.Apply(c.getValue(value))
+			v := c.getValue(value)
+			if value.Flag != nil && value.Flag.Negated {
+				v.SetBool(!v.Bool())
+			}
+
+			value.Apply(v)
 		}
 	}
 

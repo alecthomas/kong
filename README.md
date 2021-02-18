@@ -440,7 +440,7 @@ Tag                    | Description
 `required`             | If present, flag/arg is required.
 `optional`             | If present, flag/arg is optional.
 `hidden`               | If present, command or flag is hidden.
-`negatable`            | If present on a `bool` field, supports prefixing a flag with `--no-` to set flag to `false`
+`negatable`            | If present on a `bool` field, supports prefixing a flag with `--no-` to invert the default value
 `format:"X"`           | Format for parsing input, if supported.
 `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
 `mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
