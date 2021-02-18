@@ -33,6 +33,7 @@ type Tag struct {
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 	Embed       bool
 	Aliases     []string
+	Negatable   bool
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string][]string
@@ -158,6 +159,11 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Xor = t.Get("xor")
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
+	negatable := t.Has("negatable")
+	if negatable && ft.Type.Name() != "bool" {
+		fail("negatable can only be set on booleans")
+	}
+	t.Negatable = negatable
 	splitFn := func(r rune) bool {
 		return r == ',' || r == ' '
 	}

@@ -227,7 +227,6 @@ type Value struct {
 	Tag          *Tag
 	Target       reflect.Value
 	Required     bool
-	Negated      bool
 	Set          bool   // Set to true when this value is set through some mechanism.
 	Format       string // Formatting directive, if applicable.
 	Position     int    // Position (for positional arguments).
@@ -370,6 +369,7 @@ type Flag struct {
 	Env         string
 	Short       rune
 	Hidden      bool
+	Negated     bool
 }
 
 func (f *Flag) String() string {
