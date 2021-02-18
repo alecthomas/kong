@@ -356,6 +356,19 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 	require.Equal(t, "one", ctx.Command())
 }
 
+func TestNegatedBooleanFlag(t *testing.T) {
+	var cli struct {
+		Cmd struct {
+			Flag bool `kong:"default='true'"`
+		} `kong:"cmd"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd", "--no-flag"})
+	require.NoError(t, err)
+	require.Equal(t, false, cli.Cmd.Flag)
+}
+
 type hookContext struct {
 	cmd    bool
 	values []string
