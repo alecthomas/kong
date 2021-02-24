@@ -160,7 +160,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
-	if negatable && ft.Type.Name() != "bool" {
+	if negatable && ft.Type.Kind() != reflect.Bool {
 		fail("negatable can only be set on booleans")
 	}
 	t.Negatable = negatable

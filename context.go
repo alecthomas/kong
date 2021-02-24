@@ -649,7 +649,7 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		if flag.Short != 0 {
 			candidates = append(candidates, short)
 		}
-		if short != match && long != match && neg != match {
+		if short != match && long != match && !(match == neg && flag.Tag.Negatable) {
 			continue
 		}
 		// Found a matching flag.
