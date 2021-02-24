@@ -382,6 +382,21 @@ func TestInvertedNegatedBooleanFlag(t *testing.T) {
 	require.Equal(t, true, cli.Cmd.Flag)
 }
 
+func TestExistingNoFlag(t *testing.T) {
+	var cli struct {
+		Cmd struct {
+			Flag   bool `kong:"default='true'"`
+			NoFlag string
+		} `kong:"cmd"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd", "--no-flag=none"})
+	require.NoError(t, err)
+	require.Equal(t, true, cli.Cmd.Flag)
+	require.Equal(t, "none", cli.Cmd.NoFlag)
+}
+
 func TestInvalidNegatedNonBool(t *testing.T) {
 	var cli struct {
 		Cmd struct {
