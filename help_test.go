@@ -29,7 +29,7 @@ func TestHelp(t *testing.T) {
 		Slice    []string       `help:"A slice of strings." placeholder:"STR"`
 		Map      map[string]int `help:"A map of strings to ints."`
 		Required bool           `required help:"A required flag."`
-		Sort     bool           `negatable help:"Is sortable or not."`
+		Sort     bool           `negatable short:"s" help:"Is sortable or not."`
 
 		One struct {
 			Flag string `help:"Nested flag."`
@@ -76,7 +76,7 @@ Flags:
       --slice=STR,...        A slice of strings.
       --map=KEY=VALUE;...    A map of strings to ints.
       --required             A required flag.
-      --[no-]sort            Is sortable or not.
+  -s, --[no-]sort            Is sortable or not.
 
 Commands:
   one --required
@@ -117,7 +117,7 @@ Flags:
       --slice=STR,...        A slice of strings.
       --map=KEY=VALUE;...    A map of strings to ints.
       --required             A required flag.
-      --[no-]sort            Is sortable or not.
+  -s, --[no-]sort            Is sortable or not.
 
       --flag=STRING          Nested flag under two.
       --required-two
