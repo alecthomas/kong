@@ -385,8 +385,8 @@ function `NamedMapper(name, mapper)`.
 
 | Name              | Description
 |-------------------|---------------------------------------------------
-| `path`            | A path. ~ expansion is applied. `-` is accepted for stdout.
-| `existingfile`    | An existing file. ~ expansion is applied. `-` is accepted for stdin.
+| `path`            | A path. ~ expansion is applied. `-` is accepted for stdout, and will be passed unaltered.
+| `existingfile`    | An existing file. ~ expansion is applied. `-` is accepted for stdin, and will be passed unaltered.
 | `existingdir`     | An existing directory. ~ expansion is applied.
 | `counter`         | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.
 
