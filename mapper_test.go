@@ -378,3 +378,18 @@ func TestFileMapper(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, os.Stdin, cli.File)
 }
+
+func TestPathMapper(t *testing.T) {
+	var cli struct {
+		Path string `arg:"" type:"path"`
+	}
+	p := mustNew(t, &cli)
+
+	_, err := p.Parse([]string{"/an/absolute/path"})
+	require.NoError(t, err)
+	require.Equal(t, "/an/absolute/path", cli.Path)
+
+	_, err = p.Parse([]string{"-"})
+	require.NoError(t, err)
+	require.Equal(t, "-", cli.Path)
+}

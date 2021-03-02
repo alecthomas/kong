@@ -554,7 +554,9 @@ func pathMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
-		path = ExpandPath(path)
+		if path != "-" {
+			path = ExpandPath(path)
+		}
 		target.SetString(path)
 		return nil
 	}
