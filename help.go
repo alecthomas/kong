@@ -48,6 +48,9 @@ type HelpOptions struct {
 	// The following exported templates can be used: kong.SpaceIndenter, kong.LineIndenter, kong.TreeIndenter
 	// The kong.SpaceIndenter will be used by default.
 	Indenter HelpIndenter
+
+	// Don't show the help associated with subcommands
+	NoExpandSubcommands bool
 }
 
 // Apply options to Kong as a configuration option.
@@ -180,7 +183,12 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	if !w.FlagsLast {
 		printFlags()
 	}
-	cmds := node.Leaves(hide)
+	var cmds []*Node
+	if w.NoExpandSubcommands {
+		cmds = node.Children
+	} else {
+		cmds = node.Leaves(hide)
+	}
 	if len(cmds) > 0 {
 		iw := w.Indent()
 		if w.Tree {
