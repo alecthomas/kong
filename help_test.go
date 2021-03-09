@@ -334,6 +334,95 @@ Commands:
 	})
 }
 
+func TestHelpCompactNoExpand(t *testing.T) {
+	// nolint: govet
+	var cli struct {
+		One struct {
+			Thing struct {
+				Arg string `arg help:"argument"`
+			} `cmd help:"subcommand thing"`
+			Other struct {
+				Other string `arg help:"other arg"`
+			} `arg help:"subcommand other"`
+		} `cmd help:"subcommand one" group:"Group A" aliases:"un,uno"` // Groups are ignored in trees
+
+		Two struct {
+			Three threeArg `arg help:"Sub-sub-arg."`
+
+			Four struct {
+			} `cmd help:"Sub-sub-command." aliases:"for,fore"`
+		} `cmd help:"Another subcommand."`
+	}
+
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.ConfigureHelp(kong.HelpOptions{
+			Compact:             true,
+			NoExpandSubcommands: true,
+		}),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true) // Panic to fake "exit".
+		}),
+	)
+
+	t.Run("Full", func(t *testing.T) {
+		require.PanicsWithValue(t, true, func() {
+			_, err := app.Parse([]string{"--help"})
+			require.NoError(t, err)
+		})
+		require.True(t, exited)
+		expected := `Usage: test-app <command>
+
+A test app.
+
+Flags:
+  -h, --help    Show context-sensitive help.
+
+Commands:
+  two    Another subcommand.
+
+Group A
+  one    subcommand one
+
+Run "test-app <command> --help" for more information on a command.
+`
+		if expected != w.String() {
+			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
+		}
+		require.Equal(t, expected, w.String())
+	})
+
+	t.Run("Selected", func(t *testing.T) {
+		exited = false
+		w.Truncate(0)
+		require.PanicsWithValue(t, true, func() {
+			_, err := app.Parse([]string{"one", "--help"})
+			require.NoError(t, err)
+		})
+		require.True(t, exited)
+		expected := `Usage: test-app one <command>
+
+subcommand one
+
+Flags:
+  -h, --help    Show context-sensitive help.
+
+Group A
+  one thing      subcommand thing
+  one <other>    subcommand other
+`
+		if expected != w.String() {
+			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
+		}
+		require.Equal(t, expected, w.String())
+	})
+}
+
 func TestEnvarAutoHelp(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG" help:"A flag."`
