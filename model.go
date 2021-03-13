@@ -146,11 +146,17 @@ func (n *Node) Summary() string {
 		summary += " " + flags
 	}
 	args := []string{}
+	optional := 0
 	for _, arg := range n.Positional {
-		args = append(args, arg.Summary())
+		summary := arg.Summary()
+		if arg.Tag.Optional {
+			optional++
+			summary = strings.TrimRight(summary, "]")
+		}
+		args = append(args, summary)
 	}
 	if len(args) != 0 {
-		summary += " " + strings.Join(args, " ")
+		summary += " " + strings.Join(args, " ") + strings.Repeat("]", optional)
 	} else if len(n.Children) > 0 {
 		summary += " <command>"
 	}

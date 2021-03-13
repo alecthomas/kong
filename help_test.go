@@ -21,6 +21,38 @@ func (threeArg) Help() string {
 	return `Detailed help provided through the HelpProvider interface.`
 }
 
+func TestHelpOptionalArgs(t *testing.T) {
+	var cli struct {
+		One string `arg:"" optional:"" help:"One optional arg."`
+		Two string `arg:"" optional:"" help:"Two optional arg."`
+	}
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true) // Panic to fake "exit".
+		}),
+	)
+	require.PanicsWithValue(t, true, func() {
+		_, err := app.Parse([]string{"--help"})
+		require.NoError(t, err)
+	})
+	require.True(t, exited)
+	expected := `Usage: test-app [<one> [<two>]]
+
+Arguments:
+  [<one>]    One optional arg.
+  [<two>]    Two optional arg.
+
+Flags:
+  -h, --help    Show context-sensitive help.
+`
+	require.Equal(t, expected, w.String())
+}
+
 func TestHelp(t *testing.T) {
 	// nolint: govet
 	var cli struct {
