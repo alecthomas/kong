@@ -148,12 +148,12 @@ func (n *Node) Summary() string {
 	args := []string{}
 	optional := 0
 	for _, arg := range n.Positional {
-		summary := arg.Summary()
+		argSummary := arg.Summary()
 		if arg.Tag.Optional {
 			optional++
-			summary = strings.TrimRight(summary, "]")
+			argSummary = strings.TrimRight(argSummary, "]")
 		}
-		args = append(args, summary)
+		args = append(args, argSummary)
 	}
 	if len(args) != 0 {
 		summary += " " + strings.Join(args, " ") + strings.Repeat("]", optional)
