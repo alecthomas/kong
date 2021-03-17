@@ -84,7 +84,7 @@ func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Val
 	if err != nil {
 		return err
 	}
-	if target.Type().Implements(textUnmarshalerType) {
+	if target.Type().Implements(binaryUnmarshalerType) {
 		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
 	}
 	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
