@@ -243,3 +243,51 @@ func TestValidatingResolverErrors(t *testing.T) {
 	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
 	require.EqualError(t, err, "invalid")
 }
+
+func TestParseENVFileBasic(t *testing.T) {
+	var cli struct {
+		String string `env:"STRING"`
+		Int    int    `env:"INT"`
+		Bool   bool   `env:"BOOL"`
+	}
+
+	envFlie := `STRING=🍕
+INT=5
+BOOL=true
+`
+
+	r, err := kong.ENVFile(strings.NewReader(envFlie))
+	require.NoError(t, err)
+
+	parser := mustNew(t, &cli, kong.Resolvers(r))
+	_, err = parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "🍕", cli.String)
+	require.Equal(t, 5, cli.Int)
+	require.True(t, cli.Bool)
+}
+
+func TestParseENVFileSubstitutions(t *testing.T) {
+	var cli struct {
+		String  string `env:"STRING"`
+		Int     int    `env:"INT"`
+		Bool    bool   `env:"BOOL"`
+		String2 string `env:"STRING_2"`
+	}
+
+	envFlie := `STRING=🍕
+INT=5
+BOOL=true
+STRING_2=$STRING
+`
+
+	r, err := kong.ENVFile(strings.NewReader(envFlie))
+	require.NoError(t, err)
+
+	parser := mustNew(t, &cli, kong.Resolvers(r))
+	_, err = parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "🍕", cli.String)
+	require.Equal(t, 5, cli.Int)
+	require.True(t, cli.Bool)
+}

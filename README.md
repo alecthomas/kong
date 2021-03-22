@@ -552,6 +552,10 @@ eg.
 ```go
 kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json"))
 ```
+or with .env file
+```go
+kong.Parse(&cli, kong.Configuration(kong.ENVFile, "./production.env", "./.dev.env"))
+```
 
 [See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L103) for an example of how the JSON file is structured.
 

@@ -47,3 +47,23 @@ func JSON(r io.Reader) (Resolver, error) {
 
 	return f, nil
 }
+
+// ENVFile returns a Resolver that retrieves values from a .env file source.
+//
+// ENVFile resolves only flags with `env:"X"` tag.
+func ENVFile(r io.Reader) (Resolver, error) {
+	values, err := ParseENVFile(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var f ResolverFunc = func(context *Context, parent *Path, flag *Flag) (interface{}, error) {
+		raw, ok := values[flag.Env]
+		if !ok {
+			return nil, nil
+		}
+		return raw, nil
+	}
+
+	return f, nil
+}
