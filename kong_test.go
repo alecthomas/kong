@@ -1002,3 +1002,30 @@ func TestPointers(t *testing.T) {
 	require.NotNil(t, cli.JSON)
 	require.Equal(t, "FOO", string(*cli.JSON))
 }
+
+type dynamicCommand struct {
+	Flag string
+
+	ran bool
+}
+
+func (d *dynamicCommand) Run() error {
+	d.ran = true
+	return nil
+}
+
+func TestDynamicCommands(t *testing.T) {
+	cli := struct {
+		One struct{} `cmd:"one"`
+	}{}
+	two := &dynamicCommand{}
+	var twoi interface{} = &two
+	p := mustNew(t, &cli, kong.DynamicCommand("two", "", "", twoi))
+	kctx, err := p.Parse([]string{"two", "--flag=flag"})
+	require.NoError(t, err)
+	require.Equal(t, "flag", two.Flag)
+	require.False(t, two.ran)
+	err = kctx.Run()
+	require.NoError(t, err)
+	require.True(t, two.ran)
+}

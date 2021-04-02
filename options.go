@@ -54,6 +54,28 @@ func Exit(exit func(int)) Option {
 	})
 }
 
+type dynamicCommand struct {
+	name  string
+	help  string
+	group string
+	cmd   interface{}
+}
+
+// DynamicCommand registers a dynamically constructed command with the root of the CLI.
+//
+// This is useful for command-line structures that are extensible via user-provided plugins.
+func DynamicCommand(name, help, group string, cmd interface{}) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.dynamicCommands = append(k.dynamicCommands, &dynamicCommand{
+			name:  name,
+			help:  help,
+			group: group,
+			cmd:   cmd,
+		})
+		return nil
+	})
+}
+
 // NoDefaultHelp disables the default help flags.
 func NoDefaultHelp() Option {
 	return OptionFunc(func(k *Kong) error {

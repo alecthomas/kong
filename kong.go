@@ -66,6 +66,7 @@ type Kong struct {
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
+	dynamicCommands  []*dynamicCommand
 }
 
 // New creates a new Kong parser on grammar.
@@ -105,6 +106,20 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	model.Name = filepath.Base(os.Args[0])
 	k.Model = model
 	k.Model.HelpFlag = k.helpFlag
+
+	// Synthesise command nodes.
+	for _, dcmd := range k.dynamicCommands {
+		tag := newEmptyTag()
+		tag.Name = dcmd.name
+		tag.Help = dcmd.help
+		tag.Group = dcmd.group
+		tag.Cmd = true
+		v := reflect.Indirect(reflect.ValueOf(dcmd.cmd))
+		buildChild(k, k.Model.Node, CommandNode, reflect.Value{}, reflect.StructField{
+			Name: dcmd.name,
+			Type: v.Type(),
+		}, v, tag, dcmd.name, map[string]bool{})
+	}
 
 	for _, option := range k.postBuildOptions {
 		if err = option.Apply(k); err != nil {
