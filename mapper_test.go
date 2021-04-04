@@ -207,6 +207,33 @@ func TestSliceConsumesRemainingPositionalArgs(t *testing.T) {
 	require.Equal(t, []string{"ls", "-lart"}, cli.Remainder)
 }
 
+func TestPassthroughStopsParsing(t *testing.T) {
+	type cli struct {
+		Interactive bool     `short:"i"`
+		Image       string   `arg:""`
+		Argv        []string `arg:"" optional:"" passthrough:""`
+	}
+
+	var actual cli
+	p := mustNew(t, &actual)
+
+	_, err := p.Parse([]string{"alpine", "sudo", "-i", "true"})
+	require.NoError(t, err)
+	require.Equal(t, cli{
+		Interactive: false,
+		Image:       "alpine",
+		Argv:        []string{"sudo", "-i", "true"},
+	}, actual)
+
+	_, err = p.Parse([]string{"alpine", "-i", "sudo", "-i", "true"})
+	require.NoError(t, err)
+	require.Equal(t, cli{
+		Interactive: true,
+		Image:       "alpine",
+		Argv:        []string{"sudo", "-i", "true"},
+	}, actual)
+}
+
 type mappedValue struct {
 	decoded string
 }
