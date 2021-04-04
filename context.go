@@ -324,6 +324,21 @@ func (c *Context) Reset() error {
 	})
 }
 
+func (c *Context) endParsing() {
+	args := []string{}
+	for {
+		token := c.scan.Pop()
+		if token.Type == EOLToken {
+			break
+		}
+		args = append(args, token.String())
+	}
+	// Note: tokens must be pushed in reverse order.
+	for i := range args {
+		c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
+	}
+}
+
 func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 
@@ -349,18 +364,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
 				case v == "--":
 					c.scan.Pop()
-					args := []string{}
-					for {
-						token = c.scan.Pop()
-						if token.Type == EOLToken {
-							break
-						}
-						args = append(args, token.String())
-					}
-					// Note: tokens must be pushed in reverse order.
-					for i := range args {
-						c.scan.PushTyped(args[len(args)-1-i], PositionalArgumentToken)
-					}
+					c.endParsing()
 
 				// Long flag.
 				case strings.HasPrefix(v, "--"):
@@ -413,6 +417,11 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			// Ensure we've consumed all positional arguments.
 			if positional < len(node.Positional) {
 				arg := node.Positional[positional]
+
+				if arg.Passthrough {
+					c.endParsing()
+				}
+
 				err := arg.Parse(c.scan, c.getValue(arg))
 				if err != nil {
 					return err

@@ -34,6 +34,7 @@ type Tag struct {
 	Embed       bool
 	Aliases     []string
 	Negatable   bool
+	Passthrough bool
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string][]string
@@ -184,6 +185,11 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
 	}
 	t.Enum = t.Get("enum")
+	passthrough := t.Has("passthrough")
+	if passthrough && !t.Arg {
+		fail("passthrough only makes sense for positional arguments")
+	}
+	t.Passthrough = passthrough
 	return t
 }
 
