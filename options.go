@@ -329,9 +329,16 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.loader = loader
 		for _, path := range paths {
-			if _, err := os.Stat(ExpandPath(path)); os.IsNotExist(err) {
-				continue
+			f, err := os.Open(ExpandPath(path))
+			if err != nil {
+				if os.IsNotExist(err) || os.IsPermission(err) {
+					continue
+				}
+
+				return err
 			}
+			f.Close()
+
 			resolver, err := k.LoadConfig(path)
 			if err != nil {
 				return errors.Wrap(err, path)
