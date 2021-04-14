@@ -451,7 +451,7 @@ Tag                    | Description
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
 `passthrough`          | If present, this positional argument stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`.
-`-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct.
+`-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct. e.g `` `kong:"-"` ``
 
 ## Plugins
 
