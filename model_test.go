@@ -26,7 +26,7 @@ func TestModelApplicationCommands(t *testing.T) {
 	require.Equal(t, []string{"one two", "one three <four>"}, actual)
 }
 
-func TestFormatPlaceHolder(t *testing.T) {
+func TestFlagString(t *testing.T) {
 	var cli struct {
 		String                  string
 		DefaultInt              int    `default:"42"`
@@ -41,28 +41,30 @@ func TestFormatPlaceHolder(t *testing.T) {
 		MapNoSep                map[string]string `mapsep:"none"`
 		MapDefault              map[string]string `mapsep:"none" default:"hello"`
 		MapPlaceholder          map[string]string `mapsep:"none" placeholder:"world"`
+		Counter                 int               `type:"counter"`
 	}
 	tests := map[string]string{
-		"help":                      "HELP",
-		"string":                    "STRING",
-		"default-int":               "42",
-		"default-str":               `"hello"`,
-		"placeholder":               "world",
-		"slice-sep":                 "SLICE-SEP,...",
-		"slice-no-sep":              "SLICE-NO-SEP",
-		"slice-default":             "hello,...",
-		"slice-placeholder":         "world,...",
-		"slice-default-placeholder": "hello,...",
-		"map-sep":                   "KEY=VALUE;...",
-		"map-no-sep":                "KEY=VALUE",
-		"map-default":               "hello",
-		"map-placeholder":           "world",
+		"help":                      "-h, --help",
+		"string":                    "--string=STRING",
+		"default-int":               "--default-int=42",
+		"default-str":               `--default-str="hello"`,
+		"placeholder":               "--placeholder=world",
+		"slice-sep":                 "--slice-sep=SLICE-SEP,...",
+		"slice-no-sep":              "--slice-no-sep=SLICE-NO-SEP",
+		"slice-default":             "--slice-default=hello,...",
+		"slice-placeholder":         "--slice-placeholder=world,...",
+		"slice-default-placeholder": "--slice-default-placeholder=hello,...",
+		"map-sep":                   "--map-sep=KEY=VALUE;...",
+		"map-no-sep":                "--map-no-sep=KEY=VALUE",
+		"map-default":               "--map-default=hello",
+		"map-placeholder":           "--map-placeholder=world",
+		"counter":                   "--counter",
 	}
 
 	p := mustNew(t, &cli)
 	for _, flag := range p.Model.Flags {
 		want, ok := tests[flag.Name]
 		require.Truef(t, ok, "unknown flag name: %s", flag.Name)
-		require.Equal(t, want, flag.FormatPlaceHolder())
+		require.Equal(t, want, flag.String())
 	}
 }

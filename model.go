@@ -305,6 +305,11 @@ func (v *Value) IsBool() bool {
 	return v.Target.Kind() == reflect.Bool
 }
 
+// IsCounter returns true if the value is a counter.
+func (v *Value) IsCounter() bool {
+	return v.Tag.Type == "counter"
+}
+
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 	defer func() {
@@ -384,7 +389,7 @@ func (f *Flag) String() string {
 	if f.Short != 0 {
 		out = fmt.Sprintf("-%c, %s", f.Short, out)
 	}
-	if !f.IsBool() {
+	if !f.IsBool() && !f.IsCounter() {
 		out += "=" + f.FormatPlaceHolder()
 	}
 	return out
