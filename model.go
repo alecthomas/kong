@@ -399,7 +399,7 @@ func (f *Flag) String() string {
 func (f *Flag) FormatPlaceHolder() string {
 	placeholderHelper, ok := f.Value.Mapper.(PlaceHolderProvider)
 	if ok {
-		return placeholderHelper.PlaceHolder()
+		return placeholderHelper.PlaceHolder(f)
 	}
 	tail := ""
 	if f.Value.IsSlice() && f.Value.Tag.Sep != -1 {

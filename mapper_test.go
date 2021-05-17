@@ -449,6 +449,6 @@ func (t testMapperWithPlaceHolder) Decode(ctx *kong.DecodeContext, target reflec
 	return nil
 }
 
-func (t testMapperWithPlaceHolder) PlaceHolder() string {
+func (t testMapperWithPlaceHolder) PlaceHolder(flag *kong.Flag) string {
 	return "/a/b/c"
 }

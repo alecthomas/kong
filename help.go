@@ -67,7 +67,7 @@ type HelpProvider interface {
 
 // PlaceHolderProvider can be implemented by mappers to provide custom placeholder text.
 type PlaceHolderProvider interface {
-	PlaceHolder() string
+	PlaceHolder(flag *Flag) string
 }
 
 // HelpIndenter is used to indent new layers in the help tree.
