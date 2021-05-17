@@ -420,3 +420,35 @@ func TestPathMapper(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "-", cli.Path)
 }
+
+func TestMapperPlaceHolder(t *testing.T) {
+	var cli struct {
+		Flag string
+	}
+	b := bytes.NewBuffer(nil)
+	k := mustNew(
+		t,
+		&cli,
+		kong.Writers(b, b),
+		kong.ValueMapper(&cli.Flag, testMapperWithPlaceHolder{}),
+		kong.Exit(func(int) { panic("exit") }),
+	)
+	// Ensure that --help
+	require.Panics(t, func() {
+		_, err := k.Parse([]string{"--help"})
+		require.NoError(t, err)
+	})
+	require.Contains(t, b.String(), "--flag=/a/b/c")
+}
+
+type testMapperWithPlaceHolder struct {
+}
+
+func (t testMapperWithPlaceHolder) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
+	target.SetString("hi")
+	return nil
+}
+
+func (t testMapperWithPlaceHolder) PlaceHolder(flag *kong.Flag) string {
+	return "/a/b/c"
+}

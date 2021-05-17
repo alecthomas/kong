@@ -65,6 +65,11 @@ type HelpProvider interface {
 	Help() string
 }
 
+// PlaceHolderProvider can be implemented by mappers to provide custom placeholder text.
+type PlaceHolderProvider interface {
+	PlaceHolder(flag *Flag) string
+}
+
 // HelpIndenter is used to indent new layers in the help tree.
 type HelpIndenter func(prefix string) string
 

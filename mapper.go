@@ -43,6 +43,7 @@ func (r *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
 }
 
 // MapperValue may be implemented by fields in order to provide custom mapping.
+// Mappers may additionally implement PlaceHolderProvider to provide custom placeholder text.
 type MapperValue interface {
 	Decode(ctx *DecodeContext) error
 }
