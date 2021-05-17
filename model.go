@@ -397,6 +397,10 @@ func (f *Flag) String() string {
 
 // FormatPlaceHolder formats the placeholder string for a Flag.
 func (f *Flag) FormatPlaceHolder() string {
+	placeholderHelper, ok := f.Value.Mapper.(PlaceHolderProvider)
+	if ok {
+		return placeholderHelper.PlaceHolder()
+	}
 	tail := ""
 	if f.Value.IsSlice() && f.Value.Tag.Sep != -1 {
 		tail += string(f.Value.Tag.Sep) + "..."
