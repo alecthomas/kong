@@ -635,12 +635,7 @@ func (c *Context) Apply() (string, error) {
 			panic("unsupported path ?!")
 		}
 		if value != nil {
-			v := c.getValue(value)
-			if value.Flag != nil && value.Flag.Negated {
-				v.SetBool(!v.Bool())
-			}
-
-			value.Apply(v)
+			value.Apply(c.getValue(value))
 		}
 	}
 
@@ -672,6 +667,11 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 				return errors.Errorf("%s; perhaps try %s=%q?", err, flag.ShortSummary(), e.token)
 			}
 			return err
+		}
+		if flag.Negated {
+			value := c.getValue(flag.Value)
+			value.SetBool(!value.Bool())
+			flag.Value.Apply(value)
 		}
 		c.Path = append(c.Path, &Path{Flag: flag})
 		return nil

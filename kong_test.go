@@ -356,30 +356,65 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 	require.Equal(t, "one", ctx.Command())
 }
 
-func TestNegatedBooleanFlag(t *testing.T) {
-	var cli struct {
-		Cmd struct {
-			Flag bool `kong:"default='true',negatable"`
-		} `kong:"cmd"`
-	}
-
-	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{"cmd", "--no-flag"})
-	require.NoError(t, err)
-	require.Equal(t, false, cli.Cmd.Flag)
+type commandWithNegatableFlag struct {
+	Flag bool `kong:"default='true',negatable"`
+	ran  bool
 }
 
-func TestInvertedNegatedBooleanFlag(t *testing.T) {
-	var cli struct {
-		Cmd struct {
-			Flag bool `kong:"default='true',negatable"`
-		} `kong:"cmd"`
-	}
+func (c *commandWithNegatableFlag) Run() error {
+	c.ran = true
+	return nil
+}
 
-	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{"cmd", "--no-flag=false"})
-	require.NoError(t, err)
-	require.Equal(t, true, cli.Cmd.Flag)
+func TestNegatableFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected bool
+	}{
+		{
+			name:     "no flag",
+			args:     []string{"cmd"},
+			expected: true,
+		},
+		{
+			name:     "boolean flag",
+			args:     []string{"cmd", "--flag"},
+			expected: true,
+		},
+		{
+			name:     "inverted boolean flag",
+			args:     []string{"cmd", "--flag=false"},
+			expected: false,
+		},
+		{
+			name:     "negated boolean flag",
+			args:     []string{"cmd", "--no-flag"},
+			expected: false,
+		},
+		{
+			name:     "inverted negated boolean flag",
+			args:     []string{"cmd", "--no-flag=false"},
+			expected: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cli struct {
+				Cmd commandWithNegatableFlag `kong:"cmd"`
+			}
+
+			p := mustNew(t, &cli)
+			kctx, err := p.Parse(tt.args)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cli.Cmd.Flag)
+
+			err = kctx.Run()
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cli.Cmd.Flag)
+			require.True(t, cli.Cmd.ran)
+		})
+	}
 }
 
 func TestExistingNoFlag(t *testing.T) {
