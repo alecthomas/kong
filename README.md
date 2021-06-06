@@ -420,14 +420,14 @@ interface it will be used to decode arguments into the field.
 Tags can be in two forms:
 
 1. Standard Go syntax, eg. `kong:"required,name='foo'"`.
-2. Bare tags, eg. `required name:"foo"`
+2. Bare tags, eg. `required:"" name:"foo"`
 
 Both can coexist with standard Tag parsing.
 
 Tag                    | Description
 -----------------------| -------------------------------------------
-`cmd`                  | If present, struct is a command.
-`arg`                  | If present, field is an argument.
+`cmd:""`               | If present, struct is a command.
+`arg:""`               | If present, field is an argument.
 `env:"X"`              | Specify envar to use for default value.
 `name:"X"`             | Long name, for overriding field name.
 `help:"X"`             | Help text.
@@ -437,10 +437,10 @@ Tag                    | Description
 `default:"1"`          | On a command, make it the default.
 `short:"X"`            | Short name, if flag.
 `aliases:"X,Y"`        | One or more aliases (for cmd).
-`required`             | If present, flag/arg is required.
-`optional`             | If present, flag/arg is optional.
-`hidden`               | If present, command or flag is hidden.
-`negatable`            | If present on a `bool` field, supports prefixing a flag with `--no-` to invert the default value
+`required:""`          | If present, flag/arg is required.
+`optional:""`          | If present, flag/arg is optional.
+`hidden:""`            | If present, command or flag is hidden.
+`negatable:""`         | If present on a `bool` field, supports prefixing a flag with `--no-` to invert the default value
 `format:"X"`           | Format for parsing input, if supported.
 `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
 `mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
@@ -449,8 +449,8 @@ Tag                    | Description
 `xor:"X"`              | Exclusive OR group for flags. Only one flag in the group can be used which is restricted within the same command.
 `prefix:"X"`           | Prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
-`embed`                | If present, this field's children will be embedded in the parent. Useful for composition.
-`passthrough`          | If present, this positional argument stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`.
+`embed:""`             | If present, this field's children will be embedded in the parent. Useful for composition.
+`passthrough:""`       | If present, this positional argument stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`.
 `-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct. e.g `` `kong:"-"` ``
 
 ## Plugins
