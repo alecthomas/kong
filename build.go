@@ -119,7 +119,10 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 
 	// "Unsee" flags.
 	for _, flag := range node.Flags {
-		delete(seenFlags, flag.Name)
+		delete(seenFlags, "--"+flag.Name)
+		if flag.Short != 0 {
+			delete(seenFlags, "-"+string(flag.Short))
+		}
 	}
 
 	// Scan through argument positionals to ensure optional is never before a required.
@@ -205,10 +208,18 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 	if tag.Arg {
 		node.Positional = append(node.Positional, value)
 	} else {
-		if seenFlags[value.Name] {
+		if seenFlags["--"+value.Name] {
 			fail("duplicate flag --%s", value.Name)
+		} else {
+			seenFlags["--"+value.Name] = true
 		}
-		seenFlags[value.Name] = true
+		if tag.Short != 0 {
+			if seenFlags["-"+string(tag.Short)] {
+				fail("duplicate short flag -%c", tag.Short)
+			} else {
+				seenFlags["-"+string(tag.Short)] = true
+			}
+		}
 		flag := &Flag{
 			Value:       value,
 			Short:       tag.Short,

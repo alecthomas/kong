@@ -1062,3 +1062,23 @@ func TestDynamicCommands(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, two.ran)
 }
+
+func TestDuplicateShortflags(t *testing.T) {
+	cli := struct {
+		Flag1 bool `short:"t"`
+		Flag2 bool `short:"t"`
+	}{}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "duplicate short flag -t")
+}
+
+func TestDuplicateNestedShortFlags(t *testing.T) {
+	cli := struct {
+		Flag1 bool `short:"t"`
+		Cmd   struct {
+			Flag2 bool `short:"t"`
+		} `cmd:""`
+	}{}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "duplicate short flag -t")
+}
