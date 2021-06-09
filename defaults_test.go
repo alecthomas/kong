@@ -24,7 +24,6 @@ func TestApplyDefaults(t *testing.T) {
 			expected: CLI{Str: "str", Duration: time.Second}},
 	}
 	for _, tt := range tests {
-		// nolint: scopelint
 		t.Run(tt.name, func(t *testing.T) {
 			err := ApplyDefaults(&tt.target)
 			require.NoError(t, err)

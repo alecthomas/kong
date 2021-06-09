@@ -192,7 +192,6 @@ func TestLastResolverWins(t *testing.T) {
 }
 
 func TestResolverSatisfiesRequired(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		Int int `required`
 	}

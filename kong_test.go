@@ -118,7 +118,6 @@ func TestFlagSliceWithSeparator(t *testing.T) {
 }
 
 func TestArgSlice(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		Slice []int `arg`
 		Flag  bool
@@ -131,7 +130,6 @@ func TestArgSlice(t *testing.T) {
 }
 
 func TestArgSliceWithSeparator(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		Slice []string `arg`
 		Flag  bool
@@ -498,7 +496,6 @@ func TestHooks(t *testing.T) {
 	for _, test := range tests {
 		*ctx = hookContext{}
 		cli.One = hookCmd{}
-		// nolint: scopelint
 		t.Run(test.name, func(t *testing.T) {
 			_, err := p.Parse(strings.Split(test.input, " "))
 			require.NoError(t, err)

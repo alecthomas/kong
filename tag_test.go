@@ -68,7 +68,6 @@ func TestEscapedQuote(t *testing.T) {
 }
 
 func TestBareTags(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		Cmd struct {
 			Arg  string `arg`
@@ -84,7 +83,6 @@ func TestBareTags(t *testing.T) {
 }
 
 func TestBareTagsWithJsonTag(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		Cmd struct {
 			Arg  string `json:"-" optional arg`
@@ -100,7 +98,6 @@ func TestBareTagsWithJsonTag(t *testing.T) {
 }
 
 func TestManySeps(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		Arg string `arg    optional    default:"hi"`
 	}

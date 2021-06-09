@@ -22,10 +22,10 @@ type ResolverFunc func(context *Context, parent *Path, flag *Flag) (interface{},
 
 var _ Resolver = ResolverFunc(nil)
 
-func (r ResolverFunc) Resolve(context *Context, parent *Path, flag *Flag) (interface{}, error) { // nolint: golint
+func (r ResolverFunc) Resolve(context *Context, parent *Path, flag *Flag) (interface{}, error) { // nolint: revive
 	return r(context, parent, flag)
 }
-func (r ResolverFunc) Validate(app *Application) error { return nil } //  nolint: golint
+func (r ResolverFunc) Validate(app *Application) error { return nil } // nolint: revive
 
 // JSON returns a Resolver that retrieves values from a JSON source.
 //
@@ -37,7 +37,7 @@ func JSON(r io.Reader) (Resolver, error) {
 		return nil, err
 	}
 	var f ResolverFunc = func(context *Context, parent *Path, flag *Flag) (interface{}, error) {
-		name := strings.Replace(flag.Name, "-", "_", -1)
+		name := strings.ReplaceAll(flag.Name, "-", "_")
 		raw, ok := values[name]
 		if !ok {
 			return nil, nil

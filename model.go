@@ -205,6 +205,7 @@ func (n *Node) Path() (out string) {
 		out += " " + n.Name
 	case ArgumentNode:
 		out += " " + "<" + n.Name + ">"
+	default:
 	}
 	return strings.TrimSpace(out)
 }

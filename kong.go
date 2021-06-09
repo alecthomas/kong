@@ -385,7 +385,7 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer r.Close() // nolint: gosec
 
 	return k.loader(r)
 }

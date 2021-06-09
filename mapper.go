@@ -125,7 +125,7 @@ type BoolMapper interface {
 // A MapperFunc is a single function that complies with the Mapper interface.
 type MapperFunc func(ctx *DecodeContext, target reflect.Value) error
 
-func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { // nolint: golint
+func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { // nolint: revive
 	return m(ctx, target)
 }
 
@@ -737,7 +737,7 @@ func SplitEscaped(s string, sep rune) (out []string) {
 func JoinEscaped(s []string, sep rune) string {
 	escaped := []string{}
 	for _, e := range s {
-		escaped = append(escaped, strings.Replace(e, string(sep), `\`+string(sep), -1))
+		escaped = append(escaped, strings.ReplaceAll(e, string(sep), `\`+string(sep)))
 	}
 	return strings.Join(escaped, string(sep))
 }
@@ -748,7 +748,7 @@ type NamedFileContentFlag struct {
 	Contents []byte
 }
 
-func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
+func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 	var filename string
 	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {
@@ -772,7 +772,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: gol
 // FileContentFlag is a flag value that loads a file's contents into its value.
 type FileContentFlag []byte
 
-func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
+func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 	var filename string
 	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {

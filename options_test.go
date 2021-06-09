@@ -28,7 +28,7 @@ func TestBindTo(t *testing.T) {
 	}
 
 	saw := ""
-	method := func(i iface) error { // nolint: unparam
+	method := func(i iface) error {
 		saw = string(i.(impl))
 		return nil
 	}

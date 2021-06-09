@@ -585,6 +585,7 @@ func (c *Context) getValue(value *Value) reflect.Value {
 			v.Set(reflect.MakeSlice(v.Type(), 0, 0))
 		case reflect.Map:
 			v.Set(reflect.MakeMap(v.Type()))
+		default:
 		}
 		c.values[value] = v
 	}

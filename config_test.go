@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/require"
+
+	"github.com/alecthomas/kong"
 )
 
 func TestMultipleConfigLoading(t *testing.T) {
@@ -47,7 +48,7 @@ func makeConfig(t *testing.T, config interface{}) (path string, cleanup func()) 
 	t.Helper()
 	w, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
-	defer w.Close()
+	defer w.Close() // nolint: gosec
 	err = json.NewEncoder(w).Encode(config)
 	require.NoError(t, err)
 	return w.Name(), func() { os.Remove(w.Name()) }

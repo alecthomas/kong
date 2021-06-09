@@ -11,7 +11,6 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-// nolint: govet
 type threeArg struct {
 	RequiredThree bool   `required`
 	Three         string `arg`
@@ -54,7 +53,6 @@ Flags:
 }
 
 func TestHelp(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		String   string         `help:"A string flag."`
 		Bool     bool           `help:"A bool flag with very long help that wraps a lot and is verbose and is really verbose."`
@@ -163,7 +161,6 @@ Flags:
 }
 
 func TestFlagsLast(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		String   string         `help:"A string flag."`
 		Bool     bool           `help:"A bool flag with very long help that wraps a lot and is verbose and is really verbose."`
@@ -272,7 +269,6 @@ Flags:
 }
 
 func TestHelpTree(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		One struct {
 			Thing struct {
@@ -367,7 +363,6 @@ Commands:
 }
 
 func TestHelpCompactNoExpand(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		One struct {
 			Thing struct {
@@ -484,7 +479,6 @@ func TestCustomHelpFormatter(t *testing.T) {
 }
 
 func TestHelpGrouping(t *testing.T) {
-	// nolint: govet
 	var cli struct {
 		GroupedAString string `help:"A string flag grouped in A." group:"Group A"`
 		FreeString     string `help:"A non grouped string flag."`

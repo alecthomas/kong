@@ -15,6 +15,25 @@ linters:
     - gocognit
     - gomnd
     - goprintffuncname
+    - paralleltest
+    - nlreturn
+    - goerr113
+    - ifshort
+    - testpackage
+    - wrapcheck
+    - exhaustivestruct
+    - forbidigo
+    - gci
+    - godot
+    - gofumpt
+    - cyclop
+    - errorlint
+    - nestif
+    - golint
+    - scopelint
+    - interfacer
+    - tagliatelle
+    - thelper
 
 linters-settings:
   govet:
@@ -26,6 +45,8 @@ linters-settings:
     min-occurrences: 3
   gocyclo:
     min-complexity: 20
+  exhaustive:
+    default-signifies-exhaustive: true
 
 issues:
   max-per-linter: 0
