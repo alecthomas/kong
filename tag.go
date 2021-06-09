@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -130,9 +131,12 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 		t.Ignored = true
 		return t
 	}
-	t := &Tag{
-		items: parseTagItems(getTagInfo(ft)),
-	}
+	var (
+		err error
+		t   = &Tag{
+			items: parseTagItems(getTagInfo(ft)),
+		}
+	)
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
 	required := t.Has("required")
@@ -151,7 +155,10 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Help = t.Get("help")
 	t.Type = t.Get("type")
 	t.Env = t.Get("env")
-	t.Short, _ = t.GetRune("short")
+	t.Short, err = t.GetRune("short")
+	if err != nil && t.Get("short") != "" {
+		fail("invalid short flag name %q: %s", t.Get("short"), err)
+	}
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetSep("sep", ',')
@@ -232,9 +239,10 @@ func (t *Tag) GetInt(k string) (int64, error) {
 
 // GetRune parses the given tag as a rune.
 func (t *Tag) GetRune(k string) (rune, error) {
-	r, _ := utf8.DecodeRuneInString(t.Get(k))
-	if r == utf8.RuneError {
-		return 0, fmt.Errorf("%v has a rune error", t.Get(k))
+	value := t.Get(k)
+	r, size := utf8.DecodeRuneInString(value)
+	if r == utf8.RuneError || size < len(value) {
+		return 0, errors.New("invalid rune")
 	}
 	return r, nil
 }

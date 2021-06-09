@@ -192,3 +192,11 @@ func TestTagAliasesSub(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "arg", cli.Cmd.SubCmd.Arg)
 }
+
+func TestInvalidRuneErrors(t *testing.T) {
+	cli := struct {
+		Flag bool `short:"invalid"`
+	}{}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "invalid short flag name \"invalid\": invalid rune")
+}
