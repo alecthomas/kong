@@ -708,3 +708,38 @@ test: error: missing flags: --flag=STRING
 `
 	require.Equal(t, expected, w.String())
 }
+
+func TestCustomWrap(t *testing.T) {
+	var cli struct {
+		Flag string `help:"A string flag with very long help that wraps a lot and is verbose and is really verbose."`
+	}
+
+	w := bytes.NewBuffer(nil)
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.HelpOptions{
+			WrapUpperBound: 50,
+		},
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+	)
+
+	_, err := app.Parse([]string{"--help"})
+	require.NoError(t, err)
+	expected := `Usage: test-app
+
+A test app.
+
+Flags:
+  -h, --help           Show context-sensitive
+                       help.
+      --flag=STRING    A string flag with very
+                       long help that wraps a lot
+                       and is verbose and is
+                       really verbose.
+`
+	t.Log(w.String())
+	t.Log(expected)
+	require.Equal(t, expected, w.String())
+}

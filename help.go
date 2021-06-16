@@ -51,6 +51,11 @@ type HelpOptions struct {
 
 	// Don't show the help associated with subcommands
 	NoExpandSubcommands bool
+
+	// Clamp the help wrap width to a value smaller than the terminal width.
+	// If this is set to a non-positive number, the terminal width is used; otherwise,
+	// the min of this value or the terminal width is used.
+	WrapUpperBound int
 }
 
 // Apply options to Kong as a configuration option.
@@ -367,9 +372,13 @@ type helpWriter struct {
 
 func newHelpWriter(ctx *Context, options HelpOptions) *helpWriter {
 	lines := []string{}
+	wrapWidth := guessWidth(ctx.Stdout)
+	if options.WrapUpperBound > 0 && wrapWidth > options.WrapUpperBound {
+		wrapWidth = options.WrapUpperBound
+	}
 	w := &helpWriter{
 		indent:        "",
-		width:         guessWidth(ctx.Stdout),
+		width:         wrapWidth,
 		lines:         &lines,
 		helpFormatter: ctx.Kong.helpFormatter,
 		HelpOptions:   options,
