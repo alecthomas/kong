@@ -26,10 +26,10 @@ func tempEnv(env envMap) func() {
 	}
 }
 
-func newEnvParser(t *testing.T, cli interface{}, env envMap) (*kong.Kong, func()) {
+func newEnvParser(t *testing.T, cli interface{}, env envMap, options ...kong.Option) (*kong.Kong, func()) {
 	t.Helper()
 	restoreEnv := tempEnv(env)
-	parser := mustNew(t, cli)
+	parser := mustNew(t, cli, options...)
 	return parser, restoreEnv
 }
 
@@ -90,6 +90,42 @@ func TestEnvarsWithDefault(t *testing.T) {
 	_, err = parser.Parse(nil)
 	require.NoError(t, err)
 	require.Equal(t, "moo", cli.Flag)
+}
+
+func TestEnv(t *testing.T) {
+	type Embed struct {
+		Flag string
+	}
+	type Cli struct {
+		One   Embed `prefix:"one-" embed:""`
+		Two   Embed `prefix:"two." embed:""`
+		Three Embed `prefix:"three_" embed:""`
+		Four  Embed `prefix:"four_" embed:""`
+		Five  bool
+		Six   bool `env:"-"`
+	}
+
+	var cli Cli
+
+	parser, unsetEnvs := newEnvParser(t, &cli, envMap{
+		"KONG_ONE_FLAG":   "one",
+		"KONG_TWO_FLAG":   "two",
+		"KONG_THREE_FLAG": "three",
+		"KONG_FOUR_FLAG":  "four",
+		"KONG_FIVE":       "true",
+		"KONG_SIX":        "true",
+	}, kong.Env("KONG"))
+	defer unsetEnvs()
+
+	_, err := parser.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, Cli{
+		One:   Embed{Flag: "one"},
+		Two:   Embed{Flag: "two"},
+		Three: Embed{Flag: "three"},
+		Four:  Embed{Flag: "four"},
+		Five:  true,
+	}, cli)
 }
 
 func TestJSONBasic(t *testing.T) {

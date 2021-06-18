@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/pkg/errors"
 )
@@ -370,4 +371,55 @@ func ExpandPath(path string) string {
 		return path
 	}
 	return abspath
+}
+
+// Env inits environment names for flags.
+// For example:
+//   --some.value -> PREFIX_SOME_VALUE
+func Env(prefix string) Option {
+	processFlag := func(flag *Flag) {
+		switch env := flag.Env; {
+		case flag.Name == "help":
+			return
+		case env == "-":
+			flag.Env = ""
+			return
+		case env != "":
+			return
+		}
+		replacer := strings.NewReplacer("-", "_", ".", "_")
+		name := replacer.Replace(flag.Name)
+		// Split by upper chars "SomeOne" -> ["Some", "One"]
+		var names []string
+		if prefix != "" {
+			names = []string{prefix}
+		}
+		for {
+			i := strings.IndexFunc(name, unicode.IsUpper)
+			if i < 0 {
+				names = append(names, strings.Trim(name, "_"))
+				break
+			}
+			names = append(names, strings.Trim(name[:i], "_"))
+			name = name[i:]
+		}
+		name = strings.ToUpper(strings.Join(names, "_"))
+		flag.Env = name
+		flag.Value.Tag.Env = name
+	}
+
+	var processNode func(node *Node)
+	processNode = func(node *Node) {
+		for _, flag := range node.Flags {
+			processFlag(flag)
+		}
+		for _, node := range node.Children {
+			processNode(node)
+		}
+	}
+
+	return PostBuild(func(k *Kong) error {
+		processNode(k.Model.Node)
+		return nil
+	})
 }
