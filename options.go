@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"unicode"
 
 	"github.com/pkg/errors"
 )
@@ -373,10 +372,25 @@ func ExpandPath(path string) string {
 	return abspath
 }
 
-// Env inits environment names for flags.
+func siftStrings(ss []string, filter func(s string) bool) []string {
+	i := 0
+	ss = append([]string(nil), ss...)
+	for _, s := range ss {
+		if filter(s) {
+			ss[i] = s
+			i++
+		}
+	}
+	return ss[0:i]
+}
+
+// DefaultEnvars option inits environment names for flags.
+// The name will not generate if tag "env" is "-".
+// Predefined environment variables are skiped.
+//
 // For example:
 //   --some.value -> PREFIX_SOME_VALUE
-func Env(prefix string) Option {
+func DefaultEnvars(prefix string) Option {
 	processFlag := func(flag *Flag) {
 		switch env := flag.Env; {
 		case flag.Name == "help":
@@ -388,22 +402,9 @@ func Env(prefix string) Option {
 			return
 		}
 		replacer := strings.NewReplacer("-", "_", ".", "_")
-		name := replacer.Replace(flag.Name)
-		// Split by upper chars "SomeOne" -> ["Some", "One"]
-		var names []string
-		if prefix != "" {
-			names = []string{prefix}
-		}
-		for {
-			i := strings.IndexFunc(name, unicode.IsUpper)
-			if i < 0 {
-				names = append(names, strings.Trim(name, "_"))
-				break
-			}
-			names = append(names, strings.Trim(name[:i], "_"))
-			name = name[i:]
-		}
-		name = strings.ToUpper(strings.Join(names, "_"))
+		names := append([]string{prefix}, camelCase(replacer.Replace(flag.Name))...)
+		names = siftStrings(names, func(s string) bool { return !(s == "_" || strings.TrimSpace(s) == "") })
+		name := strings.ToUpper(strings.Join(names, "_"))
 		flag.Env = name
 		flag.Value.Tag.Env = name
 	}
