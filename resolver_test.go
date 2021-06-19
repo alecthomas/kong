@@ -107,6 +107,15 @@ func TestEnv(t *testing.T) {
 
 	var cli Cli
 
+	expected := Cli{
+		One:   Embed{Flag: "one"},
+		Two:   Embed{Flag: "two"},
+		Three: Embed{Flag: "three"},
+		Four:  Embed{Flag: "four"},
+		Five:  true,
+	}
+
+	// With the prefix
 	parser, unsetEnvs := newEnvParser(t, &cli, envMap{
 		"KONG_ONE_FLAG":   "one",
 		"KONG_TWO_FLAG":   "two",
@@ -114,18 +123,27 @@ func TestEnv(t *testing.T) {
 		"KONG_FOUR_FLAG":  "four",
 		"KONG_FIVE":       "true",
 		"KONG_SIX":        "true",
-	}, kong.Env("KONG"))
+	}, kong.DefaultEnvars("KONG"))
 	defer unsetEnvs()
 
 	_, err := parser.Parse(nil)
 	require.NoError(t, err)
-	require.Equal(t, Cli{
-		One:   Embed{Flag: "one"},
-		Two:   Embed{Flag: "two"},
-		Three: Embed{Flag: "three"},
-		Four:  Embed{Flag: "four"},
-		Five:  true,
-	}, cli)
+	require.Equal(t, expected, cli)
+
+	// Without the prefix
+	parser, unsetEnvs = newEnvParser(t, &cli, envMap{
+		"ONE_FLAG":   "one",
+		"TWO_FLAG":   "two",
+		"THREE_FLAG": "three",
+		"FOUR_FLAG":  "four",
+		"FIVE":       "true",
+		"SIX":        "true",
+	}, kong.DefaultEnvars(""))
+	defer unsetEnvs()
+
+	_, err = parser.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, expected, cli)
 }
 
 func TestJSONBasic(t *testing.T) {
