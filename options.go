@@ -386,7 +386,7 @@ func siftStrings(ss []string, filter func(s string) bool) []string {
 
 // DefaultEnvars option inits environment names for flags.
 // The name will not generate if tag "env" is "-".
-// Predefined environment variables are skiped.
+// Predefined environment variables are skipped.
 //
 // For example:
 //   --some.value -> PREFIX_SOME_VALUE
