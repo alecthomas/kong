@@ -103,7 +103,8 @@ func TestJSONBasic(t *testing.T) {
 		SliceWithCommas []string
 		Bool            bool
 
-		Embed Embed `prefix:"embed." embed:""`
+		One Embed `prefix:"one." embed:""`
+		Two Embed `prefix:"two." embed:""`
 	}
 
 	json := `{
@@ -111,9 +112,10 @@ func TestJSONBasic(t *testing.T) {
 		"slice": [5, 8],
 		"bool": true,
 		"slice_with_commas": ["a,b", "c"],
-		"embed":{
-			"string": "embed value"
-		}
+		"one":{
+			"string": "one value"
+		},
+		"two.string": "two value"
 	}`
 
 	r, err := kong.JSON(strings.NewReader(json))
@@ -125,7 +127,8 @@ func TestJSONBasic(t *testing.T) {
 	require.Equal(t, "🍕", cli.String)
 	require.Equal(t, []int{5, 8}, cli.Slice)
 	require.Equal(t, []string{"a,b", "c"}, cli.SliceWithCommas)
-	require.Equal(t, "embed value", cli.Embed.String)
+	require.Equal(t, "one value", cli.One.String)
+	require.Equal(t, "two value", cli.Two.String)
 	require.True(t, cli.Bool)
 }
 
