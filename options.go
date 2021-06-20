@@ -371,3 +371,56 @@ func ExpandPath(path string) string {
 	}
 	return abspath
 }
+
+func siftStrings(ss []string, filter func(s string) bool) []string {
+	i := 0
+	ss = append([]string(nil), ss...)
+	for _, s := range ss {
+		if filter(s) {
+			ss[i] = s
+			i++
+		}
+	}
+	return ss[0:i]
+}
+
+// DefaultEnvars option inits environment names for flags.
+// The name will not generate if tag "env" is "-".
+// Predefined environment variables are skipped.
+//
+// For example:
+//   --some.value -> PREFIX_SOME_VALUE
+func DefaultEnvars(prefix string) Option {
+	processFlag := func(flag *Flag) {
+		switch env := flag.Env; {
+		case flag.Name == "help":
+			return
+		case env == "-":
+			flag.Env = ""
+			return
+		case env != "":
+			return
+		}
+		replacer := strings.NewReplacer("-", "_", ".", "_")
+		names := append([]string{prefix}, camelCase(replacer.Replace(flag.Name))...)
+		names = siftStrings(names, func(s string) bool { return !(s == "_" || strings.TrimSpace(s) == "") })
+		name := strings.ToUpper(strings.Join(names, "_"))
+		flag.Env = name
+		flag.Value.Tag.Env = name
+	}
+
+	var processNode func(node *Node)
+	processNode = func(node *Node) {
+		for _, flag := range node.Flags {
+			processFlag(flag)
+		}
+		for _, node := range node.Children {
+			processNode(node)
+		}
+	}
+
+	return PostBuild(func(k *Kong) error {
+		processNode(k.Model.Node)
+		return nil
+	})
+}
