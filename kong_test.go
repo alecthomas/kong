@@ -868,6 +868,22 @@ func TestXorChild(t *testing.T) {
 	require.Error(t, err, "--two and --three can't be used together")
 }
 
+func TestMultiXor(t *testing.T) {
+	var cli struct {
+		Hello bool   `xor:"one,two"`
+		One   bool   `xor:"one"`
+		Two   string `xor:"two"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--hello", "--one"})
+	require.EqualError(t, err, "--hello and --one can't be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--hello", "--two=foo"})
+	require.EqualError(t, err, "--hello and --two can't be used together")
+}
+
 func TestEnumSequence(t *testing.T) {
 	var cli struct {
 		State []string `enum:"a,b,c" default:"a"`

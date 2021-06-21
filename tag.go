@@ -29,7 +29,7 @@ type Tag struct {
 	MapSep      rune
 	Enum        string
 	Group       string
-	Xor         string
+	Xor         []string
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 	Embed       bool
@@ -125,6 +125,10 @@ func newEmptyTag() *Tag {
 	return &Tag{items: map[string][]string{}}
 }
 
+func tagSplitFn(r rune) bool {
+	return r == ',' || r == ' '
+}
+
 func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	if ft.Tag.Get("kong") == "-" {
 		t := newEmptyTag()
@@ -164,7 +168,9 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Sep, _ = t.GetSep("sep", ',')
 	t.MapSep, _ = t.GetSep("mapsep", ';')
 	t.Group = t.Get("group")
-	t.Xor = t.Get("xor")
+	for _, xor := range t.GetAll("xor") {
+		t.Xor = append(t.Xor, strings.FieldsFunc(xor, tagSplitFn)...)
+	}
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
@@ -172,12 +178,9 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 		fail("negatable can only be set on booleans")
 	}
 	t.Negatable = negatable
-	splitFn := func(r rune) bool {
-		return r == ',' || r == ' '
-	}
 	aliases := t.Get("aliases")
 	if len(aliases) > 0 {
-		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, splitFn)...)
+		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, tagSplitFn)...)
 	}
 	t.Vars = Vars{}
 	for _, set := range t.GetAll("set") {

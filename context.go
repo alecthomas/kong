@@ -871,13 +871,12 @@ func checkXorDuplicates(paths []*Path) error {
 			if !flag.Set {
 				continue
 			}
-			if flag.Xor == "" {
-				continue
+			for _, xor := range flag.Xor {
+				if seen[xor] != nil {
+					return fmt.Errorf("--%s and --%s can't be used together", seen[xor].Name, flag.Name)
+				}
+				seen[xor] = flag
 			}
-			if seen[flag.Xor] != nil {
-				return fmt.Errorf("--%s and --%s can't be used together", seen[flag.Xor].Name, flag.Name)
-			}
-			seen[flag.Xor] = flag
 		}
 	}
 	return nil
