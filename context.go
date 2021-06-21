@@ -820,7 +820,18 @@ func checkMissingPositionals(positional int, values []*Value) error {
 
 	missing := []string{}
 	for ; positional < len(values); positional++ {
-		missing = append(missing, "<"+values[positional].Name+">")
+		arg := values[positional]
+		// TODO(aat): Fix hardcoding of these env checks all over the place :\
+		if arg.Tag.Env != "" {
+			_, ok := os.LookupEnv(arg.Tag.Env)
+			if ok {
+				continue
+			}
+		}
+		missing = append(missing, "<"+arg.Name+">")
+	}
+	if len(missing) == 0 {
+		return nil
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }

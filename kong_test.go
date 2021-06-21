@@ -902,6 +902,43 @@ func TestIssue40EnumAcrossCommands(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestIssue179(t *testing.T) {
+	type A struct {
+		Enum string `required:"" enum:"1,2"`
+	}
+
+	type B struct{}
+
+	var root struct {
+		A A `cmd`
+		B B `cmd`
+	}
+
+	p := mustNew(t, &root)
+	_, err := p.Parse([]string{"b"})
+	require.NoError(t, err)
+}
+
+func TestIssue153(t *testing.T) {
+	type LsCmd struct {
+		Paths []string `arg required name:"path" help:"Paths to list." env:"CMD_PATHS"`
+	}
+
+	var cli struct {
+		Debug bool `help:"Enable debug mode."`
+
+		Ls LsCmd `cmd help:"List paths."`
+	}
+
+	p, revert := newEnvParser(t, &cli, envMap{
+		"CMD_PATHS": "hello",
+	})
+	defer revert()
+	_, err := p.Parse([]string{"ls"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"hello"}, cli.Ls.Paths)
+}
+
 func TestEnumArg(t *testing.T) {
 	var cli struct {
 		Nested struct {
