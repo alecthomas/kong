@@ -39,8 +39,19 @@ func JSON(r io.Reader) (Resolver, error) {
 	var f ResolverFunc = func(context *Context, parent *Path, flag *Flag) (interface{}, error) {
 		name := strings.ReplaceAll(flag.Name, "-", "_")
 		raw, ok := values[name]
-		if !ok {
-			return nil, nil
+		if ok {
+			return raw, nil
+		}
+		raw = values
+		for _, part := range strings.Split(name, ".") {
+			if values, ok := raw.(map[string]interface{}); ok {
+				raw, ok = values[part]
+				if !ok {
+					return nil, nil
+				}
+			} else {
+				return nil, nil
+			}
 		}
 		return raw, nil
 	}

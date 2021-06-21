@@ -147,18 +147,29 @@ func TestEnv(t *testing.T) {
 }
 
 func TestJSONBasic(t *testing.T) {
+	type Embed struct {
+		String string
+	}
+
 	var cli struct {
 		String          string
 		Slice           []int
 		SliceWithCommas []string
 		Bool            bool
+
+		One Embed `prefix:"one." embed:""`
+		Two Embed `prefix:"two." embed:""`
 	}
 
 	json := `{
 		"string": "🍕",
 		"slice": [5, 8],
 		"bool": true,
-		"slice_with_commas": ["a,b", "c"]
+		"slice_with_commas": ["a,b", "c"],
+		"one":{
+			"string": "one value"
+		},
+		"two.string": "two value"
 	}`
 
 	r, err := kong.JSON(strings.NewReader(json))
@@ -170,6 +181,8 @@ func TestJSONBasic(t *testing.T) {
 	require.Equal(t, "🍕", cli.String)
 	require.Equal(t, []int{5, 8}, cli.Slice)
 	require.Equal(t, []string{"a,b", "c"}, cli.SliceWithCommas)
+	require.Equal(t, "one value", cli.One.String)
+	require.Equal(t, "two value", cli.Two.String)
 	require.True(t, cli.Bool)
 }
 
