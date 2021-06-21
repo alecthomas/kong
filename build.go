@@ -51,7 +51,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
 		fv := v.Field(i)
-		tag := parseTag(fv, ft)
+		tag := parseTag(v, fv, ft)
 		if tag.Ignored {
 			continue
 		}
@@ -156,8 +156,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	// a positional argument is provided to the child, and move it to the branching argument field.
 	if tag.Arg {
 		if len(child.Positional) == 0 {
-			fail("positional branch %s.%s must have at least one child positional argument named %q",
-				v.Type().Name(), ft.Name, name)
+			failField(v, ft, "positional branch must have at least one child positional argument named %q", name)
 		}
 
 		value := child.Positional[0]
@@ -168,8 +167,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 
 		child.Name = value.Name
 		if child.Name != name {
-			fail("first field in positional branch %s.%s must have the same name as the parent field (%s).",
-				v.Type().Name(), ft.Name, child.Name)
+			failField(v, ft, "first field in positional branch must have the same name as the parent field (%s).", child.Name)
 		}
 
 		child.Argument = value
@@ -179,14 +177,14 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	node.Children = append(node.Children, child)
 
 	if len(child.Positional) > 0 && len(child.Children) > 0 {
-		fail("can't mix positional arguments and branching arguments on %s.%s", v.Type().Name(), ft.Name)
+		failField(v, ft, "can't mix positional arguments and branching arguments")
 	}
 }
 
 func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
 	mapper := k.registry.ForNamedValue(tag.Type, fv)
 	if mapper == nil {
-		fail("unsupported field type %s.%s (of type %s), perhaps missing a cmd:\"\" tag?", v.Type(), ft.Name, ft.Type)
+		failField(v, ft, "unsupported field type %s, perhaps missing a cmd:\"\" tag?", ft.Type)
 	}
 
 	value := &Value{
@@ -209,13 +207,13 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 		node.Positional = append(node.Positional, value)
 	} else {
 		if seenFlags["--"+value.Name] {
-			fail("duplicate flag --%s", value.Name)
+			failField(v, ft, "duplicate flag --%s", value.Name)
 		} else {
 			seenFlags["--"+value.Name] = true
 		}
 		if tag.Short != 0 {
 			if seenFlags["-"+string(tag.Short)] {
-				fail("duplicate short flag -%c", tag.Short)
+				failField(v, ft, "duplicate short flag -%c", tag.Short)
 			} else {
 				seenFlags["-"+string(tag.Short)] = true
 			}

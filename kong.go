@@ -22,6 +22,15 @@ func fail(format string, args ...interface{}) {
 	panic(Error{msg: fmt.Sprintf(format, args...)})
 }
 
+func failField(parent reflect.Value, field reflect.StructField, format string, args ...interface{}) {
+	name := parent.Type().Name()
+	if name == "" {
+		name = "<anonymous struct>"
+	}
+	msg := fmt.Sprintf("%s.%s: %s", name, field.Name, fmt.Sprintf(format, args...))
+	panic(Error{msg: msg})
+}
+
 // Must creates a new Parser or panics if there is an error.
 func Must(ast interface{}, options ...Option) *Kong {
 	k, err := New(ast, options...)

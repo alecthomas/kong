@@ -129,7 +129,7 @@ func tagSplitFn(r rune) bool {
 	return r == ',' || r == ' '
 }
 
-func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
+func parseTag(parent, fv reflect.Value, ft reflect.StructField) *Tag {
 	if ft.Tag.Get("kong") == "-" {
 		t := newEmptyTag()
 		t.Ignored = true
@@ -146,7 +146,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	required := t.Has("required")
 	optional := t.Has("optional")
 	if required && optional {
-		fail("can't specify both required and optional")
+		failField(parent, ft, "can't specify both required and optional")
 	}
 	t.Required = required
 	t.Optional = optional
@@ -161,7 +161,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Env = t.Get("env")
 	t.Short, err = t.GetRune("short")
 	if err != nil && t.Get("short") != "" {
-		fail("invalid short flag name %q: %s", t.Get("short"), err)
+		failField(parent, ft, "invalid short flag name %q: %s", t.Get("short"), err)
 	}
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
@@ -175,7 +175,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
 	if negatable && ft.Type.Kind() != reflect.Bool {
-		fail("negatable can only be set on booleans")
+		failField(parent, ft, "negatable can only be set on booleans")
 	}
 	t.Negatable = negatable
 	aliases := t.Get("aliases")
@@ -186,7 +186,7 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	for _, set := range t.GetAll("set") {
 		parts := strings.SplitN(set, "=", 2)
 		if len(parts) == 0 {
-			fail("set should be in the form key=value but got %q", set)
+			failField(parent, ft, "set should be in the form key=value but got %q", set)
 		}
 		t.Vars[parts[0]] = parts[1]
 	}
@@ -195,9 +195,12 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
 	}
 	t.Enum = t.Get("enum")
+	if t.Enum != "" && !(t.Required || t.Default != "") {
+		failField(parent, ft, "enum value is only valid if it is either required or has a valid default value")
+	}
 	passthrough := t.Has("passthrough")
 	if passthrough && !t.Arg {
-		fail("passthrough only makes sense for positional arguments")
+		failField(parent, ft, "passthrough only makes sense for positional arguments")
 	}
 	t.Passthrough = passthrough
 	return t

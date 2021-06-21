@@ -198,5 +198,5 @@ func TestInvalidRuneErrors(t *testing.T) {
 		Flag bool `short:"invalid"`
 	}{}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "invalid short flag name \"invalid\": invalid rune")
+	require.EqualError(t, err, "<anonymous struct>.Flag: invalid short flag name \"invalid\": invalid rune")
 }

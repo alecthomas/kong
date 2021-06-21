@@ -444,7 +444,7 @@ Tag                    | Description
 `format:"X"`           | Format for parsing input, if supported.
 `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
 `mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
-`enum:"X,Y,..."`       | Set of valid values allowed for this flag.
+`enum:"X,Y,..."`       | Set of valid values allowed for this flag. An enum field must be `required` or have a valid `default`.
 `group:"X"`            | Logical group for a flag or command.
 `xor:"X,Y,..."`        | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.
 `prefix:"X"`           | Prefix for all sub-flags.

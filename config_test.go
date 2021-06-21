@@ -32,7 +32,7 @@ func TestMultipleConfigLoading(t *testing.T) {
 
 func TestConfigValidation(t *testing.T) {
 	var cli struct {
-		Flag string `json:"flag,omitempty" enum:"valid"`
+		Flag string `json:"flag,omitempty" enum:"valid" required:""`
 	}
 
 	cli.Flag = "invalid"

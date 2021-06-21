@@ -643,7 +643,7 @@ func TestRun(t *testing.T) {
 func TestInterpolationIntoModel(t *testing.T) {
 	var cli struct {
 		Flag    string `default:"${default}" help:"Help, I need ${somebody}" enum:"${enum}"`
-		EnumRef string `enum:"a,b" help:"One of ${enum}"`
+		EnumRef string `enum:"a,b" required:"" help:"One of ${enum}"`
 	}
 	_, err := kong.New(&cli)
 	require.Error(t, err)
@@ -763,7 +763,7 @@ func TestHooksCalledForDefault(t *testing.T) {
 
 func TestEnum(t *testing.T) {
 	var cli struct {
-		Flag string `enum:"a,b,c"`
+		Flag string `enum:"a,b,c" required:""`
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--flag", "d"})
 	require.EqualError(t, err, "--flag must be one of \"a\",\"b\",\"c\" but got \"d\"")
@@ -978,7 +978,7 @@ func TestIssue153(t *testing.T) {
 func TestEnumArg(t *testing.T) {
 	var cli struct {
 		Nested struct {
-			One string `arg:"" enum:"a,b,c"`
+			One string `arg:"" enum:"a,b,c" required:""`
 			Two string `arg:""`
 		} `cmd:""`
 	}
@@ -1142,7 +1142,7 @@ func TestDuplicateShortflags(t *testing.T) {
 		Flag2 bool `short:"t"`
 	}{}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "duplicate short flag -t")
+	require.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
 
 func TestDuplicateNestedShortFlags(t *testing.T) {
@@ -1153,5 +1153,5 @@ func TestDuplicateNestedShortFlags(t *testing.T) {
 		} `cmd:""`
 	}{}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "duplicate short flag -t")
+	require.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
