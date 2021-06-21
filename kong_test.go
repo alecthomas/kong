@@ -884,6 +884,26 @@ func TestMultiXor(t *testing.T) {
 	require.EqualError(t, err, "--hello and --two can't be used together")
 }
 
+func TestXorRequired(t *testing.T) {
+	var cli struct {
+		One   bool `xor:"one,two" required:""`
+		Two   bool `xor:"one" required:""`
+		Three bool `xor:"two" required:""`
+		Four  bool `required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--one"})
+	require.EqualError(t, err, "missing flags: --four")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--two"})
+	require.EqualError(t, err, "missing flags: --four, --one or --three")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	require.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
+}
+
 func TestEnumSequence(t *testing.T) {
 	var cli struct {
 		State []string `enum:"a,b,c" default:"a"`

@@ -446,7 +446,7 @@ Tag                    | Description
 `mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
 `enum:"X,Y,..."`       | Set of valid values allowed for this flag.
 `group:"X"`            | Logical group for a flag or command.
-`xor:"X,Y,..."`        | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command.
+`xor:"X,Y,..."`        | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.
 `prefix:"X"`           | Prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed:""`             | If present, this field's children will be embedded in the parent. Useful for composition.

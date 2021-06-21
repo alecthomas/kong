@@ -743,16 +743,31 @@ func (c *Context) PrintUsage(summary bool) error {
 }
 
 func checkMissingFlags(flags []*Flag) error {
+	xorGroup := map[string][]string{}
 	missing := []string{}
 	for _, flag := range flags {
 		if !flag.Required || flag.Set {
 			continue
 		}
-		missing = append(missing, flag.Summary())
+		if len(flag.Xor) > 0 {
+			for _, xor := range flag.Xor {
+				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
+			}
+		} else {
+			missing = append(missing, flag.Summary())
+		}
 	}
+	for _, flags := range xorGroup {
+		if len(flags) > 1 {
+			missing = append(missing, strings.Join(flags, " or "))
+		}
+	}
+
 	if len(missing) == 0 {
 		return nil
 	}
+
+	sort.Strings(missing)
 
 	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
 }
