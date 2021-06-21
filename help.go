@@ -56,6 +56,12 @@ type HelpOptions struct {
 	// If this is set to a non-positive number, the terminal width is used; otherwise,
 	// the min of this value or the terminal width is used.
 	WrapUpperBound int
+
+	// Don't wrap the Detail section of node formatting. This is useful for command
+	// structs implementing the `Help() string` method where the returned text
+	// contains crafted text that should not be wrapped/modified, e.g. emdedded
+	// shell invocation examples with comments.
+	NoWrapDetail bool
 }
 
 // Apply options to Kong as a configuration option.
@@ -167,7 +173,11 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	}
 	if node.Detail != "" {
 		w.Print("")
-		w.Wrap(node.Detail)
+		if w.HelpOptions.NoWrapDetail {
+			w.Print(node.Detail)
+		} else {
+			w.Wrap(node.Detail)
+		}
 	}
 	if len(node.Positional) > 0 {
 		w.Print("")

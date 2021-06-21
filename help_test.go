@@ -743,3 +743,62 @@ Flags:
 	t.Log(expected)
 	require.Equal(t, expected, w.String())
 }
+
+type detailedCmd struct {
+	Comment string `opt:""`
+}
+
+func (c *detailedCmd) Help() string {
+	return `Some examples:
+
+# test-app supports a single sub-command called 'sub'.
+$ test-app sub
+
+# The 'sub' sub-command also supports a --comment option that we would not like to
+# be wrapped when the example is printed in the help message.
+$ test-app sub \
+    --comment="A very long option value that should not be formatted/wrapped when shown in help message"`
+}
+
+func TestNoDetailWrap(t *testing.T) {
+	var cli struct {
+		Sub detailedCmd `cmd:"" help:"Detailed sub-command."`
+	}
+
+	w := bytes.NewBuffer(nil)
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.HelpOptions{
+			NoWrapDetail:   true,
+			WrapUpperBound: 60,
+		},
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+	)
+
+	_, err := app.Parse([]string{"sub", "--help"})
+	require.NoError(t, err)
+	expected := `Usage: test-app sub
+
+Detailed sub-command.
+
+Some examples:
+
+# test-app supports a single sub-command called 'sub'.
+$ test-app sub
+
+# The 'sub' sub-command also supports a --comment option that we would not like to
+# be wrapped when the example is printed in the help message.
+$ test-app sub \
+    --comment="A very long option value that should not be formatted/wrapped when shown in help message"
+
+Flags:
+  -h, --help              Show context-sensitive help.
+
+      --comment=STRING
+`
+	t.Log(w.String())
+	t.Log(expected)
+	require.Equal(t, expected, w.String())
+}
