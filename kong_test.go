@@ -904,6 +904,21 @@ func TestXorRequired(t *testing.T) {
 	require.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
 }
 
+func TestXorRequiredMany(t *testing.T) {
+	var cli struct {
+		One   bool `xor:"one" required:""`
+		Two   bool `xor:"one" required:""`
+		Three bool `xor:"one" required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--one"})
+	require.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	require.EqualError(t, err, "missing flags: --one or --two or --three")
+}
+
 func TestEnumSequence(t *testing.T) {
 	var cli struct {
 		State []string `enum:"a,b,c" default:"a"`
