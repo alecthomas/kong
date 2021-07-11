@@ -1005,9 +1005,30 @@ func TestMultipleDefaultCommands(t *testing.T) {
 		One struct{} `cmd:"" default:"1"`
 		Two struct{} `cmd:"" default:"1"`
 	}
-	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{})
-	require.EqualError(t, err, "can't have more than one default command under  <command>")
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.Two: can't have more than one default command under  <command>")
+}
+
+func TestDefaultCommandWithSubCommand(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct{} `cmd:""`
+		} `cmd:"" default:"1"`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
+}
+
+func TestDefaultCommandWithArgument(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct {
+				Two string `arg:""`
+			} `arg:""`
+		} `cmd:"" default:"1"`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
 }
 
 func TestLoneHpyhen(t *testing.T) {

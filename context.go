@@ -499,21 +499,12 @@ func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 			return nil
 		}
 	}
-	var defaultNode *Path
-	for _, child := range node.Children {
-		if child.Type == CommandNode && child.Tag.Default != "" {
-			if defaultNode != nil {
-				return fmt.Errorf("can't have more than one default command under %s", node.Summary())
-			}
-			defaultNode = &Path{
-				Parent:  child,
-				Command: child,
-				Flags:   child.Flags,
-			}
-		}
-	}
-	if defaultNode != nil {
-		c.Path = append(c.Path, defaultNode)
+	if node.DefaultCmd != nil {
+		c.Path = append(c.Path, &Path{
+			Parent:  node.DefaultCmd,
+			Command: node.DefaultCmd,
+			Flags:   node.DefaultCmd.Flags,
+		})
 	}
 	return nil
 }
@@ -785,7 +776,6 @@ func checkMissingChildren(node *Node) error {
 		missing = append(missing, strconv.Quote(strings.Join(missingArgs, " ")))
 	}
 
-	haveDefault := 0
 	for _, child := range node.Children {
 		if child.Hidden {
 			continue
@@ -796,19 +786,10 @@ func checkMissingChildren(node *Node) error {
 			}
 			missing = append(missing, strconv.Quote(child.Summary()))
 		} else {
-			if child.Tag.Default != "" {
-				if len(child.Children) > 0 {
-					return fmt.Errorf("default command %s must not have subcommands or arguments", child.Summary())
-				}
-				haveDefault++
-			}
 			missing = append(missing, strconv.Quote(child.Name))
 		}
 	}
-	if haveDefault > 1 {
-		return fmt.Errorf("more than one default command found under %s", node.Summary())
-	}
-	if len(missing) == 0 || haveDefault > 0 {
+	if len(missing) == 0 {
 		return nil
 	}
 
