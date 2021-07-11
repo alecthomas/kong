@@ -343,7 +343,14 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 
 	flags := []*Flag{}
-	for _, group := range node.AllFlags(false) {
+	flagNode := node
+	if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+		// Add flags of the default command if the current node has one
+		// and that default command allows args / flags without explicitly
+		// naming the command on the CLI.
+		flagNode = node.DefaultCmd
+	}
+	for _, group := range flagNode.AllFlags(false) {
 		flags = append(flags, group...)
 	}
 
@@ -481,6 +488,17 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 						return c.trace(branch)
 					}
 				}
+			}
+
+			// If there is a default command that allows args and nothing else
+			// matches, take the branch of the default command
+			if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+				c.Path = append(c.Path, &Path{
+					Parent:  node,
+					Command: node.DefaultCmd,
+					Flags:   node.DefaultCmd.Flags,
+				})
+				return c.trace(node.DefaultCmd)
 			}
 
 			return findPotentialCandidates(token.String(), candidates, "unexpected argument %s", token)

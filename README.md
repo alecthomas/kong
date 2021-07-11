@@ -302,7 +302,7 @@ type CLI struct {
 }
 ```
 
-If a sub-command is tagged with `default:"1"` it will be selected if there are no further arguments.
+If a sub-command is tagged with `default:"1"` it will be selected if there are no further arguments. If a sub-command is tagged with `default:"withargs"` it will be selected even if there are further arguments or flags and those arguments or flags are valid for the sub-command. This allows the user to omit the sub-command name on the CLI if its arguments/flags are not ambiguous with the sibling commands or flags.
 
 ## Branching positional arguments
 
@@ -435,6 +435,7 @@ Tag                    | Description
 `placeholder:"X"`      | Placeholder text.
 `default:"X"`          | Default value.
 `default:"1"`          | On a command, make it the default.
+`default:"withargs"`   | On a command, make it the default and allow args/flags from that command
 `short:"X"`            | Short name, if flag.
 `aliases:"X,Y"`        | One or more aliases (for cmd).
 `required:""`          | If present, flag/arg is required.
