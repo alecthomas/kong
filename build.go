@@ -172,7 +172,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 		if node.DefaultCmd != nil {
 			failField(v, ft, "can't have more than one default command under %s", node.Summary())
 		}
-		if len(child.Children) > 0 {
+		if len(child.Children) > 0 || len(child.Positional) > 0 {
 			failField(v, ft, "default command %s must not have subcommands or arguments", child.Summary())
 		}
 		node.DefaultCmd = child

@@ -1022,6 +1022,16 @@ func TestDefaultCommandWithSubCommand(t *testing.T) {
 func TestDefaultCommandWithArgument(t *testing.T) {
 	var cli struct {
 		One struct {
+			Arg string `arg:""`
+		} `cmd:"" default:"1"`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.One: default command one <arg> must not have subcommands or arguments")
+}
+
+func TestDefaultCommandWithBranchingArgument(t *testing.T) {
+	var cli struct {
+		One struct {
 			Two struct {
 				Two string `arg:""`
 			} `arg:""`
