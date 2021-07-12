@@ -51,6 +51,7 @@ type Node struct {
 	Flags      []*Flag
 	Positional []*Positional
 	Children   []*Node
+	DefaultCmd *Node
 	Target     reflect.Value // Pointer to the value in the grammar that this Node is associated with.
 	Tag        *Tag
 	Aliases    []string

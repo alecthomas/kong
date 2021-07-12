@@ -343,7 +343,14 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 
 	flags := []*Flag{}
-	for _, group := range node.AllFlags(false) {
+	flagNode := node
+	if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+		// Add flags of the default command if the current node has one
+		// and that default command allows args / flags without explicitly
+		// naming the command on the CLI.
+		flagNode = node.DefaultCmd
+	}
+	for _, group := range flagNode.AllFlags(false) {
 		flags = append(flags, group...)
 	}
 
@@ -483,6 +490,17 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 			}
 
+			// If there is a default command that allows args and nothing else
+			// matches, take the branch of the default command
+			if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+				c.Path = append(c.Path, &Path{
+					Parent:  node,
+					Command: node.DefaultCmd,
+					Flags:   node.DefaultCmd.Flags,
+				})
+				return c.trace(node.DefaultCmd)
+			}
+
 			return findPotentialCandidates(token.String(), candidates, "unexpected argument %s", token)
 		default:
 			return fmt.Errorf("unexpected token %s", token)
@@ -499,21 +517,12 @@ func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 			return nil
 		}
 	}
-	var defaultNode *Path
-	for _, child := range node.Children {
-		if child.Type == CommandNode && child.Tag.Default != "" {
-			if defaultNode != nil {
-				return fmt.Errorf("can't have more than one default command under %s", node.Summary())
-			}
-			defaultNode = &Path{
-				Parent:  child,
-				Command: child,
-				Flags:   child.Flags,
-			}
-		}
-	}
-	if defaultNode != nil {
-		c.Path = append(c.Path, defaultNode)
+	if node.DefaultCmd != nil {
+		c.Path = append(c.Path, &Path{
+			Parent:  node.DefaultCmd,
+			Command: node.DefaultCmd,
+			Flags:   node.DefaultCmd.Flags,
+		})
 	}
 	return nil
 }
@@ -794,7 +803,6 @@ func checkMissingChildren(node *Node) error {
 		missing = append(missing, strconv.Quote(strings.Join(missingArgs, " ")))
 	}
 
-	haveDefault := 0
 	for _, child := range node.Children {
 		if child.Hidden {
 			continue
@@ -805,19 +813,10 @@ func checkMissingChildren(node *Node) error {
 			}
 			missing = append(missing, strconv.Quote(child.Summary()))
 		} else {
-			if child.Tag.Default != "" {
-				if len(child.Children) > 0 {
-					return fmt.Errorf("default command %s must not have subcommands or arguments", child.Summary())
-				}
-				haveDefault++
-			}
 			missing = append(missing, strconv.Quote(child.Name))
 		}
 	}
-	if haveDefault > 1 {
-		return fmt.Errorf("more than one default command found under %s", node.Summary())
-	}
-	if len(missing) == 0 || haveDefault > 0 {
+	if len(missing) == 0 {
 		return nil
 	}
 

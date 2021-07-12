@@ -141,6 +141,7 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) {
 	child := buildNode(k, fv, typ, seenFlags)
+	child.Name = name
 	child.Tag = tag
 	child.Parent = node
 	child.Help = tag.Help
@@ -158,21 +159,23 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 		if len(child.Positional) == 0 {
 			failField(v, ft, "positional branch must have at least one child positional argument named %q", name)
 		}
-
-		value := child.Positional[0]
-		child.Positional = child.Positional[1:]
-		if child.Help == "" {
-			child.Help = value.Help
-		}
-
-		child.Name = value.Name
-		if child.Name != name {
+		if child.Positional[0].Name != name {
 			failField(v, ft, "first field in positional branch must have the same name as the parent field (%s).", child.Name)
 		}
 
-		child.Argument = value
-	} else {
-		child.Name = name
+		child.Argument = child.Positional[0]
+		child.Positional = child.Positional[1:]
+		if child.Help == "" {
+			child.Help = child.Argument.Help
+		}
+	} else if tag.Default != "" {
+		if node.DefaultCmd != nil {
+			failField(v, ft, "can't have more than one default command under %s", node.Summary())
+		}
+		if tag.Default != "withargs" && (len(child.Children) > 0 || len(child.Positional) > 0) {
+			failField(v, ft, "default command %s must not have subcommands or arguments", child.Summary())
+		}
+		node.DefaultCmd = child
 	}
 	node.Children = append(node.Children, child)
 

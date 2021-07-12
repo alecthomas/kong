@@ -1020,9 +1020,112 @@ func TestMultipleDefaultCommands(t *testing.T) {
 		One struct{} `cmd:"" default:"1"`
 		Two struct{} `cmd:"" default:"1"`
 	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.Two: can't have more than one default command under  <command>")
+}
+
+func TestDefaultCommandWithSubCommand(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct{} `cmd:""`
+		} `cmd:"" default:"1"`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
+}
+
+func TestDefaultCommandWithAllowedSubCommand(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct{} `cmd:""`
+		} `cmd:"" default:"withargs"`
+	}
 	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{})
-	require.EqualError(t, err, "can't have more than one default command under  <command>")
+	ctx, err := p.Parse([]string{"two"})
+	require.NoError(t, err)
+	require.Equal(t, "one two", ctx.Command())
+}
+
+func TestDefaultCommandWithArgument(t *testing.T) {
+	var cli struct {
+		One struct {
+			Arg string `arg:""`
+		} `cmd:"" default:"1"`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.One: default command one <arg> must not have subcommands or arguments")
+}
+
+func TestDefaultCommandWithAllowedArgument(t *testing.T) {
+	var cli struct {
+		One struct {
+			Arg  string `arg:""`
+			Flag string
+		} `cmd:"" default:"withargs"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"arg", "--flag=value"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.One.Arg)
+	require.Equal(t, "value", cli.One.Flag)
+}
+
+func TestDefaultCommandWithBranchingArgument(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct {
+				Two string `arg:""`
+			} `arg:""`
+		} `cmd:"" default:"1"`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
+}
+
+func TestDefaultCommandWithAllowedBranchingArgument(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two struct {
+				Two  string `arg:""`
+				Flag string
+			} `arg:""`
+		} `cmd:"" default:"withargs"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"arg", "--flag=value"})
+	require.NoError(t, err)
+	require.Equal(t, "arg", cli.One.Two.Two)
+	require.Equal(t, "value", cli.One.Two.Flag)
+}
+
+func TestDefaultCommandPrecedence(t *testing.T) {
+	var cli struct {
+		Two struct {
+			Arg  string `arg:""`
+			Flag bool
+		} `cmd:"" default:"withargs"`
+		One struct{} `cmd:""`
+	}
+	p := mustNew(t, &cli)
+
+	// A named command should take precedence over a default command with arg
+	ctx, err := p.Parse([]string{"one"})
+	require.NoError(t, err)
+	require.Equal(t, "one", ctx.Command())
+
+	// An explicitly named command with arg should parse, even if labeled default:"witharg"
+	ctx, err = p.Parse([]string{"two", "arg"})
+	require.NoError(t, err)
+	require.Equal(t, "two <arg>", ctx.Command())
+
+	// An arg to a default command that does not match another command should select the default
+	ctx, err = p.Parse([]string{"arg"})
+	require.NoError(t, err)
+	require.Equal(t, "two <arg>", ctx.Command())
+
+	// A flag on a default command should not be valid on a sibling command
+	_, err = p.Parse([]string{"one", "--flag"})
+	require.EqualError(t, err, "unknown flag --flag")
 }
 
 func TestLoneHpyhen(t *testing.T) {
