@@ -35,15 +35,13 @@ linters:
     - tagliatelle
     - thelper
     - godox
+    - goconst
 
 linters-settings:
   govet:
     check-shadowing: true
   dupl:
     threshold: 100
-  goconst:
-    min-len: 5
-    min-occurrences: 3
   gocyclo:
     min-complexity: 20
   exhaustive:
