@@ -129,24 +129,41 @@ func tagSplitFn(r rune) bool {
 	return r == ',' || r == ' '
 }
 
-func parseTag(parent, fv reflect.Value, ft reflect.StructField) *Tag {
+func parseTagString(s string) *Tag {
+	t := &Tag{
+		items: parseTagItems(s, bareChars),
+	}
+	err := hydrateTag(t, "", false)
+	if err != nil {
+		fail("%s: %s", s, err)
+	}
+	return t
+}
+
+func parseTag(parent reflect.Value, ft reflect.StructField) *Tag {
 	if ft.Tag.Get("kong") == "-" {
 		t := newEmptyTag()
 		t.Ignored = true
 		return t
 	}
-	var (
-		err error
-		t   = &Tag{
-			items: parseTagItems(getTagInfo(ft)),
-		}
-	)
+	t := &Tag{
+		items: parseTagItems(getTagInfo(ft)),
+	}
+	err := hydrateTag(t, ft.Type.Name(), ft.Type.Kind() == reflect.Bool)
+	if err != nil {
+		failField(parent, ft, "%s", err)
+	}
+	return t
+}
+
+func hydrateTag(t *Tag, typeName string, isBool bool) error {
+	var err error
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
 	required := t.Has("required")
 	optional := t.Has("optional")
 	if required && optional {
-		failField(parent, ft, "can't specify both required and optional")
+		return fmt.Errorf("can't specify both required and optional")
 	}
 	t.Required = required
 	t.Optional = optional
@@ -161,7 +178,7 @@ func parseTag(parent, fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Env = t.Get("env")
 	t.Short, err = t.GetRune("short")
 	if err != nil && t.Get("short") != "" {
-		failField(parent, ft, "invalid short flag name %q: %s", t.Get("short"), err)
+		return fmt.Errorf("invalid short flag name %q: %s", t.Get("short"), err)
 	}
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
@@ -174,8 +191,8 @@ func parseTag(parent, fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Prefix = t.Get("prefix")
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
-	if negatable && ft.Type.Kind() != reflect.Bool {
-		failField(parent, ft, "negatable can only be set on booleans")
+	if negatable && !isBool {
+		return fmt.Errorf("negatable can only be set on booleans")
 	}
 	t.Negatable = negatable
 	aliases := t.Get("aliases")
@@ -186,24 +203,24 @@ func parseTag(parent, fv reflect.Value, ft reflect.StructField) *Tag {
 	for _, set := range t.GetAll("set") {
 		parts := strings.SplitN(set, "=", 2)
 		if len(parts) == 0 {
-			failField(parent, ft, "set should be in the form key=value but got %q", set)
+			return fmt.Errorf("set should be in the form key=value but got %q", set)
 		}
 		t.Vars[parts[0]] = parts[1]
 	}
 	t.PlaceHolder = t.Get("placeholder")
 	if t.PlaceHolder == "" {
-		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
+		t.PlaceHolder = strings.ToUpper(dashedString(typeName))
 	}
 	t.Enum = t.Get("enum")
 	if t.Enum != "" && !(t.Required || t.Default != "") {
-		failField(parent, ft, "enum value is only valid if it is either required or has a valid default value")
+		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
 	}
 	passthrough := t.Has("passthrough")
 	if passthrough && !t.Arg {
-		failField(parent, ft, "passthrough only makes sense for positional arguments")
+		return fmt.Errorf("passthrough only makes sense for positional arguments")
 	}
 	t.Passthrough = passthrough
-	return t
+	return nil
 }
 
 // Has returns true if the tag contained the given key.

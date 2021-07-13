@@ -58,19 +58,23 @@ type dynamicCommand struct {
 	name  string
 	help  string
 	group string
+	tags  []string
 	cmd   interface{}
 }
 
 // DynamicCommand registers a dynamically constructed command with the root of the CLI.
 //
 // This is useful for command-line structures that are extensible via user-provided plugins.
-func DynamicCommand(name, help, group string, cmd interface{}) Option {
+//
+// "tags" is a list of extra tag strings to parse, in the form <key>:"<value>".
+func DynamicCommand(name, help, group string, cmd interface{}, tags ...string) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.dynamicCommands = append(k.dynamicCommands, &dynamicCommand{
 			name:  name,
 			help:  help,
 			group: group,
 			cmd:   cmd,
+			tags:  tags,
 		})
 		return nil
 	})

@@ -1242,9 +1242,14 @@ func TestDynamicCommands(t *testing.T) {
 	cli := struct {
 		One struct{} `cmd:"one"`
 	}{}
+	help := &strings.Builder{}
 	two := &dynamicCommand{}
-	var twoi interface{} = &two
-	p := mustNew(t, &cli, kong.DynamicCommand("two", "", "", twoi))
+	three := &dynamicCommand{}
+	p := mustNew(t, &cli,
+		kong.DynamicCommand("two", "", "", &two),
+		kong.DynamicCommand("three", "", "", three, "hidden"),
+		kong.Writers(help, help),
+		kong.Exit(func(int) {}))
 	kctx, err := p.Parse([]string{"two", "--flag=flag"})
 	require.NoError(t, err)
 	require.Equal(t, "flag", two.Flag)
@@ -1252,6 +1257,10 @@ func TestDynamicCommands(t *testing.T) {
 	err = kctx.Run()
 	require.NoError(t, err)
 	require.True(t, two.ran)
+
+	_, err = p.Parse([]string{"--help"})
+	require.EqualError(t, err, `expected one of "one",  "two"`)
+	require.NotContains(t, help.String(), "three", help.String())
 }
 
 func TestDuplicateShortflags(t *testing.T) {

@@ -25,6 +25,7 @@
 - [Custom decoders mappers](#custom-decoders-mappers)
 - [Supported tags](#supported-tags)
 - [Plugins](#plugins)
+- [Dynamic Commands](#dynamic-commands)
 - [Variable interpolation](#variable-interpolation)
 - [Validation](#validation)
 - [Modifying Kong's behaviour](#modifying-kongs-behaviour)
@@ -473,6 +474,11 @@ cli.Plugins = kong.Plugins{&pluginOne, &pluginTwo}
 ```
 
 Additionally if an interface type is embedded, it can also be populated with a Kong annotated struct.
+
+## Dynamic Commands
+
+While plugins give complete control over extending command-line interfaces, Kong
+also supports dynamically adding commands via `kong.DynamicCommand()`.
 
 ## Variable interpolation
 

@@ -51,7 +51,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField) {
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
 		fv := v.Field(i)
-		tag := parseTag(v, fv, ft)
+		tag := parseTag(v, ft)
 		if tag.Ignored {
 			continue
 		}
