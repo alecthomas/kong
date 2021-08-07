@@ -204,6 +204,9 @@ func (n *Node) Path() (out string) {
 	switch n.Type {
 	case CommandNode:
 		out += " " + n.Name
+		if len(n.Aliases) > 0 {
+			out += fmt.Sprintf(" (%s)", strings.Join(n.Aliases, ","))
+		}
 	case ArgumentNode:
 		out += " " + "<" + n.Name + ">"
 	default:
