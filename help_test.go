@@ -342,7 +342,7 @@ Run "test-app <command> --help" for more information on a command.
 			require.NoError(t, err)
 		})
 		require.True(t, exited)
-		expected := `Usage: test-app one <command>
+		expected := `Usage: test-app one (un,uno) <command>
 
 subcommand one
 
@@ -414,7 +414,7 @@ Commands:
   two    Another subcommand.
 
 Group A
-  one    subcommand one
+  one (un,uno)    subcommand one
 
 Run "test-app <command> --help" for more information on a command.
 `
@@ -432,7 +432,7 @@ Run "test-app <command> --help" for more information on a command.
 			require.NoError(t, err)
 		})
 		require.True(t, exited)
-		expected := `Usage: test-app one <command>
+		expected := `Usage: test-app one (un,uno) <command>
 
 subcommand one
 
@@ -440,8 +440,8 @@ Flags:
   -h, --help    Show context-sensitive help.
 
 Group A
-  one thing      subcommand thing
-  one <other>    subcommand other
+  one (un,uno) thing      subcommand thing
+  one (un,uno) <other>    subcommand other
 `
 		if expected != w.String() {
 			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
