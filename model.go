@@ -317,16 +317,6 @@ func (v *Value) IsCounter() bool {
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
-	defer func() {
-		if rerr := recover(); rerr != nil {
-			switch rerr := rerr.(type) {
-			case Error:
-				err = errors.Wrap(rerr, v.ShortSummary())
-			default:
-				panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), rerr))
-			}
-		}
-	}()
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
 		return errors.Wrap(err, v.ShortSummary())
