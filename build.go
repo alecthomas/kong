@@ -72,9 +72,9 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 			fv = fv.Elem()
 		} else if fv.Type() == reflect.TypeOf(Plugins{}) {
 			for i := 0; i < fv.Len(); i++ {
-				fields, err := flattenedFields(fv.Index(i).Elem())
-				if err != nil {
-					return nil, err
+				fields, ferr := flattenedFields(fv.Index(i).Elem())
+				if ferr != nil {
+					return nil, ferr
 				}
 				out = append(out, fields...)
 			}

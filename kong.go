@@ -108,9 +108,9 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	// Synthesise command nodes.
 	for _, dcmd := range k.dynamicCommands {
-		tag, err := parseTagString(strings.Join(dcmd.tags, " "))
-		if err != nil {
-			return nil, err
+		tag, terr := parseTagString(strings.Join(dcmd.tags, " "))
+		if terr != nil {
+			return nil, terr
 		}
 		tag.Name = dcmd.name
 		tag.Help = dcmd.help

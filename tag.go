@@ -92,10 +92,9 @@ func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) 
 					continue
 				}
 				return nil, fmt.Errorf("%v has an unexpected char at pos %v", tagString, idx)
-			} else {
-				quotes = true
-				continue
 			}
+			quotes = true
+			continue
 		}
 		if inKey {
 			key = append(key, r)
