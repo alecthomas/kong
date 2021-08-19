@@ -653,7 +653,6 @@ func (c *Context) Apply() (string, error) {
 }
 
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
-	defer catch(&err)
 	candidates := []string{}
 	for _, flag := range flags {
 		long := "--" + flag.Name
@@ -734,7 +733,6 @@ func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 // Any passed values will be bindable to arguments of the target Run() method. Additionally,
 // all parent nodes in the command structure will be bound.
 func (c *Context) Run(binds ...interface{}) (err error) {
-	defer catch(&err)
 	node := c.Selected()
 	if node == nil {
 		return fmt.Errorf("no command selected")

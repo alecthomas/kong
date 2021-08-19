@@ -21,7 +21,7 @@ func TestParseHandlingBadBuild(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			require.Equal(t, Error{msg: "fail=' is not quoted properly"}, r)
+			require.Equal(t, "fail=' is not quoted properly", r.(error).Error())
 		}
 	}()
 

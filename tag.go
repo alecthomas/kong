@@ -48,7 +48,7 @@ type tagChars struct {
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
 var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
 
-func parseTagItems(tagString string, chr tagChars) map[string][]string {
+func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) {
 	d := map[string][]string{}
 	key := []rune{}
 	value := []rune{}
@@ -91,11 +91,10 @@ func parseTagItems(tagString string, chr tagChars) map[string][]string {
 				if next == chr.sep || eof {
 					continue
 				}
-				fail("%v has an unexpected char at pos %v", tagString, idx)
-			} else {
-				quotes = true
-				continue
+				return nil, fmt.Errorf("%v has an unexpected char at pos %v", tagString, idx)
 			}
+			quotes = true
+			continue
 		}
 		if inKey {
 			key = append(key, r)
@@ -104,12 +103,12 @@ func parseTagItems(tagString string, chr tagChars) map[string][]string {
 		}
 	}
 	if quotes {
-		fail("%v is not quoted properly", tagString)
+		return nil, fmt.Errorf("%v is not quoted properly", tagString)
 	}
 
 	add()
 
-	return d
+	return d, nil
 }
 
 func getTagInfo(ft reflect.StructField) (string, tagChars) {
@@ -129,31 +128,39 @@ func tagSplitFn(r rune) bool {
 	return r == ',' || r == ' '
 }
 
-func parseTagString(s string) *Tag {
-	t := &Tag{
-		items: parseTagItems(s, bareChars),
-	}
-	err := hydrateTag(t, "", false)
+func parseTagString(s string) (*Tag, error) {
+	items, err := parseTagItems(s, bareChars)
 	if err != nil {
-		fail("%s: %s", s, err)
+		return nil, err
 	}
-	return t
+	t := &Tag{
+		items: items,
+	}
+	err = hydrateTag(t, "", false)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", s, err)
+	}
+	return t, nil
 }
 
-func parseTag(parent reflect.Value, ft reflect.StructField) *Tag {
+func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 	if ft.Tag.Get("kong") == "-" {
 		t := newEmptyTag()
 		t.Ignored = true
-		return t
+		return t, nil
+	}
+	items, err := parseTagItems(getTagInfo(ft))
+	if err != nil {
+		return nil, err
 	}
 	t := &Tag{
-		items: parseTagItems(getTagInfo(ft)),
+		items: items,
 	}
-	err := hydrateTag(t, ft.Type.Name(), ft.Type.Kind() == reflect.Bool)
+	err = hydrateTag(t, ft.Type.Name(), ft.Type.Kind() == reflect.Bool)
 	if err != nil {
-		failField(parent, ft, "%s", err)
+		return nil, failField(parent, ft, "%s", err)
 	}
-	return t
+	return t, nil
 }
 
 func hydrateTag(t *Tag, typeName string, isBool bool) error {
