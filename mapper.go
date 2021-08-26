@@ -308,15 +308,23 @@ func (boolMapper) IsBool() bool { return true }
 
 func durationDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		var value string
-		if err := ctx.Scan.PopValueInto("duration", &value); err != nil {
+		t, err := ctx.Scan.PopValue("duration")
+		if err != nil {
 			return err
 		}
-		r, err := time.ParseDuration(value)
-		if err != nil {
-			return errors.Errorf("expected duration but got %q: %s", value, err)
+		var d time.Duration
+		switch v := t.Value.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return errors.Errorf("expected duration but got %q: %s", v, err)
+			}
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			d = reflect.ValueOf(v).Convert(reflect.TypeOf(time.Duration(0))).Interface().(time.Duration) // nolint: forcetypeassert
+		default:
+			return errors.Errorf("expected duration but got %q", v)
 		}
-		target.Set(reflect.ValueOf(r))
+		target.Set(reflect.ValueOf(d))
 		return nil
 	}
 }
