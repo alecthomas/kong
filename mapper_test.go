@@ -127,6 +127,18 @@ func TestDurationMapper(t *testing.T) {
 	require.Equal(t, time.Second*5, cli.Flag)
 }
 
+func TestDurationMapperJSONResolver(t *testing.T) {
+	var cli struct {
+		Flag time.Duration
+	}
+	resolver, err := kong.JSON(strings.NewReader(`{"flag": 5000000000}`))
+	require.NoError(t, err)
+	k := mustNew(t, &cli, kong.Resolvers(resolver))
+	_, err = k.Parse(nil)
+	require.NoError(t, err)
+	require.Equal(t, time.Second*5, cli.Flag)
+}
+
 func TestSplitEscaped(t *testing.T) {
 	require.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
 	require.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
