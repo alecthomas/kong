@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -315,6 +316,26 @@ func ClearResolvers() Option {
 func Resolvers(resolvers ...Resolver) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.resolvers = append(k.resolvers, resolvers...)
+		return nil
+	})
+}
+
+// IgnoreFieldsRegex will cause kong.New() to skip field names that match any
+// of the provided regex patterns. This is useful if you are not able to add a
+// kong="-" struct tag to a struct/element before the call to New.
+//
+// Example: When referencing protoc generated structs, you will likely want to
+// ignore/skip XXX_* fields.
+func IgnoreFieldsRegex(regexes ...*regexp.Regexp) Option {
+	return OptionFunc(func(k *Kong) error {
+		for _, r := range regexes {
+			if r == nil {
+				continue
+			}
+
+			k.ignoreFieldsRegex = append(k.ignoreFieldsRegex, r)
+		}
+
 		return nil
 	})
 }

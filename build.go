@@ -24,6 +24,7 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 	for _, flag := range extraFlags {
 		seenFlags[flag.Name] = true
 	}
+
 	node, err := buildNode(k, iv, ApplicationNode, seenFlags)
 	if err != nil {
 		return nil, err
@@ -112,7 +113,17 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 	if err != nil {
 		return nil, err
 	}
+
+	MAIN:
 	for _, field := range fields {
+		for _, r := range k.ignoreFieldsRegex {
+			if r.Match([]byte(field.field.Name)) {
+				fmt.Println("skipping field: ", field.field.Name)
+
+				continue MAIN
+			}
+		}
+
 		ft := field.field
 		fv := field.value
 
