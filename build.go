@@ -99,6 +99,9 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 	return out, nil
 }
 
+// Build a Node in the Kong data model.
+//
+// "v" is the value to create the node from, "typ" is the output Node type.
 func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool) (*Node, error) {
 	node := &Node{
 		Type:   typ,
@@ -121,8 +124,16 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 			name = tag.Prefix + name
 		}
 
+		fieldType := ft.Type
+		// Hydrate command structs that are pointers.
+		if tag.Cmd && fieldType.Kind() == reflect.Ptr {
+			fv = reflect.New(fieldType.Elem()).Elem()
+			field.value = fv
+			v.FieldByIndex(field.field.Index).Set(fv.Addr())
+		}
+
 		// Nested structs are either commands or args, unless they implement the Mapper interface.
-		if ft.Type.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) && k.registry.ForValue(fv) == nil {
+		if field.value.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) && k.registry.ForValue(fv) == nil {
 			typ := CommandNode
 			if tag.Arg {
 				typ = ArgumentNode

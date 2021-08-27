@@ -1282,3 +1282,18 @@ func TestDuplicateNestedShortFlags(t *testing.T) {
 	_, err := kong.New(&cli)
 	require.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
+
+func TestHydratePointerCommands(t *testing.T) {
+	type cmd struct {
+		Flag bool
+	}
+
+	var cli struct {
+		Cmd *cmd `cmd:""`
+	}
+
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"cmd", "--flag"})
+	require.NoError(t, err)
+	require.Equal(t, &cmd{Flag: true}, cli.Cmd)
+}
