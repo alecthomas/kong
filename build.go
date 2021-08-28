@@ -61,6 +61,11 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 		if tag.Ignored {
 			continue
 		}
+		// Command and embedded structs can be pointers, so we hydrate them now.
+		if (tag.Cmd || tag.Embed) && ft.Type.Kind() == reflect.Ptr {
+			fv = reflect.New(ft.Type.Elem()).Elem()
+			v.FieldByIndex(ft.Index).Set(fv.Addr())
+		}
 		if !ft.Anonymous && !tag.Embed {
 			if fv.CanSet() {
 				out = append(out, flattenedField{field: ft, value: fv, tag: tag})
@@ -131,14 +136,6 @@ MAIN:
 			name = tag.Prefix + strings.ToLower(dashedString(ft.Name))
 		} else {
 			name = tag.Prefix + name
-		}
-
-		fieldType := ft.Type
-		// Hydrate command structs that are pointers.
-		if tag.Cmd && fieldType.Kind() == reflect.Ptr {
-			fv = reflect.New(fieldType.Elem()).Elem()
-			field.value = fv
-			v.FieldByIndex(field.field.Index).Set(fv.Addr())
 		}
 
 		// Nested structs are either commands or args, unless they implement the Mapper interface.

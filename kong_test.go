@@ -1283,19 +1283,25 @@ func TestDuplicateNestedShortFlags(t *testing.T) {
 	require.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
 
-func TestHydratePointerCommands(t *testing.T) {
+func TestHydratePointerCommandsAndEmbeds(t *testing.T) {
 	type cmd struct {
 		Flag bool
 	}
 
+	type embed struct {
+		Embed bool
+	}
+
 	var cli struct {
-		Cmd *cmd `cmd:""`
+		Cmd   *cmd   `cmd:""`
+		Embed *embed `embed:""`
 	}
 
 	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{"cmd", "--flag"})
+	_, err := k.Parse([]string{"--embed", "cmd", "--flag"})
 	require.NoError(t, err)
 	require.Equal(t, &cmd{Flag: true}, cli.Cmd)
+	require.Equal(t, &embed{Embed: true}, cli.Embed)
 }
 
 // nolint
