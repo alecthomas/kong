@@ -326,14 +326,19 @@ func Resolvers(resolvers ...Resolver) Option {
 //
 // Example: When referencing protoc generated structs, you will likely want to
 // ignore/skip XXX_* fields.
-func IgnoreFieldsRegex(regexes ...*regexp.Regexp) Option {
+func IgnoreFieldsRegex(regexes ...string) Option {
 	return OptionFunc(func(k *Kong) error {
 		for _, r := range regexes {
-			if r == nil {
-				continue
+			if r == "" {
+				return errors.New("regex input cannot be empty")
 			}
 
-			k.ignoreFieldsRegex = append(k.ignoreFieldsRegex, r)
+			re, err := regexp.Compile(r)
+			if err != nil {
+				return errors.Wrap(err, "unable to compile regex")
+			}
+
+			k.ignoreFieldsRegex = append(k.ignoreFieldsRegex, re)
 		}
 
 		return nil

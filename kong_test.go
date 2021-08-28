@@ -3,7 +3,6 @@ package kong_test
 import (
 	"bytes"
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -1299,6 +1298,7 @@ func TestHydratePointerCommands(t *testing.T) {
 	require.Equal(t, &cmd{Flag: true}, cli.Cmd)
 }
 
+//nolint
 type testIgnoreFields struct {
 	Foo struct {
 		Bar bool
@@ -1313,12 +1313,9 @@ type testIgnoreFields struct {
 }
 
 func TestIgnoreRegex(t *testing.T) {
-	r, err := regexp.Compile("^XXX_")
-	require.NoError(t, err)
-
 	cli := testIgnoreFields{}
 
-	k, err := kong.New(&cli, kong.IgnoreFieldsRegex(r))
+	k, err := kong.New(&cli, kong.IgnoreFieldsRegex(`.*\.XXX_.+`))
 	require.NoError(t, err)
 
 	_, err = k.Parse([]string{"foo", "sub"})
@@ -1337,17 +1334,12 @@ func TestIgnoreRegex(t *testing.T) {
 }
 
 // Verify that passing a nil regex will work
-func TestIgnoreRegexNil(t *testing.T) {
+func TestIgnoreRegexEmpty(t *testing.T) {
 	cli := testIgnoreFields{}
 
-	k, err := kong.New(&cli, kong.IgnoreFieldsRegex(nil))
-	require.NoError(t, err)
-
-	_, err = k.Parse([]string{"foo", "sub", "--subflag1", "--subflag2"})
-	require.NoError(t, err)
-
-	_, err = k.Parse([]string{"baz"})
-	require.NoError(t, err)
+	_, err := kong.New(&cli, kong.IgnoreFieldsRegex(""))
+	require.Error(t, err)
+	require.Contains(t, "regex input cannot be empty", err.Error())
 }
 
 type optionWithErr struct{}
@@ -1358,7 +1350,7 @@ func (o *optionWithErr) Apply(k *kong.Kong) error {
 
 func TestOptionReturnsErr(t *testing.T) {
 	cli := struct {
-		Test bool `flag"`
+		Test bool
 	}{}
 
 	optWithError := &optionWithErr{}
