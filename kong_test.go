@@ -1298,7 +1298,7 @@ func TestHydratePointerCommands(t *testing.T) {
 	require.Equal(t, &cmd{Flag: true}, cli.Cmd)
 }
 
-//nolint
+// nolint
 type testIgnoreFields struct {
 	Foo struct {
 		Bar bool
