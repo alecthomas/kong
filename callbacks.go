@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type bindings map[reflect.Type]func() (reflect.Value, error)
@@ -22,6 +24,30 @@ func (b bindings) add(values ...interface{}) bindings {
 		b[reflect.TypeOf(v)] = func() (reflect.Value, error) { return reflect.ValueOf(v), nil }
 	}
 	return b
+}
+
+func (b bindings) addTo(impl, iface interface{}) {
+	valueOf := reflect.ValueOf(impl)
+	b[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
+}
+
+func (b bindings) addProvider(provider interface{}) error {
+	pv := reflect.ValueOf(provider)
+	t := pv.Type()
+	if t.Kind() != reflect.Func || t.NumIn() != 0 || t.NumOut() != 2 || t.Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
+		return errors.Errorf("%T must be a function with the signature func()(T, error)", provider)
+	}
+	rt := pv.Type().Out(0)
+	b[rt] = func() (reflect.Value, error) {
+		out := pv.Call(nil)
+		errv := out[1]
+		var err error
+		if !errv.IsNil() {
+			err = errv.Interface().(error) // nolint
+		}
+		return out[0], err
+	}
+	return nil
 }
 
 // Clone and add values.

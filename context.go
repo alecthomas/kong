@@ -113,8 +113,15 @@ func (c *Context) Bind(args ...interface{}) {
 //
 //    BindTo(impl, (*MyInterface)(nil))
 func (c *Context) BindTo(impl, iface interface{}) {
-	valueOf := reflect.ValueOf(impl)
-	c.bindings[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
+	c.bindings.addTo(impl, iface)
+}
+
+// BindToProvider allows binding of provider functions.
+//
+// This is useful when the Run() function of different commands require different values that may
+// not all be initialisable from the main() function.
+func (c *Context) BindToProvider(provider interface{}) error {
+	return c.bindings.addProvider(provider)
 }
 
 // Value returns the value for a particular path element.
