@@ -191,8 +191,7 @@ func BindTo(impl, iface interface{}) Option {
 // not all be initialisable from the main() function.
 func BindToProvider(provider interface{}) Option {
 	return OptionFunc(func(k *Kong) error {
-		_, err := k.bindings.addProvider(provider)
-		return err
+		return k.bindings.addProvider(provider)
 	})
 }
 

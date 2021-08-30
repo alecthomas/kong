@@ -121,8 +121,7 @@ func (c *Context) BindTo(impl, iface interface{}) {
 // This is useful when the Run() function of different commands require different values that may
 // not all be initialisable from the main() function.
 func (c *Context) BindToProvider(provider interface{}) error {
-	_, err := c.bindings.addProvider(provider)
-	return err
+	return c.bindings.addProvider(provider)
 }
 
 // Value returns the value for a particular path element.

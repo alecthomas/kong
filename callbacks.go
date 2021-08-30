@@ -26,17 +26,16 @@ func (b bindings) add(values ...interface{}) bindings {
 	return b
 }
 
-func (b bindings) addTo(impl, iface interface{}) bindings {
+func (b bindings) addTo(impl, iface interface{}) {
 	valueOf := reflect.ValueOf(impl)
 	b[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
-	return b
 }
 
-func (b bindings) addProvider(provider interface{}) (bindings, error) {
+func (b bindings) addProvider(provider interface{}) error {
 	pv := reflect.ValueOf(provider)
 	t := pv.Type()
 	if t.Kind() != reflect.Func || t.NumIn() != 0 || t.NumOut() != 2 || t.Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
-		return b, errors.Errorf("%T must be a function with the signature func()(T, error)", provider)
+		return errors.Errorf("%T must be a function with the signature func()(T, error)", provider)
 	}
 	rt := pv.Type().Out(0)
 	b[rt] = func() (reflect.Value, error) {
@@ -48,7 +47,7 @@ func (b bindings) addProvider(provider interface{}) (bindings, error) {
 		}
 		return out[0], err
 	}
-	return b, nil
+	return nil
 }
 
 // Clone and add values.
