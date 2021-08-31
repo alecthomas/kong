@@ -66,7 +66,7 @@ var CLI struct {
   } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg:"" optional name:"path" help:"Paths to list." type:"path"`
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
   } `cmd:"" help:"List paths."`
 }
 
@@ -159,7 +159,7 @@ var CLI struct {
   } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg:"" optional name:"path" help:"Paths to list." type:"path"`
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
   } `cmd:"" help:"List paths."`
 }
 
@@ -217,7 +217,7 @@ func (r *RmCmd) Run(ctx *Context) error {
 }
 
 type LsCmd struct {
-  Paths []string `arg:"" optional name:"path" help:"Paths to list." type:"path"`
+  Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
 }
 
 func (l *LsCmd) Run(ctx *Context) error {
