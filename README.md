@@ -63,11 +63,11 @@ var CLI struct {
     Recursive bool `help:"Recursively remove files."`
 
     Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
-  } `cmd help:"Remove files."`
+  } `cmd:"" help:"Remove files."`
 
   Ls struct {
     Paths []string `arg:"" optional name:"path" help:"Paths to list." type:"path"`
-  } `cmd help:"List paths."`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -156,11 +156,11 @@ var CLI struct {
     Recursive bool `help:"Recursively remove files."`
 
     Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
-  } `cmd help:"Remove files."`
+  } `cmd:"" help:"Remove files."`
 
   Ls struct {
     Paths []string `arg:"" optional name:"path" help:"Paths to list." type:"path"`
-  } `cmd help:"List paths."`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -228,8 +228,8 @@ func (l *LsCmd) Run(ctx *Context) error {
 var cli struct {
   Debug bool `help:"Enable debug mode."`
 
-  Rm RmCmd `cmd help:"Remove files."`
-  Ls LsCmd `cmd help:"List paths."`
+  Rm RmCmd `cmd:"" help:"Remove files."`
+  Ls LsCmd `cmd:"" help:"List paths."`
 }
 
 func main() {
