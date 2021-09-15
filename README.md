@@ -62,12 +62,12 @@ var CLI struct {
     Force     bool `help:"Force removal."`
     Recursive bool `help:"Recursively remove files."`
 
-    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
-  } `cmd help:"Remove files."`
+    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
-  } `cmd help:"List paths."`
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -155,12 +155,12 @@ var CLI struct {
     Force     bool `help:"Force removal."`
     Recursive bool `help:"Recursively remove files."`
 
-    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
-  } `cmd help:"Remove files."`
+    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
-  } `cmd help:"List paths."`
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -208,7 +208,7 @@ type RmCmd struct {
   Force     bool `help:"Force removal."`
   Recursive bool `help:"Recursively remove files."`
 
-  Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
+  Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
 }
 
 func (r *RmCmd) Run(ctx *Context) error {
@@ -217,7 +217,7 @@ func (r *RmCmd) Run(ctx *Context) error {
 }
 
 type LsCmd struct {
-  Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
+  Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
 }
 
 func (l *LsCmd) Run(ctx *Context) error {
@@ -228,8 +228,8 @@ func (l *LsCmd) Run(ctx *Context) error {
 var cli struct {
   Debug bool `help:"Enable debug mode."`
 
-  Rm RmCmd `cmd help:"Remove files."`
-  Ls LsCmd `cmd help:"List paths."`
+  Rm RmCmd `cmd:"" help:"Remove files."`
+  Ls LsCmd `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -351,7 +351,7 @@ You would use the following:
 ```go
 var CLI struct {
   Ls struct {
-    Files []string `arg type:"existingfile"`
+    Files []string `arg:"" type:"existingfile"`
   } `cmd`
 }
 ```
@@ -370,7 +370,7 @@ You would use the following:
 var CLI struct {
   Config struct {
     Set struct {
-      Config map[string]float64 `arg type:"file:"`
+      Config map[string]float64 `arg:"" type:"file:"`
     } `cmd`
   } `cmd`
 }
