@@ -540,8 +540,8 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 	}
 	for _, subCmd := range node.Children {
 		if subCmd.Hidden {
-	            continue
-        	}
+			continue
+		}
 		rows = append(rows, h.CommandTree(subCmd, prefix)...)
 	}
 	return
