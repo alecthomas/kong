@@ -539,6 +539,9 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 		rows = append(rows, [2]string{prefix + arg.Summary(), arg.Help})
 	}
 	for _, subCmd := range node.Children {
+		if subCmd.Hidden {
+			continue
+		}
 		rows = append(rows, h.CommandTree(subCmd, prefix)...)
 	}
 	return
