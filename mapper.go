@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -639,7 +639,7 @@ func pbEnumMapper() MapperFunc {
 			return fmt.Errorf("unable to marshal enum descriptor []byte to FileDescriptorProto: %s", err)
 		}
 
-		pbEnumMap := make(map[string]int32, 0)
+		pbEnumMap := make(map[string]int32)
 		keys := make([]string, 0) // Nice to have for error output
 
 		// Build a map of all available enums
