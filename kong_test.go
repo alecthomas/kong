@@ -1321,7 +1321,7 @@ type testIgnoreFields struct {
 func TestIgnoreRegex(t *testing.T) {
 	cli := testIgnoreFields{}
 
-	k, err := kong.New(&cli, kong.IgnoreFieldsRegex(`.*\.XXX_.+`))
+	k, err := kong.New(&cli, kong.IgnoreFields(`.*\.XXX_.+`))
 	require.NoError(t, err)
 
 	_, err = k.Parse([]string{"foo", "sub"})
@@ -1343,7 +1343,7 @@ func TestIgnoreRegex(t *testing.T) {
 func TestIgnoreRegexEmpty(t *testing.T) {
 	cli := testIgnoreFields{}
 
-	_, err := kong.New(&cli, kong.IgnoreFieldsRegex(""))
+	_, err := kong.New(&cli, kong.IgnoreFields(""))
 	require.Error(t, err)
 	require.Contains(t, "regex input cannot be empty", err.Error())
 }

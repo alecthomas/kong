@@ -121,7 +121,7 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 
 MAIN:
 	for _, field := range fields {
-		for _, r := range k.ignoreFieldsRegex {
+		for _, r := range k.ignoreFields {
 			if r.MatchString(v.Type().Name() + "." + field.field.Name) {
 				continue MAIN
 			}

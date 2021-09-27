@@ -49,11 +49,11 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	bindings          bindings
-	loader            ConfigurationLoader
-	resolvers         []Resolver
-	registry          *Registry
-	ignoreFieldsRegex []*regexp.Regexp
+	bindings     bindings
+	loader       ConfigurationLoader
+	resolvers    []Resolver
+	registry     *Registry
+	ignoreFields []*regexp.Regexp
 
 	noDefaultHelp bool
 	usageOnError  usageOnError
@@ -75,14 +75,14 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:              os.Exit,
-		Stdout:            os.Stdout,
-		Stderr:            os.Stderr,
-		registry:          NewRegistry().RegisterDefaults(),
-		vars:              Vars{},
-		bindings:          bindings{},
-		helpFormatter:     DefaultHelpValueFormatter,
-		ignoreFieldsRegex: make([]*regexp.Regexp, 0),
+		Exit:          os.Exit,
+		Stdout:        os.Stdout,
+		Stderr:        os.Stderr,
+		registry:      NewRegistry().RegisterDefaults(),
+		vars:          Vars{},
+		bindings:      bindings{},
+		helpFormatter: DefaultHelpValueFormatter,
+		ignoreFields:  make([]*regexp.Regexp, 0),
 	}
 
 	options = append(options, Bind(k))
