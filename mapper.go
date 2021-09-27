@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 var (
@@ -271,7 +273,8 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
-		RegisterName("counter", counterMapper())
+		RegisterName("counter", counterMapper()).
+		RegisterName("pbenum", pbEnumMapper())
 }
 
 type boolMapper struct{}
@@ -592,6 +595,88 @@ func fileMapper(r *Registry) MapperFunc {
 			}
 		}
 		target.Set(reflect.ValueOf(file))
+		return nil
+	}
+}
+
+// enums created with protoc will contain an EnumDescriptor that we can access
+// to determine available enums and use that data to validate input & translate
+// "human-readable" (strings) into their original int32 form.
+func pbEnumMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		v := target.MethodByName("EnumDescriptor")
+		if !v.IsValid() {
+			return errors.New("pbenum does not contain required method 'EnumDescriptor()'; " +
+				"is this a protobuf enum?")
+		}
+
+		// Attempt to call .EnumDescriptor()
+		recv := v.Call([]reflect.Value{})
+
+		// Should receive 2 return values: []byte and []int
+		if len(recv) != 2 {
+			return fmt.Errorf("returned data contained unexpected number of values (%d)", len(recv))
+		}
+
+		if !recv[0].IsValid() {
+			return errors.New("invalid reflect value")
+		}
+
+		desc, ok := recv[0].Interface().([]byte)
+		if !ok {
+			return errors.New("unable to assert returned descriptor as []byte")
+		}
+
+		// EnumDescriptor data is compressed - decompress it
+		unzippedData, err := Unzip(desc)
+		if err != nil {
+			return fmt.Errorf("unable to decompress: %s", err)
+		}
+
+		fd := &descriptorpb.FileDescriptorProto{}
+
+		if err := proto.Unmarshal(unzippedData, fd); err != nil {
+			return fmt.Errorf("unable to marshal enum descriptor []byte to FileDescriptorProto: %s", err)
+		}
+
+		pbEnumMap := make(map[string]int32, 0)
+		keys := make([]string, 0) // Nice to have for error output
+
+		// Build a map of all available enums
+		for _, enumDesc := range fd.EnumType {
+			for _, valueDesc := range enumDesc.Value {
+				if valueDesc.Name == nil || valueDesc.Number == nil {
+					continue
+				}
+
+				name := *valueDesc.Name
+
+				name = strings.TrimPrefix(name, ctx.Value.Tag.PBEnumStripPrefix)
+
+				if ctx.Value.Tag.PBEnumLowercase {
+					name = strings.ToLower(name)
+				}
+
+				pbEnumMap[name] = *valueDesc.Number
+				keys = append(keys, name)
+			}
+		}
+
+		// Set the target to the equivalent int32
+		var providedInput string
+		if err := ctx.Scan.PopValueInto("pbenum", &providedInput); err != nil {
+			return errors.Wrap(err, "unable to populate pbenum value")
+		}
+
+		// Not sure if this is the right place for this check.  ~ds 09.26.21
+		num, ok := pbEnumMap[providedInput]
+		if !ok {
+			return fmt.Errorf("'%s' not available in proto enum map (available values: %s)",
+				providedInput, strings.Join(keys, ", "))
+		}
+
+		target.SetInt(int64(num))
+
 		return nil
 	}
 }

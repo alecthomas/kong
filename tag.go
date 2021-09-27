@@ -11,31 +11,33 @@ import (
 
 // Tag represents the parsed state of Kong tags in a struct field tag.
 type Tag struct {
-	Ignored     bool // Field is ignored by Kong. ie. kong:"-"
-	Cmd         bool
-	Arg         bool
-	Required    bool
-	Optional    bool
-	Name        string
-	Help        string
-	Type        string
-	Default     string
-	Format      string
-	PlaceHolder string
-	Env         string
-	Short       rune
-	Hidden      bool
-	Sep         rune
-	MapSep      rune
-	Enum        string
-	Group       string
-	Xor         []string
-	Vars        Vars
-	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
-	Embed       bool
-	Aliases     []string
-	Negatable   bool
-	Passthrough bool
+	Ignored           bool // Field is ignored by Kong. ie. kong:"-"
+	Cmd               bool
+	Arg               bool
+	Required          bool
+	Optional          bool
+	Name              string
+	Help              string
+	Type              string
+	Default           string
+	Format            string
+	PlaceHolder       string
+	Env               string
+	Short             rune
+	Hidden            bool
+	Sep               rune
+	MapSep            rune
+	Enum              string
+	Group             string
+	Xor               []string
+	Vars              Vars
+	Prefix            string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
+	Embed             bool
+	Aliases           []string
+	Negatable         bool
+	Passthrough       bool
+	PBEnumLowercase   bool   // Optionally lowercase all target enum names
+	PBEnumStripPrefix string // Optionally strip the prefix from target enum names
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string][]string
@@ -227,6 +229,9 @@ func hydrateTag(t *Tag, typeName string, isBool bool) error {
 		return fmt.Errorf("passthrough only makes sense for positional arguments")
 	}
 	t.Passthrough = passthrough
+	// Protobuf enum specific settings
+	t.PBEnumLowercase = t.Has("pbenum_lowercase")
+	t.PBEnumStripPrefix = t.Get("pbenum_strip_prefix")
 	return nil
 }
 

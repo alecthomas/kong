@@ -1,7 +1,12 @@
 package kong
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
+	"io/ioutil"
+
+	"github.com/pkg/errors"
 )
 
 // ConfigFlag uses the configured (via kong.Configuration(loader)) configuration loader to load configuration
@@ -32,4 +37,20 @@ func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
 	fmt.Fprintln(app.Stdout, vars["version"])
 	app.Exit(0)
 	return nil
+}
+
+// Unzip unzips data and writes it to the Writer
+func Unzip(data []byte) ([]byte, error) {
+	gr, err := gzip.NewReader(bytes.NewBuffer(data))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create new gzip reader")
+	}
+	defer gr.Close()
+
+	data, err = ioutil.ReadAll(gr)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to read gzip data")
+	}
+
+	return data, nil
 }

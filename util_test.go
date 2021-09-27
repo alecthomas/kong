@@ -1,6 +1,8 @@
 package kong
 
 import (
+	"bytes"
+	"compress/gzip"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -41,4 +43,23 @@ func TestVersionFlag(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "0.1.1", strings.TrimSpace(w.String()))
 	require.Equal(t, 0, called)
+}
+
+func TestUnzip(t *testing.T) {
+	inputData := "hello batman"
+
+	// Compress inputData
+	var writeBuffer bytes.Buffer
+
+	writer := gzip.NewWriter(&writeBuffer)
+	_, writeErr := writer.Write([]byte(inputData))
+	closeErr := writer.Close()
+	require.NoError(t, closeErr)
+	require.NoError(t, writeErr)
+	compressedInputData := writeBuffer.Bytes()
+
+	// Now try to decompress
+	unzippedData, unzipErr := Unzip(compressedInputData)
+	require.NoError(t, unzipErr)
+	require.Equal(t, string(unzippedData), inputData)
 }
