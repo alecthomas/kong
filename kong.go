@@ -183,6 +183,9 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	if len(value.Tag.Vars) > 0 {
 		vars = vars.CloneWith(value.Tag.Vars)
 	}
+	if varsContributor, ok := value.Mapper.(VarsContributor); ok {
+		vars = vars.CloneWith(varsContributor.Vars(value))
+	}
 	if value.Default, err = interpolate(value.Default, vars, nil); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}

@@ -115,6 +115,11 @@ type Mapper interface {
 	Decode(ctx *DecodeContext, target reflect.Value) error
 }
 
+// VarsContributor can be implemented by a Mapper to contribute Vars during interpolation.
+type VarsContributor interface {
+	Vars(ctx *Value) Vars
+}
+
 // A BoolMapper is a Mapper to a value that is a boolean.
 //
 // This is used solely for formatting help.

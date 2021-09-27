@@ -464,3 +464,34 @@ func (t testMapperWithPlaceHolder) Decode(ctx *kong.DecodeContext, target reflec
 func (t testMapperWithPlaceHolder) PlaceHolder(flag *kong.Flag) string {
 	return "/a/b/c"
 }
+
+func TestMapperVarsContributor(t *testing.T) {
+	var cli struct {
+		Flag string `help:"Some help with ${avar}"`
+	}
+	b := bytes.NewBuffer(nil)
+	k := mustNew(
+		t,
+		&cli,
+		kong.Writers(b, b),
+		kong.ValueMapper(&cli.Flag, testMapperVarsContributor{}),
+		kong.Exit(func(int) { panic("exit") }),
+	)
+	// Ensure that --help
+	require.Panics(t, func() {
+		_, err := k.Parse([]string{"--help"})
+		require.NoError(t, err)
+	})
+	require.Regexp(t, "--flag=STRING\\s+Some help with a var", b.String())
+}
+
+type testMapperVarsContributor struct{}
+
+func (t testMapperVarsContributor) Vars(value *kong.Value) kong.Vars {
+	return kong.Vars{"avar": "a var"}
+}
+
+func (t testMapperVarsContributor) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
+	target.SetString("hi")
+	return nil
+}
