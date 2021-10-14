@@ -742,6 +742,15 @@ func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 func (c *Context) Run(binds ...interface{}) (err error) {
 	node := c.Selected()
 	if node == nil {
+		if len(c.Path) > 0 {
+			selected := c.Path[0].Node()
+			if selected.Type == ApplicationNode {
+				method := getMethod(selected.Target, "Run")
+				if method.IsValid() {
+					return c.RunNode(selected, binds...)
+				}
+			}
+		}
 		return fmt.Errorf("no command selected")
 	}
 	return c.RunNode(node, binds...)
