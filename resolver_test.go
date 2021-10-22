@@ -74,6 +74,39 @@ func TestEnvarsTag(t *testing.T) {
 	require.Equal(t, []int{5, 2, 9}, cli.Slice)
 }
 
+func TestEnvarsEnvPrefix(t *testing.T) {
+	type Anonymous struct {
+		Slice []int `env:"NUMBERS"`
+	}
+	var cli struct {
+		Anonymous `envprefix:"KONG_"`
+	}
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "1,2,3"})
+	defer restoreEnv()
+
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+}
+
+func TestEnvarsNestedEnvPrefix(t *testing.T) {
+	type NestedAnonymous struct {
+		String string `env:"STRING"`
+	}
+	type Anonymous struct {
+		NestedAnonymous `envprefix:"ANON_"`
+	}
+	var cli struct {
+		Anonymous `envprefix:"KONG_"`
+	}
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_ANON_STRING": "abc"})
+	defer restoreEnv()
+
+	_, err := parser.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, "abc", cli.String)
+}
+
 func TestEnvarsWithDefault(t *testing.T) {
 	var cli struct {
 		Flag string `env:"KONG_FLAG" default:"default"`
