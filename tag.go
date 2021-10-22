@@ -32,6 +32,7 @@ type Tag struct {
 	Xor         []string
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
+	EnvPrefix   string
 	Embed       bool
 	Aliases     []string
 	Negatable   bool
@@ -196,6 +197,7 @@ func hydrateTag(t *Tag, typeName string, isBool bool) error {
 		t.Xor = append(t.Xor, strings.FieldsFunc(xor, tagSplitFn)...)
 	}
 	t.Prefix = t.Get("prefix")
+	t.EnvPrefix = t.Get("envprefix")
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
 	if negatable && !isBool {

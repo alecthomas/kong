@@ -461,6 +461,20 @@ func TestEnvarAutoHelp(t *testing.T) {
 	require.Contains(t, w.String(), "A flag ($FLAG).")
 }
 
+func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
+	type Anonymous struct {
+		Flag string `env:"FLAG" help:"A flag."`
+	}
+	var cli struct {
+		Anonymous `envprefix:"ANON_"`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, w.String(), "A flag ($ANON_FLAG).")
+}
+
 func TestCustomHelpFormatter(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG" help:"A flag."`

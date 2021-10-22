@@ -97,6 +97,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 			}
 			// Accumulate prefixes.
 			subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
+			subf.tag.EnvPrefix = tag.EnvPrefix + subf.tag.EnvPrefix
 			// Combine parent vars.
 			subf.tag.Vars = tag.Vars.CloneWith(subf.tag.Vars)
 		}
@@ -137,6 +138,8 @@ MAIN:
 		} else {
 			name = tag.Prefix + name
 		}
+
+		tag.Env = tag.EnvPrefix + tag.Env
 
 		// Nested structs are either commands or args, unless they implement the Mapper interface.
 		if field.value.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) && k.registry.ForValue(fv) == nil {
