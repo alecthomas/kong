@@ -463,7 +463,8 @@ func TestEnvarAutoHelp(t *testing.T) {
 
 func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	type Anonymous struct {
-		Flag string `env:"FLAG" help:"A flag."`
+		Flag  string `env:"FLAG" help:"A flag."`
+		Other string `help:"A different flag."`
 	}
 	var cli struct {
 		Anonymous `envprefix:"ANON_"`
@@ -473,6 +474,7 @@ func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	_, err := p.Parse([]string{"--help"})
 	require.NoError(t, err)
 	require.Contains(t, w.String(), "A flag ($ANON_FLAG).")
+	require.Contains(t, w.String(), "A different flag.")
 }
 
 func TestCustomHelpFormatter(t *testing.T) {
