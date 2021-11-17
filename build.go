@@ -139,7 +139,9 @@ MAIN:
 			name = tag.Prefix + name
 		}
 
-		tag.Env = tag.EnvPrefix + tag.Env
+		if tag.Env != "" {
+			tag.Env = tag.EnvPrefix + tag.Env
+		}
 
 		// Nested structs are either commands or args, unless they implement the Mapper interface.
 		if field.value.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) && k.registry.ForValue(fv) == nil {
