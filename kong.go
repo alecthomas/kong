@@ -192,9 +192,13 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
+	if value.Flag.Env, err = interpolate(value.Flag.Env, vars, nil); err != nil {
+		return fmt.Errorf("env value for %s: %s", value.Summary(), err)
+	}
 	value.Help, err = interpolate(value.Help, vars, map[string]string{
 		"default": value.Default,
 		"enum":    value.Enum,
+		"env":     value.Flag.Env,
 	})
 	if err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
