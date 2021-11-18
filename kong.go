@@ -186,16 +186,24 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	if varsContributor, ok := value.Mapper.(VarsContributor); ok {
 		vars = vars.CloneWith(varsContributor.Vars(value))
 	}
+
+	updatedVars := map[string]string{
+		"default": value.Default,
+		"enum":    value.Enum,
+	}
 	if value.Default, err = interpolate(value.Default, vars, nil); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}
 	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
-	value.Help, err = interpolate(value.Help, vars, map[string]string{
-		"default": value.Default,
-		"enum":    value.Enum,
-	})
+	if value.Flag != nil {
+		if value.Flag.Env, err = interpolate(value.Flag.Env, vars, nil); err != nil {
+			return fmt.Errorf("env value for %s: %s", value.Summary(), err)
+		}
+		updatedVars["env"] = value.Flag.Env
+	}
+	value.Help, err = interpolate(value.Help, vars, updatedVars)
 	if err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}

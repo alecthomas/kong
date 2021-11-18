@@ -644,6 +644,7 @@ func TestInterpolationIntoModel(t *testing.T) {
 	var cli struct {
 		Flag    string `default:"${default}" help:"Help, I need ${somebody}" enum:"${enum}"`
 		EnumRef string `enum:"a,b" required:"" help:"One of ${enum}"`
+		EnvRef  string `env:"${env}" help:"God ${env}"`
 	}
 	_, err := kong.New(&cli)
 	require.Error(t, err)
@@ -651,14 +652,19 @@ func TestInterpolationIntoModel(t *testing.T) {
 		"default":  "Some default value.",
 		"somebody": "chickens!",
 		"enum":     "a,b,c,d",
+		"env":      "SAVE_THE_QUEEN",
 	})
 	require.NoError(t, err)
+	require.Len(t, p.Model.Flags, 4)
 	flag := p.Model.Flags[1]
 	flag2 := p.Model.Flags[2]
+	flag3 := p.Model.Flags[3]
 	require.Equal(t, "Some default value.", flag.Default)
 	require.Equal(t, "Help, I need chickens!", flag.Help)
 	require.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
 	require.Equal(t, "One of a,b", flag2.Help)
+	require.Equal(t, "SAVE_THE_QUEEN", flag3.Env)
+	require.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
 
 func TestErrorMissingArgs(t *testing.T) {
