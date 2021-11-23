@@ -40,7 +40,7 @@ func TestEnvarsFlagBasic(t *testing.T) {
 		Interp string `env:"${kongInterp}"`
 	}
 	kongInterpEnv := "KONG_INTERP"
-	parser, unsetEnvs := newEnvParser(t, &cli, 
+	parser, unsetEnvs := newEnvParser(t, &cli,
 		envMap{
 			"KONG_STRING": "bye",
 			"KONG_SLICE":  "5,2,9",
