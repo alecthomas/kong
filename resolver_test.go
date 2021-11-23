@@ -37,17 +37,26 @@ func TestEnvarsFlagBasic(t *testing.T) {
 	var cli struct {
 		String string `env:"KONG_STRING"`
 		Slice  []int  `env:"KONG_SLICE"`
+		Interp string `env:"${kongInterp}"`
 	}
-	parser, unsetEnvs := newEnvParser(t, &cli, envMap{
-		"KONG_STRING": "bye",
-		"KONG_SLICE":  "5,2,9",
-	})
+	kongInterpEnv := "KONG_INTERP"
+	parser, unsetEnvs := newEnvParser(t, &cli, 
+		envMap{
+			"KONG_STRING": "bye",
+			"KONG_SLICE":  "5,2,9",
+			"KONG_INTERP": "foo",
+		},
+		kong.Vars{
+			"kongInterp": kongInterpEnv,
+		},
+	)
 	defer unsetEnvs()
 
 	_, err := parser.Parse([]string{})
 	require.NoError(t, err)
 	require.Equal(t, "bye", cli.String)
 	require.Equal(t, []int{5, 2, 9}, cli.Slice)
+	require.Equal(t, "foo", cli.Interp)
 }
 
 func TestEnvarsFlagOverride(t *testing.T) {

@@ -201,6 +201,7 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		if value.Flag.Env, err = interpolate(value.Flag.Env, vars, nil); err != nil {
 			return fmt.Errorf("env value for %s: %s", value.Summary(), err)
 		}
+		value.Tag.Env = value.Flag.Env
 		updatedVars["env"] = value.Flag.Env
 	}
 	value.Help, err = interpolate(value.Help, vars, updatedVars)
