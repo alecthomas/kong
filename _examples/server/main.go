@@ -18,17 +18,12 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-type context struct {
-	kong *kong.Context
-	rl   *readline.Instance
-}
-
 // Handle a single SSH interactive connection.
 func handle(log *log.Logger, s ssh.Session) error {
 	log.Printf("New SSH")
 	sshPty, _, isPty := s.Pty()
 	if !isPty {
-		return errors.New("No PTY requested")
+		return errors.New("no PTY requested")
 	}
 	log.Printf("Using TERM=%s width=%d height=%d", sshPty.Term, sshPty.Window.Width, sshPty.Window.Height)
 	cpty, tty, err := pty.Open()

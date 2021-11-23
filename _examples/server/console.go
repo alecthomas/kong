@@ -12,10 +12,10 @@ var _ = kong.Must(&grammar{})
 
 // Server interface.
 type grammar struct {
-	Help     helpCmd `cmd help:"Show help."`
-	Question helpCmd `cmd hidden name:"?" help:"Show help."`
+	Help     helpCmd `cmd:"" help:"Show help."`
+	Question helpCmd `cmd:"" hidden:"" name:"?" help:"Show help."`
 
-	Status statusCmd `cmd help:"Show server status."`
+	Status statusCmd `cmd:"" help:"Show server status."`
 }
 
 type statusCmd struct {
@@ -28,7 +28,7 @@ func (s *statusCmd) Run(ctx *kong.Context) error {
 }
 
 type helpCmd struct {
-	Command []string `arg optional help:"Show help on command."`
+	Command []string `arg:"" optional:"" help:"Show help on command."`
 }
 
 // Run shows help.
