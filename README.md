@@ -130,8 +130,9 @@ including `help:""` and other tags. [Variables](#variable-interpolation) will
 also be interpolated into the help string.
 
 Finally, any command, argument, or flag type implementing the interface
-`Help() string` will have this function called to retrieve the help string.
-This allows for much more descriptive text than can fit in Go tags.
+`Help() string` will have this function called to retrieve more detail to
+augment the help tag. This allows for much more descriptive text than can
+fit in Go tags.
 
 ## Command handling
 
