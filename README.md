@@ -144,7 +144,7 @@ There are two ways to handle commands in Kong.
 
 When you call `kong.Parse()` it will return a unique string representation of the command. Each command branch in the hierarchy will be a bare word and each branching argument or required positional argument will be the name surrounded by angle brackets. Here's an example:
 
-There's an example of this pattern [here](https://github.com/alecthomas/kong/blob/master/_examples/shell/main.go).
+There's an example of this pattern [here](https://github.com/alecthomas/kong/blob/master/_examples/shell/commandstring/main.go).
 
 eg.
 
