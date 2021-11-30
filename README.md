@@ -12,6 +12,9 @@
 1. [Help](#help)
     1. [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
     1. [Defining help in Kong](#defining-help-in-kong)
+        1. [Showing the _command_'s detailed help](#showing-the-commands-detailed-help)
+        1. [Showing an _argument_'s detailed help](#showing-an-arguments-detailed-help)
+        1. [Showing a _flag_'s detailed help](#showing-a-flags-detailed-help)
 1. [Command handling](#command-handling)
     1. [Switch on the command string](#switch-on-the-command-string)
     1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
@@ -134,7 +137,68 @@ also be interpolated into the help string.
 Finally, any command, argument, or flag type implementing the interface
 `Help() string` will have this function called to retrieve more detail to
 augment the help tag. This allows for much more descriptive text than can
-fit in Go tags.
+fit in Go tags.  [See _examples/shell/help](./_examples/shell/help)
+
+#### Showing the _command_'s detailed help
+
+A command's additional help text is _not_ shown from top-level help, but can be displayed within contextual help:
+
+**Top level help**
+```bash
+ $ go run ./_examples/shell/help --help
+Usage: help <command>
+
+An app demonstrating HelpProviders
+
+Flags:
+  -h, --help    Show context-sensitive help.
+      --flag    Regular flag help
+
+Commands:
+  echo    Regular command help
+```
+
+**Contextual**
+```bash
+ $ go run ./_examples/shell/help echo --help
+Usage: help echo <msg>
+
+Regular command help
+
+🚀 additional command help
+
+Arguments:
+  <msg>    Regular argument help
+
+Flags:
+  -h, --help    Show context-sensitive help.
+      --flag    Regular flag help
+```
+
+#### Showing an _argument_'s detailed help
+
+Custom help will only be shown for _positional arguments with named fields_ ([see the README section on positional arguments for more details on what that means](../../../README.md#branching-positional-arguments))
+
+**Contextual argument help**
+```bash
+ $ go run ./_examples/shell/help msg --help
+Usage: help echo <msg>
+
+Regular argument help
+
+📣 additional argument help
+
+Flags:
+  -h, --help    Show context-sensitive help.
+      --flag    Regular flag help
+```
+
+#### Showing a _flag_'s detailed help
+
+> **TODO** (not known how to elicit this behaviour)
+
+Neither `go run ./main.go --help --flag` nor `go run ./main.go --flag --help` appear to work
+
 
 ## Command handling
 
@@ -405,12 +469,12 @@ Kong includes a number of builtin custom type mappers. These can be used by
 specifying the tag `type:"<type>"`. They are registered with the option
 function `NamedMapper(name, mapper)`.
 
-| Name              | Description
-|-------------------|---------------------------------------------------
-| `path`            | A path. ~ expansion is applied. `-` is accepted for stdout, and will be passed unaltered.
-| `existingfile`    | An existing file. ~ expansion is applied. `-` is accepted for stdin, and will be passed unaltered.
-| `existingdir`     | An existing directory. ~ expansion is applied.
-| `counter`         | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.
+| Name           | Description                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| `path`         | A path. ~ expansion is applied. `-` is accepted for stdout, and will be passed unaltered.          |
+| `existingfile` | An existing file. ~ expansion is applied. `-` is accepted for stdin, and will be passed unaltered. |
+| `existingdir`  | An existing directory. ~ expansion is applied.                                                     |
+| `counter`      | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.             |
 
 
 Slices and maps treat type tags specially. For slices, the `type:""` tag
@@ -426,12 +490,12 @@ specifies the element type. For maps, the tag has the format
 Any field implementing `encoding.TextUnmarshaler` or `json.Unmarshaler` will use those interfaces
 for decoding values. Kong also includes builtin support for many common Go types:
 
-| Type                | Description
-|---------------------|--------------------------------------------
-| `time.Duration`     | Populated using `time.ParseDuration()`.
-| `time.Time`         | Populated using `time.Parse()`. Format defaults to RFC3339 but can be overridden with the `format:"X"` tag.
-| `*os.File`          | Path to a file that will be opened, or `-` for `os.Stdin`. File must be closed by the user.
-| `*url.URL`          | Populated with `url.Parse()`.
+| Type            | Description                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `time.Duration` | Populated using `time.ParseDuration()`.                                                                     |
+| `time.Time`     | Populated using `time.Parse()`. Format defaults to RFC3339 but can be overridden with the `format:"X"` tag. |
+| `*os.File`      | Path to a file that will be opened, or `-` for `os.Stdin`. File must be closed by the user.                 |
+| `*url.URL`      | Populated with `url.Parse()`.                                                                               |
 
 For more fine-grained control, if a field implements the
 [MapperValue](https://godoc.org/github.com/alecthomas/kong#MapperValue)
@@ -446,36 +510,36 @@ Tags can be in two forms:
 
 Both can coexist with standard Tag parsing.
 
-Tag                    | Description
------------------------| -------------------------------------------
-`cmd:""`               | If present, struct is a command.
-`arg:""`               | If present, field is an argument. Required by default.
-`env:"X"`              | Specify envar to use for default value.
-`name:"X"`             | Long name, for overriding field name.
-`help:"X"`             | Help text.
-`type:"X"`             | Specify [named types](#custom-named-decoders) to use.
-`placeholder:"X"`      | Placeholder text.
-`default:"X"`          | Default value.
-`default:"1"`          | On a command, make it the default.
-`default:"withargs"`   | On a command, make it the default and allow args/flags from that command
-`short:"X"`            | Short name, if flag.
-`aliases:"X,Y"`        | One or more aliases (for cmd).
-`required:""`          | If present, flag/arg is required.
-`optional:""`          | If present, flag/arg is optional.
-`hidden:""`            | If present, command or flag is hidden.
-`negatable:""`         | If present on a `bool` field, supports prefixing a flag with `--no-` to invert the default value
-`format:"X"`           | Format for parsing input, if supported.
-`sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
-`mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
-`enum:"X,Y,..."`       | Set of valid values allowed for this flag. An enum field must be `required` or have a valid `default`.
-`group:"X"`            | Logical group for a flag or command.
-`xor:"X,Y,..."`        | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.
-`prefix:"X"`           | Prefix for all sub-flags.
-`envprefix:"X"`        | Envar prefix for all sub-flags.
-`set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
-`embed:""`             | If present, this field's children will be embedded in the parent. Useful for composition.
-`passthrough:""`       | If present on a positional argument, it stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`. On a command it requires that the command contains only one argument of type `[]string` which is then filled with everything following the command, unparsed.
-`-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct. e.g `` `kong:"-"` ``
+| Tag                  | Description                                                                                                                                                                                                                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cmd:""`             | If present, struct is a command.                                                                                                                                                                                                                                                                                               |
+| `arg:""`             | If present, field is an argument. Required by default.                                                                                                                                                                                                                                                                         |
+| `env:"X"`            | Specify envar to use for default value.                                                                                                                                                                                                                                                                                        |
+| `name:"X"`           | Long name, for overriding field name.                                                                                                                                                                                                                                                                                          |
+| `help:"X"`           | Help text.                                                                                                                                                                                                                                                                                                                     |
+| `type:"X"`           | Specify [named types](#custom-named-decoders) to use.                                                                                                                                                                                                                                                                          |
+| `placeholder:"X"`    | Placeholder text.                                                                                                                                                                                                                                                                                                              |
+| `default:"X"`        | Default value.                                                                                                                                                                                                                                                                                                                 |
+| `default:"1"`        | On a command, make it the default.                                                                                                                                                                                                                                                                                             |
+| `default:"withargs"` | On a command, make it the default and allow args/flags from that command                                                                                                                                                                                                                                                       |
+| `short:"X"`          | Short name, if flag.                                                                                                                                                                                                                                                                                                           |
+| `aliases:"X,Y"`      | One or more aliases (for cmd).                                                                                                                                                                                                                                                                                                 |
+| `required:""`        | If present, flag/arg is required.                                                                                                                                                                                                                                                                                              |
+| `optional:""`        | If present, flag/arg is optional.                                                                                                                                                                                                                                                                                              |
+| `hidden:""`          | If present, command or flag is hidden.                                                                                                                                                                                                                                                                                         |
+| `negatable:""`       | If present on a `bool` field, supports prefixing a flag with `--no-` to invert the default value                                                                                                                                                                                                                               |
+| `format:"X"`         | Format for parsing input, if supported.                                                                                                                                                                                                                                                                                        |
+| `sep:"X"`            | Separator for sequences (defaults to ","). May be `none` to disable splitting.                                                                                                                                                                                                                                                 |
+| `mapsep:"X"`         | Separator for maps (defaults to ";"). May be `none` to disable splitting.                                                                                                                                                                                                                                                      |
+| `enum:"X,Y,..."`     | Set of valid values allowed for this flag. An enum field must be `required` or have a valid `default`.                                                                                                                                                                                                                         |
+| `group:"X"`          | Logical group for a flag or command.                                                                                                                                                                                                                                                                                           |
+| `xor:"X,Y,..."`      | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.                                                                                                                            |
+| `prefix:"X"`         | Prefix for all sub-flags.                                                                                                                                                                                                                                                                                                      |
+| `envprefix:"X"`      | Envar prefix for all sub-flags.                                                                                                                                                                                                                                                                                                |
+| `set:"K=V"`          | Set a variable for expansion by child elements. Multiples can occur.                                                                                                                                                                                                                                                           |
+| `embed:""`           | If present, this field's children will be embedded in the parent. Useful for composition.                                                                                                                                                                                                                                      |
+| `passthrough:""`     | If present on a positional argument, it stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`. On a command it requires that the command contains only one argument of type `[]string` which is then filled with everything following the command, unparsed. |
+| `-`                  | Ignore the field. Useful for adding non-CLI fields to a configuration struct. e.g `` `kong:"-"` ``                                                                                                                                                                                                                             |
 
 ## Plugins
 
