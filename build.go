@@ -239,6 +239,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 	value := &Value{
 		Name:         name,
 		Help:         tag.Help,
+		OrigHelp:     tag.Help,
 		Default:      tag.Default,
 		DefaultValue: reflect.New(fv.Type()).Elem(),
 		Mapper:       mapper,

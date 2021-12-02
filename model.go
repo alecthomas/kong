@@ -231,6 +231,7 @@ type Value struct {
 	Flag         *Flag // Nil if positional argument.
 	Name         string
 	Help         string
+	OrigHelp     string // Original help string, without interpolated variables.
 	Default      string
 	DefaultValue reflect.Value
 	Enum         string

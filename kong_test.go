@@ -675,7 +675,7 @@ func TestIssue244(t *testing.T) {
 	k := mustNew(t, &Config{}, kong.Exit(func(int) {}), kong.Writers(w, w))
 	_, err := k.Parse([]string{"--help"})
 	require.NoError(t, err)
-	require.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID ($CI_PROJECT_ID)`)
+	require.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
 }
 
 func TestErrorMissingArgs(t *testing.T) {

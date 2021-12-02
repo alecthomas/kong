@@ -86,7 +86,7 @@ type HelpValueFormatter func(value *Value) string
 
 // DefaultHelpValueFormatter is the default HelpValueFormatter.
 func DefaultHelpValueFormatter(value *Value) string {
-	if value.Tag.Env == "" {
+	if value.Tag.Env == "" || HasInterpolatedVar(value.OrigHelp, "env") {
 		return value.Help
 	}
 	suffix := "($" + value.Tag.Env + ")"
