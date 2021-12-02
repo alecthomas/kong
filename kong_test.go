@@ -667,6 +667,17 @@ func TestInterpolationIntoModel(t *testing.T) {
 	require.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
 
+func TestIssue244(t *testing.T) {
+	type Config struct {
+		Project string `short:"p" env:"CI_PROJECT_ID" help:"Environment variable: ${env}"`
+	}
+	w := &strings.Builder{}
+	k := mustNew(t, &Config{}, kong.Exit(func(int) {}), kong.Writers(w, w))
+	_, err := k.Parse([]string{"--help"})
+	require.NoError(t, err)
+	require.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID ($CI_PROJECT_ID)`)
+}
+
 func TestErrorMissingArgs(t *testing.T) {
 	var cli struct {
 		One string `arg:""`
