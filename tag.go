@@ -19,6 +19,7 @@ type Tag struct {
 	Name        string
 	Help        string
 	Type        string
+	TypeName    string
 	Default     string
 	Format      string
 	PlaceHolder string
@@ -183,6 +184,7 @@ func hydrateTag(t *Tag, typeName string, isBool bool) error {
 	t.Name = t.Get("name")
 	t.Help = t.Get("help")
 	t.Type = t.Get("type")
+	t.TypeName = typeName
 	t.Env = t.Get("env")
 	t.Short, err = t.GetRune("short")
 	if err != nil && t.Get("short") != "" {
@@ -217,9 +219,6 @@ func hydrateTag(t *Tag, typeName string, isBool bool) error {
 		t.Vars[parts[0]] = parts[1]
 	}
 	t.PlaceHolder = t.Get("placeholder")
-	if t.PlaceHolder == "" {
-		t.PlaceHolder = strings.ToUpper(dashedString(typeName))
-	}
 	t.Enum = t.Get("enum")
 	if t.Enum != "" && !(t.Required || t.Default != "") {
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")

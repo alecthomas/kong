@@ -400,20 +400,23 @@ func (f *Flag) FormatPlaceHolder() string {
 	if f.Value.IsSlice() && f.Value.Tag.Sep != -1 {
 		tail += string(f.Value.Tag.Sep) + "..."
 	}
+	if f.PlaceHolder != "" {
+		return f.PlaceHolder + tail
+	}
 	if f.Default != "" {
 		if f.Value.Target.Kind() == reflect.String {
 			return strconv.Quote(f.Default) + tail
 		}
 		return f.Default + tail
 	}
-	if f.PlaceHolder != "" {
-		return f.PlaceHolder + tail
-	}
 	if f.Value.IsMap() {
 		if f.Value.Tag.MapSep != -1 {
 			tail = string(f.Value.Tag.MapSep) + "..."
 		}
 		return "KEY=VALUE" + tail
+	}
+	if f.Tag != nil && f.Tag.TypeName != "" {
+		return strings.ToUpper(dashedString(f.Tag.TypeName)) + tail
 	}
 	return strings.ToUpper(f.Name) + tail
 }
