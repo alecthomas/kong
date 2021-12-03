@@ -477,7 +477,7 @@ func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	require.Contains(t, w.String(), "A different flag.")
 }
 
-func TestCustomHelpFormatter(t *testing.T) {
+func TestCustomValueFormatter(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG" help:"A flag."`
 	}
@@ -485,7 +485,7 @@ func TestCustomHelpFormatter(t *testing.T) {
 	p := mustNew(t, &cli,
 		kong.Writers(w, w),
 		kong.Exit(func(int) {}),
-		kong.HelpFormatter(func(value *kong.Value) string {
+		kong.ValueFormatter(func(value *kong.Value) string {
 			return value.Help
 		}),
 	)

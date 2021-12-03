@@ -215,7 +215,17 @@ func ShortHelp(shortHelp HelpPrinter) Option {
 }
 
 // HelpFormatter configures how the help text is formatted.
+//
+// Deprecated: Use ValueFormatter() instead.
 func HelpFormatter(helpFormatter HelpValueFormatter) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.helpFormatter = helpFormatter
+		return nil
+	})
+}
+
+// ValueFormatter configures how the help text is formatted.
+func ValueFormatter(helpFormatter HelpValueFormatter) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.helpFormatter = helpFormatter
 		return nil
