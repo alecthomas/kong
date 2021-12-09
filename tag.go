@@ -138,7 +138,7 @@ func parseTagString(s string) (*Tag, error) {
 	t := &Tag{
 		items: items,
 	}
-	err = hydrateTag(t, "", false)
+	err = hydrateTag(t, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", s, err)
 	}
@@ -158,14 +158,20 @@ func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 	t := &Tag{
 		items: items,
 	}
-	err = hydrateTag(t, ft.Type.Name(), ft.Type.Kind() == reflect.Bool)
+	err = hydrateTag(t, ft.Type)
 	if err != nil {
 		return nil, failField(parent, ft, "%s", err)
 	}
 	return t, nil
 }
 
-func hydrateTag(t *Tag, typeName string, isBool bool) error {
+func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
+	var typeName string
+	var isBool bool
+	if typ != nil {
+		typeName = typ.Name()
+		isBool = typ.Kind() == reflect.Bool
+	}
 	var err error
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
@@ -220,7 +226,8 @@ func hydrateTag(t *Tag, typeName string, isBool bool) error {
 	}
 	t.PlaceHolder = t.Get("placeholder")
 	t.Enum = t.Get("enum")
-	if t.Enum != "" && !(t.Required || t.Default != "") {
+	scalarType := (typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map))
+	if t.Enum != "" && !(t.Required || t.Default != "") && scalarType {
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
 	}
 	passthrough := t.Has("passthrough")

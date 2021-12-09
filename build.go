@@ -167,14 +167,13 @@ MAIN:
 	}
 
 	// Scan through argument positionals to ensure optional is never before a required.
-	last := true
-	for i, p := range node.Positional {
-		if !last && p.Required {
-			return nil, fmt.Errorf("argument %q can not be required after an optional", p.Name)
+	var last *Value
+	for i, curr := range node.Positional {
+		if last != nil && !last.Required && curr.Required {
+			return nil, fmt.Errorf("%s: required %q can not come after optional %q", node.FullPath(), curr.Name, last.Name)
 		}
-
-		last = p.Required
-		p.Position = i
+		last = curr
+		curr.Position = i
 	}
 
 	return node, nil

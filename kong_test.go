@@ -1382,3 +1382,19 @@ func TestOptionReturnsErr(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, "option returned err", err.Error())
 }
+
+func TestEnumValidation(t *testing.T) {
+	var cli struct {
+		Enum string `arg:"" enum:"one,two"`
+	}
+	_, err := kong.New(&cli)
+	require.Error(t, err)
+}
+
+func TestEnumValidationSlice(t *testing.T) {
+	var cli struct {
+		Enum []string `arg:"" enum:"one,two"`
+	}
+	_, err := kong.New(&cli)
+	require.NoError(t, err)
+}
