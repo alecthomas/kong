@@ -79,8 +79,8 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 func callMethod(name string, v, f reflect.Value, bindings bindings) error {
 	in := []reflect.Value{}
 	t := f.Type()
-	if t.NumOut() != 1 || t.Out(0) != callbackReturnSignature {
-		return fmt.Errorf("return value of %T.%s() must be exactly \"error\"", v.Type(), name)
+	if t.NumOut() != 1 || !t.Out(0).Implements(callbackReturnSignature) {
+		return fmt.Errorf("return value of %T.%s() must implement \"error\"", v.Type(), name)
 	}
 	for i := 0; i < t.NumIn(); i++ {
 		pt := t.In(i)

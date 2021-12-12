@@ -42,6 +42,51 @@ func TestBindTo(t *testing.T) {
 	require.Equal(t, "foo", saw)
 }
 
+func TestInvalidCallback(t *testing.T) {
+	type iface interface {
+		Method()
+	}
+
+	saw := ""
+	method := func(i iface) string {
+		saw = string(i.(impl))
+		return saw
+	}
+
+	var cli struct{}
+
+	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
+	require.NoError(t, err)
+	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
+	require.EqualError(t, err, `return value of *reflect.rtype.method() must implement "error"`)
+}
+
+type zrror struct{}
+
+func (*zrror) Error() string {
+	return "error"
+}
+
+func TestCallbackCustomError(t *testing.T) {
+	type iface interface {
+		Method()
+	}
+
+	saw := ""
+	method := func(i iface) *zrror {
+		saw = string(i.(impl))
+		return nil
+	}
+
+	var cli struct{}
+
+	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
+	require.NoError(t, err)
+	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
+	require.NoError(t, err)
+	require.Equal(t, "foo", saw)
+}
+
 type bindToProviderCLI struct {
 	Called bool
 	Cmd    bindToProviderCmd `cmd:""`
