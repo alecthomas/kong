@@ -4,40 +4,42 @@
 # Kong is a command-line parser for Go
 [![](https://godoc.org/github.com/alecthomas/kong?status.svg)](http://godoc.org/github.com/alecthomas/kong) [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong) [![Go Report Card](https://goreportcard.com/badge/github.com/alecthomas/kong)](https://goreportcard.com/report/github.com/alecthomas/kong) [![Slack chat](https://img.shields.io/static/v1?logo=slack&style=flat&label=slack&color=green&message=gophers)](https://gophers.slack.com/messages/CN9DS8YF3)
 
-<!-- TOC depthfrom:2 updateonsave:true withlinks:true -->
+<!-- https://github.com/naokazuterada/MarkdownTOC -->
 
-- [Introduction](#introduction)
-- [Help](#help)
-    - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
-    - [Defining help in Kong](#defining-help-in-kong)
-- [Command handling](#command-handling)
-    - [Switch on the command string](#switch-on-the-command-string)
-    - [Attach a Run... error method to each command](#attach-a-run-error-method-to-each-command)
-- [Hooks: BeforeResolve, BeforeApply, AfterApply and the Bind option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
-- [Flags](#flags)
-- [Commands and sub-commands](#commands-and-sub-commands)
-- [Branching positional arguments](#branching-positional-arguments)
-- [Terminating positional arguments](#terminating-positional-arguments)
-- [Slices](#slices)
-- [Maps](#maps)
-- [Custom named decoders](#custom-named-decoders)
-- [Supported field types](#supported-field-types)
-- [Custom decoders mappers](#custom-decoders-mappers)
-- [Supported tags](#supported-tags)
-- [Plugins](#plugins)
-- [Dynamic Commands](#dynamic-commands)
-- [Variable interpolation](#variable-interpolation)
-- [Validation](#validation)
-- [Modifying Kong's behaviour](#modifying-kongs-behaviour)
-    - [Namehelp and Descriptionhelp - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
-    - [Configurationloader, paths... - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
-    - [Resolver... - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
-    - [*Mapper... - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    - [ConfigureHelpHelpOptions and HelpHelpFunc - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-    - [Bind... - bind values for callback hooks and Run methods](#bind---bind-values-for-callback-hooks-and-run-methods)
-    - [Other options](#other-options)
+<!-- MarkdownTOC autolink="true" style="ordered" indent="    " -->
 
-<!-- /TOC -->
+1. [Introduction](#introduction)
+1. [Help](#help)
+    1. [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
+    1. [Defining help in Kong](#defining-help-in-kong)
+1. [Command handling](#command-handling)
+    1. [Switch on the command string](#switch-on-the-command-string)
+    1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+1. [Hooks: BeforeResolve\(\), BeforeApply\(\), AfterApply\(\) and the Bind\(\) option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
+1. [Flags](#flags)
+1. [Commands and sub-commands](#commands-and-sub-commands)
+1. [Branching positional arguments](#branching-positional-arguments)
+1. [Positional arguments](#positional-arguments)
+1. [Slices](#slices)
+1. [Maps](#maps)
+1. [Custom named decoders](#custom-named-decoders)
+1. [Supported field types](#supported-field-types)
+1. [Custom decoders \(mappers\)](#custom-decoders-mappers)
+1. [Supported tags](#supported-tags)
+1. [Plugins](#plugins)
+1. [Dynamic Commands](#dynamic-commands)
+1. [Variable interpolation](#variable-interpolation)
+1. [Validation](#validation)
+1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
+    1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
+    1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+    1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
+    1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    1. [`Bind(...)` - bind values for callback hooks and Run\(\) methods](#bind---bind-values-for-callback-hooks-and-run-methods)
+    1. [Other options](#other-options)
+
+<!-- /MarkdownTOC -->
 
 ## Introduction
 
@@ -333,11 +335,14 @@ var CLI struct {
 
 This looks a little verbose in this contrived example, but typically this will not be the case.
 
-## Terminating positional arguments
+## Positional arguments
 
-If a [mapped type](#mapper---customising-how-the-command-line-is-mapped-to-go-values) is tagged with `arg` it will be treated as the final positional values to be parsed on the command line.
+If a field is tagged with `arg:""` it will be treated as the final positional
+value to be parsed on the command line. By default positional arguments are
+required, but specifying `optional:""` will alter this.
 
-If a positional argument is a slice, all remaining arguments will be appended to that slice.
+If a positional argument is a slice, all remaining arguments will be appended
+to that slice.
 
 ## Slices
 
@@ -429,7 +434,7 @@ Both can coexist with standard Tag parsing.
 Tag                    | Description
 -----------------------| -------------------------------------------
 `cmd:""`               | If present, struct is a command.
-`arg:""`               | If present, field is an argument.
+`arg:""`               | If present, field is an argument. Required by default.
 `env:"X"`              | Specify envar to use for default value.
 `name:"X"`             | Long name, for overriding field name.
 `help:"X"`             | Help text.

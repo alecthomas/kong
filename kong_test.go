@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/repr"
 )
 
 func mustNew(t *testing.T, cli interface{}, options ...kong.Option) *kong.Kong {
@@ -1384,17 +1385,63 @@ func TestOptionReturnsErr(t *testing.T) {
 }
 
 func TestEnumValidation(t *testing.T) {
-	var cli struct {
-		Enum string `arg:"" enum:"one,two"`
+	tests := []struct {
+		name string
+		cli  interface{}
+		fail bool
+	}{
+		{
+			"Arg",
+			&struct {
+				Enum string `arg:"" enum:"one,two"`
+			}{},
+			false,
+		},
+		{
+			"RequiredArg",
+			&struct {
+				Enum string `required:"" arg:"" enum:"one,two"`
+			}{},
+			false,
+		},
+		{
+			"OptionalArg",
+			&struct {
+				Enum string `optional:"" arg:"" enum:"one,two"`
+			}{},
+			true,
+		},
+		{
+			"RepeatedArgs",
+			&struct {
+				Enum []string `arg:"" enum:"one,two"`
+			}{},
+			false,
+		},
+		{
+			"RequiredRepeatedArgs",
+			&struct {
+				Enum []string `required:"" arg:"" enum:"one,two"`
+			}{},
+			false,
+		},
+		{
+			"OptionalRepeatedArgs",
+			&struct {
+				Enum []string `optional:"" arg:"" enum:"one,two"`
+			}{},
+			false,
+		},
 	}
-	_, err := kong.New(&cli)
-	require.Error(t, err)
-}
-
-func TestEnumValidationSlice(t *testing.T) {
-	var cli struct {
-		Enum []string `arg:"" enum:"one,two"`
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			_, err := kong.New(test.cli)
+			if test.fail {
+				require.Error(t, err, repr.String(test.cli))
+			} else {
+				require.NoError(t, err, repr.String(test.cli))
+			}
+		})
 	}
-	_, err := kong.New(&cli)
-	require.NoError(t, err)
 }

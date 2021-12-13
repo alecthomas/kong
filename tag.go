@@ -186,6 +186,8 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	// Arguments with defaults are always optional.
 	if t.Arg && t.Default != "" {
 		t.Optional = true
+	} else if t.Arg && !optional { // Arguments are required unless explicitly made optional.
+		t.Required = true
 	}
 	t.Name = t.Get("name")
 	t.Help = t.Get("help")
