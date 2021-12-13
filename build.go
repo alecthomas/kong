@@ -211,7 +211,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 		if child.Help == "" {
 			child.Help = child.Argument.Help
 		}
-	} else if tag.Default != "" {
+	} else if tag.HasDefault {
 		if node.DefaultCmd != nil {
 			return failField(v, ft, "can't have more than one default command under %s", node.Summary())
 		}
@@ -239,6 +239,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 		Name:         name,
 		Help:         tag.Help,
 		OrigHelp:     tag.Help,
+		HasDefault:   tag.HasDefault,
 		Default:      tag.Default,
 		DefaultValue: reflect.New(fv.Type()).Elem(),
 		Mapper:       mapper,

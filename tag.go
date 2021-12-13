@@ -20,6 +20,7 @@ type Tag struct {
 	Help        string
 	Type        string
 	TypeName    string
+	HasDefault  bool
 	Default     string
 	Format      string
 	PlaceHolder string
@@ -182,9 +183,10 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	}
 	t.Required = required
 	t.Optional = optional
+	t.HasDefault = t.Has("default")
 	t.Default = t.Get("default")
 	// Arguments with defaults are always optional.
-	if t.Arg && t.Default != "" {
+	if t.Arg && t.HasDefault {
 		t.Optional = true
 	} else if t.Arg && !optional { // Arguments are required unless explicitly made optional.
 		t.Required = true
@@ -229,7 +231,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	t.PlaceHolder = t.Get("placeholder")
 	t.Enum = t.Get("enum")
 	scalarType := (typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map))
-	if t.Enum != "" && !(t.Required || t.Default != "") && scalarType {
+	if t.Enum != "" && !(t.Required || t.HasDefault) && scalarType {
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
 	}
 	passthrough := t.Has("passthrough")

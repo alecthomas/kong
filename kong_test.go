@@ -1432,6 +1432,13 @@ func TestEnumValidation(t *testing.T) {
 			}{},
 			false,
 		},
+		{
+			"EnumWithEmptyDefault",
+			&struct {
+				Flag string `enum:"one,two," default:""`
+			}{},
+			false,
+		},
 	}
 	for _, test := range tests {
 		test := test

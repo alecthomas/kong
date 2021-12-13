@@ -319,7 +319,7 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 		}
 		binds := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
 		for _, flag := range node.Flags {
-			if flag.Default == "" || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
+			if !flag.HasDefault || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
 				continue
 			}
 			method := getMethod(flag.Target, name)

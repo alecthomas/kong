@@ -232,6 +232,7 @@ type Value struct {
 	Name         string
 	Help         string
 	OrigHelp     string // Original help string, without interpolated variables.
+	HasDefault   bool
 	Default      string
 	DefaultValue reflect.Value
 	Enum         string
@@ -357,7 +358,7 @@ func (v *Value) Reset() error {
 			return nil
 		}
 	}
-	if v.Default != "" {
+	if v.HasDefault {
 		return v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
 	}
 	return nil
@@ -404,7 +405,7 @@ func (f *Flag) FormatPlaceHolder() string {
 	if f.PlaceHolder != "" {
 		return f.PlaceHolder + tail
 	}
-	if f.Default != "" {
+	if f.HasDefault {
 		if f.Value.Target.Kind() == reflect.String {
 			return strconv.Quote(f.Default) + tail
 		}

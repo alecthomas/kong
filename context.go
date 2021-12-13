@@ -167,7 +167,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		switch node := node.(type) {
 		case *Value:
 			_, ok := os.LookupEnv(node.Tag.Env)
-			if node.Enum != "" && (!node.Required || node.Default != "" || (node.Tag.Env != "" && ok)) {
+			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
 				if err := checkEnum(node, node.Target); err != nil {
 					return err
 				}
@@ -175,7 +175,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 
 		case *Flag:
 			_, ok := os.LookupEnv(node.Tag.Env)
-			if node.Enum != "" && (!node.Required || node.Default != "" || (node.Tag.Env != "" && ok)) {
+			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
 				if err := checkEnum(node.Value, node.Target); err != nil {
 					return err
 				}
