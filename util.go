@@ -2,6 +2,8 @@ package kong
 
 import (
 	"fmt"
+	"os"
+	"reflect"
 )
 
 // ConfigFlag uses the configured (via kong.Configuration(loader)) configuration loader to load configuration
@@ -32,4 +34,21 @@ func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
 	fmt.Fprintln(app.Stdout, vars["version"])
 	app.Exit(0)
 	return nil
+}
+
+// ChangeDirFlag changes the current working directory to a path specified by a flag
+// early in the parsing process, changing how other flags resolve relative paths.
+//
+// Use this flag to provide a "git -C" like functionality.
+type ChangeDirFlag string
+
+// Decode is used to create a side effect of changing the current working directory.
+func (c ChangeDirFlag) Decode(ctx *DecodeContext) error {
+	var path string
+	err := ctx.Scan.PopValueInto("string", &path)
+	if err != nil {
+		return err
+	}
+	ctx.Value.Target.Set(reflect.ValueOf(ChangeDirFlag(path)))
+	return os.Chdir(path)
 }
