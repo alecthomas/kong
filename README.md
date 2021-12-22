@@ -384,6 +384,21 @@ var CLI struct {
 
 For flags, multiple key+value pairs should be separated by `mapsep:"rune"` tag (defaults to `;`) eg. `--set="key1=value1;key2=value2"`.
 
+## Nested data structure
+
+Kong support a nested data structure as well with `embed:""`. You can combine `embed:""` with `prefix:""`:
+
+```go
+var CLI struct {
+  Logging struct {
+    Level string `enum:"debug,info,warn,error" default:"info"`
+    Type string `enum:"json,console" default:"console"`
+  } `embed:"" prefix:"logging."`
+}
+```
+
+This configures Kong to accept flags `--logging.level` and `--logging.type`.
+
 ## Custom named decoders
 
 Kong includes a number of builtin custom type mappers. These can be used by
