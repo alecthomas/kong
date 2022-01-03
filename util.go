@@ -40,6 +40,8 @@ func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
 // early in the parsing process, changing how other flags resolve relative paths.
 //
 // Use this flag to provide a "git -C" like functionality.
+//
+// It is not compatible with custom named decoders, e.g., existingdir.
 type ChangeDirFlag string
 
 // Decode is used to create a side effect of changing the current working directory.
@@ -49,6 +51,7 @@ func (c ChangeDirFlag) Decode(ctx *DecodeContext) error {
 	if err != nil {
 		return err
 	}
+	path = ExpandPath(path)
 	ctx.Value.Target.Set(reflect.ValueOf(ChangeDirFlag(path)))
 	return os.Chdir(path)
 }
