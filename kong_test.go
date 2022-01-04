@@ -1452,3 +1452,80 @@ func TestEnumValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestPassthroughCmd(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		flag    string
+		cmdArgs []string
+	}{
+		{
+			"Simple",
+			[]string{"--flag", "foobar", "command", "something"},
+			"foobar",
+			[]string{"something"},
+		},
+		{
+			"DashDash",
+			[]string{"--flag", "foobar", "command", "--", "something"},
+			"foobar",
+			[]string{"--", "something"},
+		},
+		{
+			"Flag",
+			[]string{"command", "--flag", "foobar"},
+			"",
+			[]string{"--flag", "foobar"},
+		},
+		{
+			"FlagAndFlag",
+			[]string{"--flag", "foobar", "command", "--flag", "foobar"},
+			"foobar",
+			[]string{"--flag", "foobar"},
+		},
+		{
+			"NoArgs",
+			[]string{"--flag", "foobar", "command"},
+			"foobar",
+			[]string(nil),
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			var cli struct {
+				Flag    string
+				Command struct {
+					Args []string `arg:"" optional:""`
+				} `cmd:"" passthrough:""`
+			}
+			p := mustNew(t, &cli)
+			_, err := p.Parse(test.args)
+			require.NoError(t, err)
+			require.Equal(t, test.flag, cli.Flag)
+			require.Equal(t, test.cmdArgs, cli.Command.Args)
+		})
+	}
+}
+
+func TestPassthroughCmdOnlyArgs(t *testing.T) {
+	var cli struct {
+		Command struct {
+			Flag string
+			Args []string `arg:"" optional:""`
+		} `cmd:"" passthrough:""`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must not have subcommands or flags")
+}
+
+func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
+	var cli struct {
+		Command struct {
+			Args []int `arg:"" optional:""`
+		} `cmd:"" passthrough:""`
+	}
+	_, err := kong.New(&cli)
+	require.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must contain exactly one positional argument of []string type")
+}

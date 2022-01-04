@@ -235,8 +235,8 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
 	}
 	passthrough := t.Has("passthrough")
-	if passthrough && !t.Arg {
-		return fmt.Errorf("passthrough only makes sense for positional arguments")
+	if passthrough && !t.Arg && !t.Cmd {
+		return fmt.Errorf("passthrough only makes sense for positional arguments or commands")
 	}
 	t.Passthrough = passthrough
 	return nil
