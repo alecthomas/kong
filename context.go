@@ -361,6 +361,10 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 		flags = append(flags, group...)
 	}
 
+	if node.Passthrough {
+		c.endParsing()
+	}
+
 	for !c.scan.Peek().IsEOL() {
 		token := c.scan.Peek()
 		switch token.Type {
@@ -898,6 +902,16 @@ func checkEnum(value *Value, target reflect.Value) error {
 		}
 		sort.Strings(enums)
 		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
+	}
+}
+
+func checkPassthroughArg(target reflect.Value) bool {
+	typ := target.Type()
+	switch typ.Kind() {
+	case reflect.Slice:
+		return typ.Elem().Kind() == reflect.String
+	default:
+		return false
 	}
 }
 

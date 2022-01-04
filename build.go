@@ -211,14 +211,28 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 		if child.Help == "" {
 			child.Help = child.Argument.Help
 		}
-	} else if tag.HasDefault {
-		if node.DefaultCmd != nil {
-			return failField(v, ft, "can't have more than one default command under %s", node.Summary())
+	} else {
+		if tag.HasDefault {
+			if node.DefaultCmd != nil {
+				return failField(v, ft, "can't have more than one default command under %s", node.Summary())
+			}
+			if tag.Default != "withargs" && (len(child.Children) > 0 || len(child.Positional) > 0) {
+				return failField(v, ft, "default command %s must not have subcommands or arguments", child.Summary())
+			}
+			node.DefaultCmd = child
 		}
-		if tag.Default != "withargs" && (len(child.Children) > 0 || len(child.Positional) > 0) {
-			return failField(v, ft, "default command %s must not have subcommands or arguments", child.Summary())
+		if tag.Passthrough {
+			if len(child.Children) > 0 || len(child.Flags) > 0 {
+				return failField(v, ft, "passthrough command %s must not have subcommands or flags", child.Summary())
+			}
+			if len(child.Positional) != 1 {
+				return failField(v, ft, "passthrough command %s must contain exactly one positional argument", child.Summary())
+			}
+			if !checkPassthroughArg(child.Positional[0].Target) {
+				return failField(v, ft, "passthrough command %s must contain exactly one positional argument of []string type", child.Summary())
+			}
+			child.Passthrough = true
 		}
-		node.DefaultCmd = child
 	}
 	node.Children = append(node.Children, child)
 
