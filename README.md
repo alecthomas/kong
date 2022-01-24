@@ -392,7 +392,7 @@ Kong support a nested data structure as well with `embed:""`. You can combine `e
 var CLI struct {
   Logging struct {
     Level string `enum:"debug,info,warn,error" default:"info"`
-    Type string `enum:"https://github.com/alecthomas/kong/blob/3987efba8647711f11290d443e07106f22f7393f/resolver_test.go#L206,console" default:"console"`
+    Type string `enum:"json,console" default:"console"`
   } `embed:"" prefix:"logging."`
 }
 ```
