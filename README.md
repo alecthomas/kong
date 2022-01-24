@@ -583,7 +583,7 @@ eg.
 kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json"))
 ```
 
-[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L103) for an example of how the JSON file is structured.
+[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L206) for an example of how the JSON file is structured.
 
 ### `Resolver(...)` - support for default values from external sources
 
