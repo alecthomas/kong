@@ -582,7 +582,7 @@ func (c *Context) Resolve() error {
 			})
 		}
 	}
-	c.Path = append(inserted, c.Path...)
+	c.Path = append(c.Path, inserted...)
 	return nil
 }
 
