@@ -933,6 +933,10 @@ func TestXorRequiredMany(t *testing.T) {
 	require.NoError(t, err)
 
 	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--three"})
+	require.NoError(t, err)
+
+	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
 	require.EqualError(t, err, "missing flags: --one or --two or --three")
 }

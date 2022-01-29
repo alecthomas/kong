@@ -793,8 +793,8 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, flag.Summary())
 		}
 	}
-	for _, flags := range xorGroup {
-		if len(flags) > 1 {
+	for xor, flags := range xorGroup {
+		if !xorGroupSet[xor] && len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}
