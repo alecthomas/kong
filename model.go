@@ -320,6 +320,9 @@ func (v *Value) IsCounter() bool {
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
+	if target.Kind() == reflect.Ptr && target.IsNil() {
+		target.Set(reflect.New(target.Type().Elem()))
+	}
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
 		return errors.Wrap(err, v.ShortSummary())
