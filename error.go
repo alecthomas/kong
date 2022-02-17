@@ -60,17 +60,17 @@ func (w *withStackError) Format(s fmt.State, verb rune) {
 			fmt.Fprintf(s, "%+v", w.Unwrap())
 			for _, pc := range w.stack {
 				f := frame(pc)
-				io.WriteString(s, "\n"+f.name())
-				io.WriteString(s, "\n\t")
-				io.WriteString(s, f.file())
-				io.WriteString(s, ":")
-				io.WriteString(s, strconv.Itoa(f.line()))
+				_, _ = io.WriteString(s, "\n"+f.name())
+				_, _ = io.WriteString(s, "\n\t")
+				_, _ = io.WriteString(s, f.file())
+				_, _ = io.WriteString(s, ":")
+				_, _ = io.WriteString(s, strconv.Itoa(f.line()))
 			}
 			return
 		}
 		fallthrough
 	case 's':
-		io.WriteString(s, w.Error())
+		_, _ = io.WriteString(s, w.Error())
 	case 'q':
 		fmt.Fprintf(s, "%q", w.Error())
 	}
