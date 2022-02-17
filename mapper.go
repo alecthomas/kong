@@ -3,6 +3,7 @@ package kong
 import (
 	"encoding"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/bits"
@@ -12,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 var (
@@ -295,14 +294,14 @@ func (boolMapper) Decode(ctx *DecodeContext, target reflect.Value) error {
 				target.SetBool(false)
 
 			default:
-				return errors.Errorf("bool value must be true, 1, yes, false, 0 or no but got %q", v)
+				return fmt.Errorf("bool value must be true, 1, yes, false, 0 or no but got %q", v)
 			}
 
 		case bool:
 			target.SetBool(v)
 
 		default:
-			return errors.Errorf("expected bool but got %q (%T)", token.Value, token.Value)
+			return fmt.Errorf("expected bool but got %q (%T)", token.Value, token.Value)
 		}
 	} else {
 		target.SetBool(true)
@@ -322,12 +321,12 @@ func durationDecoder() MapperFunc {
 		case string:
 			d, err = time.ParseDuration(v)
 			if err != nil {
-				return errors.Errorf("expected duration but got %q: %s", v, err)
+				return fmt.Errorf("expected duration but got %q: %v", v, err)
 			}
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 			d = reflect.ValueOf(v).Convert(reflect.TypeOf(time.Duration(0))).Interface().(time.Duration) // nolint: forcetypeassert
 		default:
-			return errors.Errorf("expected duration but got %q", v)
+			return fmt.Errorf("expected duration but got %q", v)
 		}
 		target.Set(reflect.ValueOf(d))
 		return nil
@@ -368,11 +367,11 @@ func intDecoder(bits int) MapperFunc { // nolint: dupl
 			sv = fmt.Sprintf("%v", v)
 
 		default:
-			return errors.Errorf("expected an int but got %q (%T)", t, t.Value)
+			return fmt.Errorf("expected an int but got %q (%T)", t, t.Value)
 		}
 		n, err := strconv.ParseInt(sv, 10, bits)
 		if err != nil {
-			return errors.Errorf("expected a valid %d bit int but got %q", bits, sv)
+			return fmt.Errorf("expected a valid %d bit int but got %q", bits, sv)
 		}
 		target.SetInt(n)
 		return nil
@@ -394,11 +393,11 @@ func uintDecoder(bits int) MapperFunc { // nolint: dupl
 			sv = fmt.Sprintf("%v", v)
 
 		default:
-			return errors.Errorf("expected an int but got %q (%T)", t, t.Value)
+			return fmt.Errorf("expected an int but got %q (%T)", t, t.Value)
 		}
 		n, err := strconv.ParseUint(sv, 10, bits)
 		if err != nil {
-			return errors.Errorf("expected a valid %d bit uint but got %q", bits, sv)
+			return fmt.Errorf("expected a valid %d bit uint but got %q", bits, sv)
 		}
 		target.SetUint(n)
 		return nil
@@ -415,7 +414,7 @@ func floatDecoder(bits int) MapperFunc {
 		case string:
 			n, err := strconv.ParseFloat(v, bits)
 			if err != nil {
-				return errors.Errorf("expected a float but got %q (%T)", t, t.Value)
+				return fmt.Errorf("expected a float but got %q (%T)", t, t.Value)
 			}
 			target.SetFloat(n)
 
@@ -429,7 +428,7 @@ func floatDecoder(bits int) MapperFunc {
 			target.Set(reflect.ValueOf(v))
 
 		default:
-			return errors.Errorf("expected an int but got %q (%T)", t, t.Value)
+			return fmt.Errorf("expected an int but got %q (%T)", t, t.Value)
 		}
 		return nil
 	}
@@ -447,7 +446,7 @@ func mapDecoder(r *Registry) MapperFunc {
 			t := ctx.Scan.Pop()
 			// If decoding a flag, we need an argument.
 			if t.IsEOL() {
-				return errors.Errorf("unexpected EOL")
+				return errors.New("unexpected EOL")
 			}
 			switch v := t.Value.(type) {
 			case string:
@@ -457,7 +456,7 @@ func mapDecoder(r *Registry) MapperFunc {
 				for _, m := range v {
 					err := jsonTranscode(m, target.Addr().Interface())
 					if err != nil {
-						return errors.WithStack(err)
+						return newWithStackError(err)
 					}
 				}
 				return nil
@@ -466,7 +465,7 @@ func mapDecoder(r *Registry) MapperFunc {
 				return jsonTranscode(v, target.Addr().Interface())
 
 			default:
-				return errors.Errorf("invalid map value %q (of type %T)", t, t.Value)
+				return fmt.Errorf("invalid map value %q (of type %T)", t, t.Value)
 			}
 		} else {
 			tokens := ctx.Scan.PopWhile(func(t Token) bool { return t.IsValue() })
@@ -480,7 +479,7 @@ func mapDecoder(r *Registry) MapperFunc {
 			}
 			parts := strings.SplitN(token, "=", 2)
 			if len(parts) != 2 {
-				return errors.Errorf("expected \"<key>=<value>\" but got %q", token)
+				return fmt.Errorf("expected \"<key>=<value>\" but got %q", token)
 			}
 			key, value := parts[0], parts[1]
 
@@ -488,7 +487,7 @@ func mapDecoder(r *Registry) MapperFunc {
 			if typ := ctx.Value.Tag.Type; typ != "" {
 				parts := strings.Split(typ, ":")
 				if len(parts) != 2 {
-					return errors.Errorf("type:\"\" on map field must be in the form \"[<keytype>]:[<valuetype>]\"")
+					return errors.New("type:\"\" on map field must be in the form \"[<keytype>]:[<valuetype>]\"")
 				}
 				keyTypeName, valueTypeName = parts[0], parts[1]
 			}
@@ -497,14 +496,14 @@ func mapDecoder(r *Registry) MapperFunc {
 			keyDecoder := r.ForNamedType(keyTypeName, el.Key())
 			keyValue := reflect.New(el.Key()).Elem()
 			if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
-				return errors.Errorf("invalid map key %q", key)
+				return fmt.Errorf("invalid map key %q", key)
 			}
 
 			valueScanner := Scan(value)
 			valueDecoder := r.ForNamedType(valueTypeName, el.Elem())
 			valueValue := reflect.New(el.Elem()).Elem()
 			if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
-				return errors.Errorf("invalid map value %q", value)
+				return fmt.Errorf("invalid map value %q", value)
 			}
 
 			target.SetMapIndex(keyValue, valueValue)
@@ -522,7 +521,7 @@ func sliceDecoder(r *Registry) MapperFunc {
 			t := ctx.Scan.Pop()
 			// If decoding a flag, we need an argument.
 			if t.IsEOL() {
-				return errors.Errorf("unexpected EOL")
+				return errors.New("unexpected EOL")
 			}
 			switch v := t.Value.(type) {
 			case string:
@@ -541,13 +540,13 @@ func sliceDecoder(r *Registry) MapperFunc {
 		}
 		childDecoder := r.ForNamedType(ctx.Value.Tag.Type, el)
 		if childDecoder == nil {
-			return errors.Errorf("no mapper for element type of %s", target.Type())
+			return fmt.Errorf("no mapper for element type of %s", target.Type())
 		}
 		for !childScanner.Peek().IsEOL() {
 			childValue := reflect.New(el).Elem()
 			err := childDecoder.Decode(ctx.WithScanner(childScanner), childValue)
 			if err != nil {
-				return errors.WithStack(err)
+				return newWithStackError(err)
 			}
 			target.Set(reflect.Append(target, childValue))
 		}
@@ -561,7 +560,7 @@ func pathMapper(r *Registry) MapperFunc {
 			return sliceDecoder(r)(ctx, target)
 		}
 		if target.Kind() != reflect.String {
-			return errors.Errorf("\"path\" type must be applied to a string not %s", target.Type())
+			return fmt.Errorf("\"path\" type must be applied to a string not %s", target.Type())
 		}
 		var path string
 		err := ctx.Scan.PopValueInto("file", &path)
@@ -607,7 +606,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 			return sliceDecoder(r)(ctx, target)
 		}
 		if target.Kind() != reflect.String {
-			return errors.Errorf("\"existingfile\" type must be applied to a string not %s", target.Type())
+			return fmt.Errorf("\"existingfile\" type must be applied to a string not %s", target.Type())
 		}
 		var path string
 		err := ctx.Scan.PopValueInto("file", &path)
@@ -621,7 +620,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 				return err
 			}
 			if stat.IsDir() {
-				return errors.Errorf("%q exists but is a directory", path)
+				return fmt.Errorf("%q exists but is a directory", path)
 			}
 		}
 		target.SetString(path)
@@ -635,7 +634,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return sliceDecoder(r)(ctx, target)
 		}
 		if target.Kind() != reflect.String {
-			return errors.Errorf("\"existingdir\" must be applied to a string not %s", target.Type())
+			return fmt.Errorf("\"existingdir\" must be applied to a string not %s", target.Type())
 		}
 		var path string
 		err := ctx.Scan.PopValueInto("file", &path)
@@ -648,7 +647,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return err
 		}
 		if !stat.IsDir() {
-			return errors.Errorf("%q exists but is not a directory", path)
+			return fmt.Errorf("%q exists but is not a directory", path)
 		}
 		target.SetString(path)
 		return nil
@@ -666,7 +665,7 @@ func counterMapper() MapperFunc {
 			case string:
 				n, err := strconv.ParseInt(v, 10, 64)
 				if err != nil {
-					return errors.Errorf("expected a counter but got %q (%T)", t, t.Value)
+					return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
 				}
 				target.SetInt(n)
 
@@ -674,7 +673,7 @@ func counterMapper() MapperFunc {
 				target.Set(reflect.ValueOf(v))
 
 			default:
-				return errors.Errorf("expected a counter but got %q (%T)", t, t.Value)
+				return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
 			}
 			return nil
 		}
@@ -690,7 +689,7 @@ func counterMapper() MapperFunc {
 			target.SetFloat(target.Float() + 1)
 
 		default:
-			return errors.Errorf("type:\"counter\" must be used with a numeric field")
+			return fmt.Errorf("type:\"counter\" must be used with a numeric field")
 		}
 		return nil
 	}
@@ -705,7 +704,7 @@ func urlMapper() MapperFunc {
 		}
 		url, err := url.Parse(urlStr)
 		if err != nil {
-			return errors.WithStack(err)
+			return newWithStackError(err)
 		}
 		target.Set(reflect.ValueOf(url))
 		return nil
@@ -775,7 +774,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: rev
 	filename = ExpandPath(filename)
 	data, err := ioutil.ReadFile(filename) // nolint: gosec
 	if err != nil {
-		return errors.Errorf("failed to open %q: %s", filename, err)
+		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
 	f.Contents = data
 	f.Filename = filename
@@ -799,7 +798,7 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 	filename = ExpandPath(filename)
 	data, err := ioutil.ReadFile(filename) // nolint: gosec
 	if err != nil {
-		return errors.Errorf("failed to open %q: %s", filename, err)
+		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
 	*f = data
 	return nil
@@ -808,7 +807,10 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 func jsonTranscode(in, out interface{}) error {
 	data, err := json.Marshal(in)
 	if err != nil {
-		return errors.WithStack(err)
+		return newWithStackError(err)
 	}
-	return errors.Wrapf(json.Unmarshal(data, out), "%#v -> %T", in, out)
+	if err = json.Unmarshal(data, out); err != nil {
+		return fmt.Errorf("%#v -> %T: %v", in, out, err)
+	}
+	return nil
 }
