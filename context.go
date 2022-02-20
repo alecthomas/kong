@@ -168,7 +168,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		case *Value:
 			_, ok := os.LookupEnv(node.Tag.Env)
 			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
-				if err := checkEnum(node, node.Target); err != nil {
+				if err := checkEnum(node, node.Target, node.Tag.SkipEnumSort); err != nil {
 					return err
 				}
 			}
@@ -176,7 +176,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		case *Flag:
 			_, ok := os.LookupEnv(node.Tag.Env)
 			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
-				if err := checkEnum(node.Value, node.Target); err != nil {
+				if err := checkEnum(node.Value, node.Target, node.Tag.SkipEnumSort); err != nil {
 					return err
 				}
 			}
@@ -230,7 +230,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 			value = path.Positional
 		}
 		if value != nil && value.Tag.Enum != "" {
-			if err := checkEnum(value, value.Target); err != nil {
+			if err := checkEnum(value, value.Target, value.Tag.SkipEnumSort); err != nil {
 				return err
 			}
 		}
@@ -877,11 +877,11 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
 
-func checkEnum(value *Value, target reflect.Value) error {
+func checkEnum(value *Value, target reflect.Value, skipEnumSort bool) error {
 	switch target.Kind() {
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < target.Len(); i++ {
-			if err := checkEnum(value, target.Index(i)); err != nil {
+			if err := checkEnum(value, target.Index(i), skipEnumSort); err != nil {
 				return err
 			}
 		}
@@ -900,7 +900,9 @@ func checkEnum(value *Value, target reflect.Value) error {
 		for enum := range enumMap {
 			enums = append(enums, fmt.Sprintf("%q", enum))
 		}
-		sort.Strings(enums)
+		if !skipEnumSort {
+			sort.Strings(enums)
+		}
 		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
 	}
 }

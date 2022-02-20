@@ -787,6 +787,14 @@ func TestEnum(t *testing.T) {
 	require.EqualError(t, err, "--flag must be one of \"a\",\"b\",\"c\" but got \"d\"")
 }
 
+func TestSkipEnumSort(t *testing.T) {
+	var cli struct {
+		Flag string `enum:"first,second,third,fourth,fifth" required:"" skipenumsort:""`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--flag", "sixth"})
+	require.EqualError(t, err, "--flag must be one of \"first\",\"second\",\"third\",\"fourth\",\"fifth\" but got \"sixth\"")
+}
+
 type commandWithHook struct {
 	value string
 }

@@ -11,34 +11,35 @@ import (
 
 // Tag represents the parsed state of Kong tags in a struct field tag.
 type Tag struct {
-	Ignored     bool // Field is ignored by Kong. ie. kong:"-"
-	Cmd         bool
-	Arg         bool
-	Required    bool
-	Optional    bool
-	Name        string
-	Help        string
-	Type        string
-	TypeName    string
-	HasDefault  bool
-	Default     string
-	Format      string
-	PlaceHolder string
-	Env         string
-	Short       rune
-	Hidden      bool
-	Sep         rune
-	MapSep      rune
-	Enum        string
-	Group       string
-	Xor         []string
-	Vars        Vars
-	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
-	EnvPrefix   string
-	Embed       bool
-	Aliases     []string
-	Negatable   bool
-	Passthrough bool
+	Ignored      bool // Field is ignored by Kong. ie. kong:"-"
+	Cmd          bool
+	Arg          bool
+	Required     bool
+	Optional     bool
+	Name         string
+	Help         string
+	Type         string
+	TypeName     string
+	HasDefault   bool
+	Default      string
+	Format       string
+	PlaceHolder  string
+	Env          string
+	Short        rune
+	Hidden       bool
+	Sep          rune
+	MapSep       rune
+	Enum         string
+	SkipEnumSort bool
+	Group        string
+	Xor          []string
+	Vars         Vars
+	Prefix       string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
+	EnvPrefix    string
+	Embed        bool
+	Aliases      []string
+	Negatable    bool
+	Passthrough  bool
 
 	// Storage for all tag keys for arbitrary lookups.
 	items map[string][]string
@@ -230,6 +231,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	}
 	t.PlaceHolder = t.Get("placeholder")
 	t.Enum = t.Get("enum")
+	t.SkipEnumSort = t.Has("skipenumsort")
 	scalarType := (typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map))
 	if t.Enum != "" && !(t.Required || t.HasDefault) && scalarType {
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
