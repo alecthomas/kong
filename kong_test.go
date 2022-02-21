@@ -663,6 +663,7 @@ func TestInterpolationIntoModel(t *testing.T) {
 	require.Equal(t, "Some default value.", flag.Default)
 	require.Equal(t, "Help, I need chickens!", flag.Help)
 	require.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
+	require.Equal(t, []string{"a", "b", "c", "d"}, flag.EnumSlice())
 	require.Equal(t, "One of a,b", flag2.Help)
 	require.Equal(t, "SAVE_THE_QUEEN", flag3.Env)
 	require.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
@@ -787,9 +788,9 @@ func TestEnum(t *testing.T) {
 	require.EqualError(t, err, "--flag must be one of \"a\",\"b\",\"c\" but got \"d\"")
 }
 
-func TestSkipEnumSort(t *testing.T) {
+func TestEnumMeaningfulOrder(t *testing.T) {
 	var cli struct {
-		Flag string `enum:"first,second,third,fourth,fifth" required:"" skipenumsort:""`
+		Flag string `enum:"first,second,third,fourth,fifth" required:""`
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--flag", "sixth"})
 	require.EqualError(t, err, "--flag must be one of \"first\",\"second\",\"third\",\"fourth\",\"fifth\" but got \"sixth\"")

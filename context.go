@@ -168,7 +168,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		case *Value:
 			_, ok := os.LookupEnv(node.Tag.Env)
 			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
-				if err := checkEnum(node, node.Target, node.Tag.SkipEnumSort); err != nil {
+				if err := checkEnum(node, node.Target); err != nil {
 					return err
 				}
 			}
@@ -176,7 +176,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		case *Flag:
 			_, ok := os.LookupEnv(node.Tag.Env)
 			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
-				if err := checkEnum(node.Value, node.Target, node.Tag.SkipEnumSort); err != nil {
+				if err := checkEnum(node.Value, node.Target); err != nil {
 					return err
 				}
 			}
@@ -230,7 +230,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 			value = path.Positional
 		}
 		if value != nil && value.Tag.Enum != "" {
-			if err := checkEnum(value, value.Target, value.Tag.SkipEnumSort); err != nil {
+			if err := checkEnum(value, value.Target); err != nil {
 				return err
 			}
 		}
@@ -877,11 +877,11 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
 
-func checkEnum(value *Value, target reflect.Value, skipEnumSort bool) error {
+func checkEnum(value *Value, target reflect.Value) error {
 	switch target.Kind() {
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < target.Len(); i++ {
-			if err := checkEnum(value, target.Index(i), skipEnumSort); err != nil {
+			if err := checkEnum(value, target.Index(i)); err != nil {
 				return err
 			}
 		}
@@ -891,17 +891,14 @@ func checkEnum(value *Value, target reflect.Value, skipEnumSort bool) error {
 		return errors.Errorf("enum can only be applied to a slice or value")
 
 	default:
-		enumMap := value.EnumMap()
+		enumSlice := value.EnumSlice()
 		v := fmt.Sprintf("%v", target)
-		if enumMap[v] {
-			return nil
-		}
 		enums := []string{}
-		for enum := range enumMap {
+		for _, enum := range enumSlice {
+			if enum == v {
+				return nil
+			}
 			enums = append(enums, fmt.Sprintf("%q", enum))
-		}
-		if !skipEnumSort {
-			sort.Strings(enums)
 		}
 		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
 	}
