@@ -891,16 +891,15 @@ func checkEnum(value *Value, target reflect.Value) error {
 		return errors.Errorf("enum can only be applied to a slice or value")
 
 	default:
-		enumMap := value.EnumMap()
+		enumSlice := value.EnumSlice()
 		v := fmt.Sprintf("%v", target)
-		if enumMap[v] {
-			return nil
-		}
 		enums := []string{}
-		for enum := range enumMap {
+		for _, enum := range enumSlice {
+			if enum == v {
+				return nil
+			}
 			enums = append(enums, fmt.Sprintf("%q", enum))
 		}
-		sort.Strings(enums)
 		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
 	}
 }

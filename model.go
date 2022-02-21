@@ -257,6 +257,16 @@ func (v *Value) EnumMap() map[string]bool {
 	return out
 }
 
+// EnumSlice returns a slice of the enums in this value.
+func (v *Value) EnumSlice() []string {
+	parts := strings.Split(v.Enum, ",")
+	out := make([]string, len(parts))
+	for i, part := range parts {
+		out[i] = strings.TrimSpace(part)
+	}
+	return out
+}
+
 // ShortSummary returns a human-readable summary of the value, not including any placeholders/defaults.
 func (v *Value) ShortSummary() string {
 	if v.Flag != nil {
