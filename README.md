@@ -556,8 +556,8 @@ type Validatable interface {
  }
  ```
 
-+If one of these nodes is in the active command-line it will be called during
-+normal validation.
+If one of these nodes is in the active command-line it will be called during
+normal validation.
 
 ## Modifying Kong's behaviour
 
