@@ -494,6 +494,81 @@ func TestCustomValueFormatter(t *testing.T) {
 	require.Contains(t, w.String(), "A flag.")
 }
 
+func TestAutoGroup(t *testing.T) {
+	var cli struct {
+		GroupedAString string `help:"A string flag grouped in A."`
+		FreeString     string `help:"A non grouped string flag."`
+		GroupedBString string `help:"A string flag grouped in B."`
+		FreeBool       bool   `help:"A non grouped bool flag."`
+		GroupedABool   bool   `help:"A bool flag grouped in A."`
+
+		One struct {
+			Flag string `help:"Nested flag."`
+			// Group is inherited from the parent command
+			Thing struct {
+				Arg string `arg help:"argument"`
+			} `cmd help:"subcommand thing"`
+			Other struct {
+				Other string `arg help:"other arg"`
+			} `arg help:"subcommand other"`
+			// ... but a subcommand can override it
+			Stuff struct {
+				Stuff string `arg help:"argument"`
+			} `arg help:"subcommand stuff"`
+		} `cmd help:"A subcommand grouped in A."`
+
+		Two struct {
+			Grouped1String  string `help:"A string flag grouped in 1."`
+			AFreeString     string `help:"A non grouped string flag."`
+			Grouped2String  string `help:"A string flag grouped in 2."`
+			AGroupedAString bool   `help:"A string flag grouped in A."`
+			Grouped1Bool    bool   `help:"A bool flag grouped in 1."`
+		} `cmd help:"A non grouped subcommand."`
+
+		Four struct {
+			Flag string `help:"Nested flag."`
+		} `cmd help:"Another subcommand grouped in B."`
+
+		Three struct {
+			Flag string `help:"Nested flag."`
+		} `cmd help:"Another subcommand grouped in A."`
+	}
+	w := bytes.NewBuffer(nil)
+	app := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
+			if node, ok := parent.(*kong.Node); ok {
+				return &kong.Group{
+					Key:   node.Name,
+					Title: strings.Title(node.Name) + " flags:",
+				}
+			}
+			return nil
+		}),
+	)
+	_, _ = app.Parse([]string{"--help", "two"})
+	require.Equal(t, `Usage: test two
+
+A non grouped subcommand.
+
+Flags:
+  -h, --help                       Show context-sensitive help.
+      --grouped-a-string=STRING    A string flag grouped in A.
+      --free-string=STRING         A non grouped string flag.
+      --grouped-b-string=STRING    A string flag grouped in B.
+      --free-bool                  A non grouped bool flag.
+      --grouped-a-bool             A bool flag grouped in A.
+
+Two flags:
+  --grouped-1-string=STRING    A string flag grouped in 1.
+  --a-free-string=STRING       A non grouped string flag.
+  --grouped-2-string=STRING    A string flag grouped in 2.
+  --a-grouped-a-string         A string flag grouped in A.
+  --grouped-1-bool             A bool flag grouped in 1.
+`, w.String())
+}
+
 func TestHelpGrouping(t *testing.T) {
 	var cli struct {
 		GroupedAString string `help:"A string flag grouped in A." group:"Group A"`

@@ -240,6 +240,21 @@ func ConfigureHelp(options HelpOptions) Option {
 	})
 }
 
+// AutoGroup automatically assigns groups to flags.
+func AutoGroup(format func(parent Visitable, flag *Flag) *Group) Option {
+	return PostBuild(func(kong *Kong) error {
+		parents := []Visitable{kong.Model}
+		return Visit(kong.Model, func(node Visitable, next Next) error {
+			if flag, ok := node.(*Flag); ok && flag.Group == nil {
+				flag.Group = format(parents[len(parents)-1], flag)
+			}
+			parents = append(parents, node)
+			defer func() { parents = parents[:len(parents)-1] }()
+			return next(nil)
+		})
+	})
+}
+
 // Groups associates `group` field tags with group metadata.
 //
 // This option is used to simplify Kong tags while providing
