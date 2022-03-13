@@ -384,6 +384,20 @@ var CLI struct {
 
 For flags, multiple key+value pairs should be separated by `mapsep:"rune"` tag (defaults to `;`) eg. `--set="key1=value1;key2=value2"`.
 
+## Pointers
+
+Pointers work like the underlying type, except that you can differentiate between the presence of the zero value and no value being supplied.
+
+For example:
+
+```go
+var CLI struct {
+	Foo *int
+}
+```
+
+Would produce a nil value for `Foo` if no `--foo` argument is supplied, but would have a pointer to the value 0 if the argument `--foo=0` was supplied.
+
 ## Nested data structure
 
 Kong support a nested data structure as well with `embed:""`. You can combine `embed:""` with `prefix:""`:
