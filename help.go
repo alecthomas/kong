@@ -364,10 +364,11 @@ func PrintCommandSummary(w *HelpWriter, cmd *Command) {
 }
 
 type HelpWriter struct {
-	Indent        string
-	width         int
-	lines         *[]string
-	helpFormatter HelpValueFormatter
+	indent          string
+	IndentCharacter string
+	width           int
+	lines           *[]string
+	helpFormatter   HelpValueFormatter
 	HelpOptions
 }
 
@@ -378,11 +379,12 @@ func NewHelpWriter(ctx *Context, options HelpOptions) *HelpWriter {
 		wrapWidth = options.WrapUpperBound
 	}
 	w := &HelpWriter{
-		Indent:        "  ",
-		width:         wrapWidth,
-		lines:         &lines,
-		helpFormatter: ctx.Kong.helpFormatter,
-		HelpOptions:   options,
+		indent:          "",
+		IndentCharacter: strings.Repeat(" ", defaultIndent),
+		width:           wrapWidth,
+		lines:           &lines,
+		helpFormatter:   ctx.Kong.helpFormatter,
+		HelpOptions:     options,
 	}
 	return w
 }
@@ -392,12 +394,12 @@ func (h *HelpWriter) Printf(format string, args ...interface{}) {
 }
 
 func (h *HelpWriter) Print(text string) {
-	*h.lines = append(*h.lines, strings.TrimRight(h.Indent+text, " "))
+	*h.lines = append(*h.lines, strings.TrimRight(h.indent+text, " "))
 }
 
 // Indent returns a new helpWriter indented by two characters.
 func (h *HelpWriter) Indent() *HelpWriter {
-	return &helpWriter{indent: h.Indent, lines: h.lines, width: h.width - 2, HelpOptions: h.HelpOptions, helpFormatter: h.helpFormatter}
+	return &HelpWriter{indent: h.indent + h.IndentCharacter, IndentCharacter: h.IndentCharacter, lines: h.lines, width: h.width - len(h.IndentCharacter), HelpOptions: h.HelpOptions, helpFormatter: h.helpFormatter}
 }
 
 func (h *HelpWriter) String() string {
