@@ -449,7 +449,7 @@ func writeFlags(w *HelpWriter, groups [][]*Flag) {
 		}
 		for _, flag := range group {
 			if !flag.Hidden {
-				rows = append(rows, [2]string{formatFlag(haveShort, flag), w.helpFormatter(flag.Value)})
+				rows = append(rows, [2]string{FormatFlag(haveShort, flag), w.helpFormatter(flag.Value)})
 			}
 		}
 	}
@@ -489,7 +489,7 @@ func writeTwoColumns(w *HelpWriter, rows [][2]string) {
 }
 
 // haveShort will be true if there are short flags present at all in the help. Useful for column alignment.
-func formatFlag(haveShort bool, flag *Flag) string {
+func FormatFlag(haveShort bool, flag *Flag) string {
 	flagString := ""
 	name := flag.Name
 	isBool := flag.IsBool()
