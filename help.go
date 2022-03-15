@@ -488,6 +488,7 @@ func writeTwoColumns(w *HelpWriter, rows [][2]string) {
 	}
 }
 
+// FormatFlag formats the flag for the help output.
 // haveShort will be true if there are short flags present at all in the help. Useful for column alignment.
 func FormatFlag(haveShort bool, flag *Flag) string {
 	flagString := ""
