@@ -456,7 +456,7 @@ func mapDecoder(r *Registry) MapperFunc {
 				for _, m := range v {
 					err := jsonTranscode(m, target.Addr().Interface())
 					if err != nil {
-						return newWithStackError(err)
+						return err
 					}
 				}
 				return nil
@@ -546,7 +546,7 @@ func sliceDecoder(r *Registry) MapperFunc {
 			childValue := reflect.New(el).Elem()
 			err := childDecoder.Decode(ctx.WithScanner(childScanner), childValue)
 			if err != nil {
-				return newWithStackError(err)
+				return err
 			}
 			target.Set(reflect.Append(target, childValue))
 		}
@@ -704,7 +704,7 @@ func urlMapper() MapperFunc {
 		}
 		url, err := url.Parse(urlStr)
 		if err != nil {
-			return newWithStackError(err)
+			return err
 		}
 		target.Set(reflect.ValueOf(url))
 		return nil
@@ -807,7 +807,7 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 func jsonTranscode(in, out interface{}) error {
 	data, err := json.Marshal(in)
 	if err != nil {
-		return newWithStackError(err)
+		return err
 	}
 	if err = json.Unmarshal(data, out); err != nil {
 		return fmt.Errorf("%#v -> %T: %v", in, out, err)
