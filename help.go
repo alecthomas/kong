@@ -174,11 +174,10 @@ func WriteNodeDetail(w *HelpWriter, node *Node, hide bool) {
 	}
 	if len(node.Positional) > 0 {
 		w.Print("")
-		w.Print("Arguments:")
-		WritePositionals(w.Indent(), node.Positional)
+		WritePositionals(w, node.Positional, "Arguments:")
 	}
 	if !w.FlagsLast {
-		WriteFlagsForCommand(w, node)
+		WriteFlagsForCommand(w, node, "Flags:")
 	}
 	var cmds []*Node
 	if w.NoExpandSubcommands {
@@ -187,12 +186,12 @@ func WriteNodeDetail(w *HelpWriter, node *Node, hide bool) {
 		cmds = node.Leaves(hide)
 	}
 	if len(cmds) > 0 {
-		iw := w.Indent()
+
 		if w.Tree {
 			w.Print("")
-			w.Print("Commands:")
-			WriteCommandTree(iw, node)
+			WriteCommandTree(w, node, "Commands:")
 		} else {
+			iw := w.Indent()
 			groupedCmds := collectCommandGroups(cmds)
 			for _, group := range groupedCmds {
 				w.Print("")
@@ -213,14 +212,14 @@ func WriteNodeDetail(w *HelpWriter, node *Node, hide bool) {
 		}
 	}
 	if w.FlagsLast {
-		WriteFlagsForCommand(w, node)
+		WriteFlagsForCommand(w, node, "Flags:")
 	}
 }
 
 // WriteFlagsForCommand writes the help output for flags.
-func WriteFlagsForCommand(w *HelpWriter, node *Node) {
+func WriteFlagsForCommand(w *HelpWriter, node *Node, title string) {
 	if flags := node.AllFlags(true); len(flags) > 0 {
-		groupedFlags := collectFlagGroups(flags)
+		groupedFlags := collectFlagGroups(title, flags)
 		for _, group := range groupedFlags {
 			w.Print("")
 			if group.Metadata.Title != "" {
@@ -261,7 +260,11 @@ func WriteCompactCommandList(iw *HelpWriter, cmds []*Node) {
 }
 
 // WriteCommandTree writes the help output for the command tree.
-func WriteCommandTree(w *HelpWriter, node *Node) {
+func WriteCommandTree(w *HelpWriter, node *Node, title string) {
+	if title != "" {
+		w.Print(title)
+	}
+	w = w.Indent()
 	rows := make([][2]string, 0, len(node.Children)*2)
 	for i, cmd := range node.Children {
 		if cmd.Hidden {
@@ -280,7 +283,7 @@ type helpFlagGroup struct {
 	Flags    [][]*Flag
 }
 
-func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
+func collectFlagGroups(title string, flags [][]*Flag) []helpFlagGroup {
 	// Group keys in order of appearance.
 	groups := []*Group{}
 	// Flags grouped by their group key.
@@ -317,7 +320,7 @@ func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
 	// Ungrouped flags are always displayed first.
 	if ungroupedFlags, ok := flagsByGroup[""]; ok {
 		out = append(out, helpFlagGroup{
-			Metadata: &Group{Title: "Flags:"},
+			Metadata: &Group{Title: title},
 			Flags:    ungroupedFlags,
 		})
 	}
@@ -438,7 +441,11 @@ func (h *HelpWriter) Wrap(text string) {
 }
 
 // WritePositionals writes positional to HelpWriter.
-func WritePositionals(w *HelpWriter, args []*Positional) {
+func WritePositionals(w *HelpWriter, args []*Positional, title string) {
+	if title != "" {
+		w.Print(title)
+	}
+	w = w.Indent()
 	rows := [][2]string{}
 	for _, arg := range args {
 		rows = append(rows, [2]string{arg.Summary(), w.helpFormatter(arg)})
