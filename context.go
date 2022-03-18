@@ -1,14 +1,13 @@
 package kong
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // Path records the nodes and parsed values from the current command-line.
@@ -209,9 +208,8 @@ func (c *Context) Validate() error { // nolint: gocyclo
 			desc = node.Path()
 		}
 		if validate := isValidatable(value); validate != nil {
-			err := validate.Validate()
-			if err != nil {
-				return errors.Wrap(err, desc)
+			if err := validate.Validate(); err != nil {
+				return fmt.Errorf("%s: %w", desc, err)
 			}
 		}
 	}
@@ -558,7 +556,7 @@ func (c *Context) Resolve() error {
 			for _, resolver := range resolvers {
 				s, err := resolver.Resolve(c, path, flag)
 				if err != nil {
-					return errors.Wrap(err, flag.ShortSummary())
+					return fmt.Errorf("%s: %w", flag.ShortSummary(), err)
 				}
 				if s == nil {
 					continue
@@ -683,8 +681,9 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
-			if e, ok := errors.Cause(err).(*expectedError); ok && e.token.InferredType().IsAny(FlagToken, ShortFlagToken) {
-				return errors.Errorf("%s; perhaps try %s=%q?", err, flag.ShortSummary(), e.token)
+			var expected *expectedError
+			if errors.As(err, &expected) && expected.token.InferredType().IsAny(FlagToken, ShortFlagToken) {
+				return fmt.Errorf("%s; perhaps try %s=%q?", err.Error(), flag.ShortSummary(), expected.token)
 			}
 			return err
 		}
@@ -888,7 +887,7 @@ func checkEnum(value *Value, target reflect.Value) error {
 		return nil
 
 	case reflect.Map, reflect.Struct:
-		return errors.Errorf("enum can only be applied to a slice or value")
+		return errors.New("enum can only be applied to a slice or value")
 
 	default:
 		enumSlice := value.EnumSlice()

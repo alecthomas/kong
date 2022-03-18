@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // A Visitable component in the model.
@@ -335,7 +333,7 @@ func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 	}
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
-		return errors.Wrap(err, v.ShortSummary())
+		return fmt.Errorf("%s: %w", v.ShortSummary(), err)
 	}
 	v.Set = true
 	return nil
