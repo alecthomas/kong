@@ -495,3 +495,21 @@ func (t testMapperVarsContributor) Decode(ctx *kong.DecodeContext, target reflec
 	target.SetString("hi")
 	return nil
 }
+
+func TestValuesThatLookLikeFlags(t *testing.T) {
+	var cli struct {
+		Slice []string
+		Map   map[string]string
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--slice", "-foo"})
+	require.Error(t, err)
+	_, err = k.Parse([]string{"--map", "-foo=-bar"})
+	require.Error(t, err)
+	_, err = k.Parse([]string{"--slice=-foo", "--slice=-bar"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"-foo", "-bar"}, cli.Slice)
+	_, err = k.Parse([]string{"--map=-foo=-bar"})
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"-foo": "-bar"}, cli.Map)
+}

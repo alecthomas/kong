@@ -262,8 +262,7 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterKind(reflect.Float32, floatDecoder(32)).
 		RegisterKind(reflect.Float64, floatDecoder(64)).
 		RegisterKind(reflect.String, MapperFunc(func(ctx *DecodeContext, target reflect.Value) error {
-			err := ctx.Scan.PopValueInto("string", target.Addr().Interface())
-			return err
+			return ctx.Scan.PopValueInto("string", target.Addr().Interface())
 		})).
 		RegisterKind(reflect.Bool, boolMapper{}).
 		RegisterKind(reflect.Slice, sliceDecoder(r)).
@@ -450,7 +449,7 @@ func mapDecoder(r *Registry) MapperFunc {
 			}
 			switch v := t.Value.(type) {
 			case string:
-				childScanner = Scan(SplitEscaped(v, sep)...)
+				childScanner = ScanAsType(t.Type, SplitEscaped(v, sep)...)
 
 			case []map[string]interface{}:
 				for _, m := range v {
@@ -492,14 +491,14 @@ func mapDecoder(r *Registry) MapperFunc {
 				keyTypeName, valueTypeName = parts[0], parts[1]
 			}
 
-			keyScanner := Scan(key)
+			keyScanner := ScanAsType(FlagValueToken, key)
 			keyDecoder := r.ForNamedType(keyTypeName, el.Key())
 			keyValue := reflect.New(el.Key()).Elem()
 			if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
 				return fmt.Errorf("invalid map key %q", key)
 			}
 
-			valueScanner := Scan(value)
+			valueScanner := ScanAsType(FlagValueToken, value)
 			valueDecoder := r.ForNamedType(valueTypeName, el.Elem())
 			valueValue := reflect.New(el.Elem()).Elem()
 			if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
@@ -525,7 +524,7 @@ func sliceDecoder(r *Registry) MapperFunc {
 			}
 			switch v := t.Value.(type) {
 			case string:
-				childScanner = Scan(SplitEscaped(v, sep)...)
+				childScanner = ScanAsType(t.Type, SplitEscaped(v, sep)...)
 
 			case []interface{}:
 				return jsonTranscode(v, target.Addr().Interface())
