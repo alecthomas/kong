@@ -1,7 +1,6 @@
 package kong
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -336,21 +335,24 @@ func Resolvers(resolvers ...Resolver) Option {
 // Example: When referencing protoc generated structs, you will likely want to
 // ignore/skip XXX_* fields.
 func IgnoreFields(regexes ...string) Option {
-	return OptionFunc(func(k *Kong) error {
-		for _, r := range regexes {
+	return OptionFunc(func(k *Kong) (err error) {
+		var (
+			r  string
+			re *regexp.Regexp
+		)
+
+		for _, r = range regexes {
 			if r == "" {
-				return errors.New("regex input cannot be empty")
+				return Errors().RegexInputCannotBeEmpty()
 			}
-
-			re, err := regexp.Compile(r)
-			if err != nil {
-				return fmt.Errorf("unable to compile regex: %v", err)
+			if re, err = regexp.Compile(r); err != nil {
+				err = Errors().RegexUnableToCompile(err)
+				return
 			}
-
 			k.ignoreFields = append(k.ignoreFields, re)
 		}
 
-		return nil
+		return
 	})
 }
 
@@ -376,7 +378,7 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 
 				return err
 			}
-			f.Close()
+			_ = f.Close()
 
 			resolver, err := k.LoadConfig(path)
 			if err != nil {
@@ -432,18 +434,18 @@ func siftStrings(ss []string, filter func(s string) bool) []string {
 func DefaultEnvars(prefix string) Option {
 	processFlag := func(flag *Flag) {
 		switch env := flag.Env; {
-		case flag.Name == "help":
+		case flag.Name == helpName:
 			return
-		case env == "-":
+		case env == delimiterDash:
 			flag.Env = ""
 			return
 		case env != "":
 			return
 		}
-		replacer := strings.NewReplacer("-", "_", ".", "_")
+		replacer := strings.NewReplacer(delimiterDash, delimiterUnderscore, delimiterPoint, delimiterUnderscore)
 		names := append([]string{prefix}, camelCase(replacer.Replace(flag.Name))...)
-		names = siftStrings(names, func(s string) bool { return !(s == "_" || strings.TrimSpace(s) == "") })
-		name := strings.ToUpper(strings.Join(names, "_"))
+		names = siftStrings(names, func(s string) bool { return !(s == delimiterUnderscore || strings.TrimSpace(s) == "") })
+		name := strings.ToUpper(strings.Join(names, delimiterUnderscore))
 		flag.Env = name
 		flag.Value.Tag.Env = name
 	}
@@ -461,5 +463,23 @@ func DefaultEnvars(prefix string) Option {
 	return PostBuild(func(k *Kong) error {
 		processNode(k.Model.Node)
 		return nil
+	})
+}
+
+// HelpDisplaySetup Set up help display options
+func HelpDisplaySetup(
+	name string, // ------- Command name
+	help string, // ------- Command help
+	origin string, // ----- Origin command help
+	short rune, // -------- Short key of command
+	defaultValue bool, // - Default value flag
+) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		k.helpFlag.Value.Name = valueOrDefaultValue(name, helpName).(string)
+		k.helpFlag.Value.Help = valueOrDefaultValue(help, helpHelp).(string)
+		k.helpFlag.Value.OrigHelp = valueOrDefaultValue(origin, helpOrigin).(string)
+		k.helpFlag.Short = valueOrDefaultValue(short, helpShort).(int32)
+		k.helpFlag.Value.DefaultValue = reflect.ValueOf(valueOrDefaultValue(defaultValue, helpDefaultValue).(bool))
+		return
 	})
 }

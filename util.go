@@ -13,17 +13,23 @@ import (
 type ConfigFlag string
 
 // BeforeResolve adds a resolver.
-func (c ConfigFlag) BeforeResolve(kong *Kong, ctx *Context, trace *Path) error {
+func (c ConfigFlag) BeforeResolve(kong *Kong, ctx *Context, trace *Path) (err error) {
+	var (
+		path     string
+		resolver Resolver
+	)
+
 	if kong.loader == nil {
-		return fmt.Errorf("kong must be configured with kong.Configuration(...)")
+		err = Errors().KongMustBeConfiguredWithConfiguration()
+		return
 	}
-	path := string(ctx.FlagValue(trace.Flag).(ConfigFlag))
-	resolver, err := kong.LoadConfig(path)
-	if err != nil {
-		return err
+	path = string(ctx.FlagValue(trace.Flag).(ConfigFlag))
+	if resolver, err = kong.LoadConfig(path); err != nil {
+		return
 	}
 	ctx.AddResolver(resolver)
-	return nil
+
+	return
 }
 
 // VersionFlag is a flag type that can be used to display a version number, stored in the "version" variable.
@@ -31,7 +37,7 @@ type VersionFlag bool
 
 // BeforeApply writes the version variable and terminates with a 0 exit status.
 func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
-	fmt.Fprintln(app.Stdout, vars["version"])
+	_, _ = fmt.Fprintln(app.Stdout, vars[keyVersion])
 	app.Exit(0)
 	return nil
 }
@@ -45,13 +51,15 @@ func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
 type ChangeDirFlag string
 
 // Decode is used to create a side effect of changing the current working directory.
-func (c ChangeDirFlag) Decode(ctx *DecodeContext) error {
+func (c ChangeDirFlag) Decode(ctx *DecodeContext) (err error) {
 	var path string
-	err := ctx.Scan.PopValueInto("string", &path)
-	if err != nil {
-		return err
+
+	if err = ctx.Scan.PopValueInto(keyString, &path); err != nil {
+		return
 	}
 	path = ExpandPath(path)
 	ctx.Value.Target.Set(reflect.ValueOf(ChangeDirFlag(path)))
-	return os.Chdir(path)
+	err = os.Chdir(path)
+
+	return
 }

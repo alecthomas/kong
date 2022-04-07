@@ -147,7 +147,7 @@ func parseTagString(s string) (*Tag, error) {
 }
 
 func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
-	if ft.Tag.Get("kong") == "-" {
+	if ft.Tag.Get("kong") == delimiterDash {
 		t := newEmptyTag()
 		t.Ignored = true
 		return t, nil

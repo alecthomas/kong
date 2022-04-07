@@ -11,33 +11,29 @@ import (
 	"strings"
 )
 
-var (
-	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
-)
+var callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
 
-func failField(parent reflect.Value, field reflect.StructField, format string, args ...interface{}) error {
-	name := parent.Type().Name()
-	if name == "" {
-		name = "<anonymous struct>"
+func failField(parent reflect.Value, field reflect.StructField, format string, args ...interface{}) (err error) {
+	var name string
+
+	if name = parent.Type().Name(); name == "" {
+		name = anonymousStruct
 	}
-	return fmt.Errorf("%s.%s: %s", name, field.Name, fmt.Sprintf(format, args...))
+	err = Errors().FailField(name, field.Name, fmt.Sprintf(format, args...))
+
+	return
 }
 
 // Must creates a new Parser or panics if there is an error.
-func Must(ast interface{}, options ...Option) *Kong {
-	k, err := New(ast, options...)
-	if err != nil {
+func Must(ast interface{}, options ...Option) (k *Kong) {
+	var err error
+	if k, err = New(ast, options...); err != nil {
 		panic(err)
 	}
-	return k
+	return
 }
 
 type usageOnError int
-
-const (
-	shortUsage usageOnError = iota + 1
-	fullUsage
-)
 
 // Kong is the main parser type.
 type Kong struct {
@@ -112,7 +108,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	// Synthesise command nodes.
 	for _, dcmd := range k.dynamicCommands {
-		tag, terr := parseTagString(strings.Join(dcmd.tags, " "))
+		tag, terr := parseTagString(strings.Join(dcmd.tags, delimiterSpace))
 		if terr != nil {
 			return nil, terr
 		}
@@ -160,19 +156,20 @@ func (v *varStack) push(vars Vars) Vars {
 
 // Interpolate variables into model.
 func (k *Kong) interpolate(node *Node) (err error) {
-	stack := varStack{}
+	var stack varStack
+
 	return Visit(node, func(node Visitable, next Next) error {
+		var vars Vars
+
 		switch node := node.(type) {
 		case *Node:
-			vars := stack.push(node.Vars())
-			node.Help, err = interpolate(node.Help, vars, nil)
-			if err != nil {
-				return fmt.Errorf("help for %s: %s", node.Path(), err)
+			vars = stack.push(node.Vars())
+			if node.Help, err = interpolate(node.Help, vars, nil); err != nil {
+				return Errors().HelpFor(node.Path(), err)
 			}
 			err = next(nil)
 			stack.pop()
 			return err
-
 		case *Value:
 			return next(k.interpolateValue(node, stack.head()))
 		}
@@ -181,59 +178,73 @@ func (k *Kong) interpolate(node *Node) (err error) {
 }
 
 func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
+	var (
+		varsContributor VarsContributor
+		updatedVars     map[string]string
+		ok              bool
+	)
+
 	if len(value.Tag.Vars) > 0 {
 		vars = vars.CloneWith(value.Tag.Vars)
 	}
-	if varsContributor, ok := value.Mapper.(VarsContributor); ok {
+	if varsContributor, ok = value.Mapper.(VarsContributor); ok {
 		vars = vars.CloneWith(varsContributor.Vars(value))
 	}
-
-	updatedVars := map[string]string{
-		"default": value.Default,
-		"enum":    value.Enum,
+	updatedVars = map[string]string{
+		interpolateValueDefault: value.Default,
+		interpolateValueEnum:    value.Enum,
 	}
 	if value.Default, err = interpolate(value.Default, vars, nil); err != nil {
-		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
+		err = Errors().DefaultValueFor(value.Summary(), err)
+		return
 	}
 	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
-		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
+		err = Errors().EnumValueFor(value.Summary(), err)
+		return
 	}
 	if value.Flag != nil {
 		if value.Flag.Env, err = interpolate(value.Flag.Env, vars, nil); err != nil {
-			return fmt.Errorf("env value for %s: %s", value.Summary(), err)
+			err = Errors().EnvValueFor(value.Summary(), err)
+			return
 		}
-		value.Tag.Env = value.Flag.Env
-		updatedVars["env"] = value.Flag.Env
+		value.Tag.Env, updatedVars[keyEnv] = value.Flag.Env, value.Flag.Env
 	}
-	value.Help, err = interpolate(value.Help, vars, updatedVars)
-	if err != nil {
-		return fmt.Errorf("help for %s: %s", value.Summary(), err)
+	if value.Help, err = interpolate(value.Help, vars, updatedVars); err != nil {
+		err = Errors().HelpFor(value.Summary(), err)
+		return
 	}
-	return nil
+
+	return
 }
 
 // Provide additional builtin flags, if any.
-func (k *Kong) extraFlags() []*Flag {
+func (k *Kong) extraFlags() (ret []*Flag) {
+	var (
+		helpTarget helpValue
+		value      reflect.Value
+		helpFlag   *Flag
+	)
+
 	if k.noDefaultHelp {
-		return nil
+		return
 	}
-	var helpTarget helpValue
-	value := reflect.ValueOf(&helpTarget).Elem()
-	helpFlag := &Flag{
-		Short: 'h',
+	value = reflect.ValueOf(&helpTarget).Elem()
+	helpFlag = &Flag{
+		Short: helpShort,
 		Value: &Value{
-			Name:         "help",
-			Help:         "Show context-sensitive help.",
-			OrigHelp:     "Show context-sensitive help.",
+			Name:         helpName,
+			Help:         helpHelp,
+			OrigHelp:     helpOrigin,
 			Target:       value,
 			Tag:          &Tag{},
 			Mapper:       k.registry.ForValue(value),
-			DefaultValue: reflect.ValueOf(false),
+			DefaultValue: reflect.ValueOf(helpDefaultValue),
 		},
 	}
-	helpFlag.Flag = helpFlag
-	k.helpFlag = helpFlag
-	return []*Flag{helpFlag}
+	helpFlag.Flag, k.helpFlag = helpFlag, helpFlag
+	ret = []*Flag{helpFlag}
+
+	return
 }
 
 // Parse arguments into target.
@@ -254,13 +265,13 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err = ctx.Reset(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "BeforeResolve"); err != nil {
+	if err = k.applyHook(ctx, keyBeforeResolve); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Resolve(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
+	if err = k.applyHook(ctx, keyBeforeApply); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if _, err = ctx.Apply(); err != nil {
@@ -269,7 +280,7 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err = ctx.Validate(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "AfterApply"); err != nil {
+	if err = k.applyHook(ctx, keyAfterApply); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	return ctx, nil
@@ -290,7 +301,7 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		case trace.Flag != nil:
 			value = trace.Flag.Value.Target
 		default:
-			panic("unsupported Path")
+			panic(panicUnsupportedPath)
 		}
 		method := getMethod(value, name)
 		if !method.IsValid() {
@@ -345,9 +356,9 @@ func formatMultilineMessage(w io.Writer, leaders []string, format string, args .
 		}
 		leader += l + ": "
 	}
-	fmt.Fprintf(w, "%s%s\n", leader, lines[0])
+	_, _ = fmt.Fprintf(w, "%s%s\n", leader, lines[0])
 	for _, line := range lines[1:] {
-		fmt.Fprintf(w, "%*s%s\n", len(leader), " ", line)
+		_, _ = fmt.Fprintf(w, "%*s%s\n", len(leader), delimiterSpace, line)
 	}
 }
 
@@ -384,10 +395,10 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 		switch k.usageOnError {
 		case fullUsage:
 			_ = k.help(k.helpOptions, parseErr.Context)
-			fmt.Fprintln(k.Stdout)
+			_, _ = fmt.Fprintln(k.Stdout)
 		case shortUsage:
 			_ = k.shortHelp(k.helpOptions, parseErr.Context)
-			fmt.Fprintln(k.Stdout)
+			_, _ = fmt.Fprintln(k.Stdout)
 		}
 	}
 	k.Fatalf("%s", msg)
@@ -407,7 +418,7 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close() // nolint: gosec
+	defer func() { _ = r.Close() }()
 
 	return k.loader(r)
 }

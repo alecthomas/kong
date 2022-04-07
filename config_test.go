@@ -48,8 +48,8 @@ func makeConfig(t *testing.T, config interface{}) (path string, cleanup func()) 
 	t.Helper()
 	w, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
-	defer w.Close() // nolint: gosec
+	defer func() { _ = w.Close() }() // nolint: gosec
 	err = json.NewEncoder(w).Encode(config)
 	require.NoError(t, err)
-	return w.Name(), func() { os.Remove(w.Name()) }
+	return w.Name(), func() { _ = os.Remove(w.Name()) }
 }

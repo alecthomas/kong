@@ -1,1 +1,6 @@
 bin
+
+# IDE
+.project
+.settings
+.idea

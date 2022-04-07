@@ -1,8 +1,6 @@
 package kong
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // Next should be called by Visitor to proceed with the walk.
 //

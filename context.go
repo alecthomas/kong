@@ -253,7 +253,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 	if err := checkMissingChildren(node); err != nil {
 		return err
 	}
-	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
+	if err := checkMissingPositional(positionals, node.Positional); err != nil {
 		return err
 	}
 	if err := checkXorDuplicates(c.Path); err != nil {
@@ -263,7 +263,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 	if node.Type == ArgumentNode {
 		value := node.Argument
 		if value.Required && !value.Set {
-			return fmt.Errorf("%s is required", node.Summary())
+			return Errors().IsRequired(node.Summary())
 		}
 	}
 	return nil
@@ -292,7 +292,7 @@ func (c *Context) Command() string {
 			command = append(command, trace.Command.Name)
 		}
 	}
-	return strings.Join(command, " ")
+	return strings.Join(command, delimiterSpace)
 }
 
 // AddResolver adds a context-specific resolver.
@@ -349,7 +349,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 
 	flags := []*Flag{}
 	flagNode := node
-	if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+	if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == cmdWithArgs {
 		// Add flags of the default command if the current node has one
 		// and that default command allows args / flags without explicitly
 		// naming the command on the CLI.
@@ -371,19 +371,19 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			case string:
 
 				switch {
-				case v == "-":
+				case v == delimiterDash:
 					fallthrough
 				default: // nolint
 					c.scan.Pop()
 					c.scan.PushTyped(token.Value, PositionalArgumentToken)
 
 				// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
-				case v == "--":
+				case v == delimiterDoubleDash:
 					c.scan.Pop()
 					c.endParsing()
 
 				// Long flag.
-				case strings.HasPrefix(v, "--"):
+				case strings.HasPrefix(v, delimiterDoubleDash):
 					c.scan.Pop()
 					// Parse it and push the tokens.
 					parts := strings.SplitN(v[2:], "=", 2)
@@ -393,7 +393,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					c.scan.PushTyped(parts[0], FlagToken)
 
 				// Short flag.
-				case strings.HasPrefix(v, "-"):
+				case strings.HasPrefix(v, delimiterDash):
 					c.scan.Pop()
 					// Note: tokens must be pushed in reverse order.
 					if tail := v[2:]; tail != "" {
@@ -425,7 +425,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			}
 
 		case FlagValueToken:
-			return fmt.Errorf("unexpected flag argument %q", token.Value)
+			return Errors().UnexpectedFlagArgument(token.Value)
 
 		case PositionalArgumentToken:
 			candidates := []string{}
@@ -501,7 +501,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 
 			// If there is a default command that allows args and nothing else
 			// matches, take the branch of the default command
-			if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+			if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == cmdWithArgs {
 				c.Path = append(c.Path, &Path{
 					Parent:  node,
 					Command: node.DefaultCmd,
@@ -510,9 +510,9 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				return c.trace(node.DefaultCmd)
 			}
 
-			return findPotentialCandidates(token.String(), candidates, "unexpected argument %s", token)
+			return findPotentialCandidates(token.String(), candidates, Errors().UnexpectedArgument(token.String()))
 		default:
-			return fmt.Errorf("unexpected token %s", token)
+			return Errors().UnexpectedToken(token)
 		}
 	}
 	return c.maybeSelectDefault(flags, node)
@@ -522,7 +522,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 // otherwise we'd only ever display the help for the default command.
 func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 	for _, flag := range flags {
-		if flag.Name == "help" && flag.Set {
+		if flag.Name == helpName && flag.Set {
 			return nil
 		}
 	}
@@ -658,14 +658,14 @@ func (c *Context) Apply() (string, error) {
 		}
 	}
 
-	return strings.Join(path, " "), nil
+	return strings.Join(path, delimiterSpace), nil
 }
 
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	candidates := []string{}
 	for _, flag := range flags {
-		long := "--" + flag.Name
-		short := "-" + string(flag.Short)
+		long := delimiterDoubleDash + flag.Name
+		short := delimiterDash + string(flag.Short)
 		neg := "--no-" + flag.Name
 		candidates = append(candidates, long)
 		if flag.Short != 0 {
@@ -695,7 +695,7 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		c.Path = append(c.Path, &Path{Flag: flag})
 		return nil
 	}
-	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
+	return findPotentialCandidates(match, candidates, Errors().UnknownFlag(match))
 }
 
 // RunNode calls the Run() method on an arbitrary node.
@@ -754,7 +754,7 @@ func (c *Context) Run(binds ...interface{}) (err error) {
 				}
 			}
 		}
-		return fmt.Errorf("no command selected")
+		return Errors().NoCommandSelected()
 	}
 	return c.RunNode(node, binds...)
 }
@@ -768,13 +768,19 @@ func (c *Context) PrintUsage(summary bool) error {
 	return c.help(options, c)
 }
 
-func checkMissingFlags(flags []*Flag) error {
-	xorGroupSet := map[string]bool{}
-	xorGroup := map[string][]string{}
-	missing := []string{}
-	for _, flag := range flags {
+func checkMissingFlags(flags []*Flag) (err error) {
+	const delimiterOr = ` or `
+	var (
+		flag         *Flag
+		missing, fgs []string
+		xor          string
+		xorGroupSet  = map[string]bool{}
+		xorGroup     = map[string][]string{}
+	)
+
+	for _, flag = range flags {
 		if flag.Set {
-			for _, xor := range flag.Xor {
+			for _, xor = range flag.Xor {
 				xorGroupSet[xor] = true
 			}
 		}
@@ -782,7 +788,7 @@ func checkMissingFlags(flags []*Flag) error {
 			continue
 		}
 		if len(flag.Xor) > 0 {
-			for _, xor := range flag.Xor {
+			for _, xor = range flag.Xor {
 				if xorGroupSet[xor] {
 					continue
 				}
@@ -792,115 +798,135 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, flag.Summary())
 		}
 	}
-	for xor, flags := range xorGroup {
-		if !xorGroupSet[xor] && len(flags) > 1 {
-			missing = append(missing, strings.Join(flags, " or "))
+	for xor, fgs = range xorGroup {
+		if !xorGroupSet[xor] && len(fgs) > 1 {
+			missing = append(missing, strings.Join(fgs, delimiterOr))
 		}
 	}
-
 	if len(missing) == 0 {
-		return nil
+		return
 	}
-
 	sort.Strings(missing)
+	err = Errors().MissingFlags(strings.Join(missing, delimiterCommaSpace))
 
-	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
+	return
 }
 
-func checkMissingChildren(node *Node) error {
-	missing := []string{}
+func checkMissingChildren(node *Node) (err error) {
+	var (
+		arg         *Positional
+		child       *Node
+		missing     []string
+		missingArgs []string
+	)
 
-	missingArgs := []string{}
-	for _, arg := range node.Positional {
+	for _, arg = range node.Positional {
 		if arg.Required && !arg.Set {
 			missingArgs = append(missingArgs, arg.Summary())
 		}
 	}
 	if len(missingArgs) > 0 {
-		missing = append(missing, strconv.Quote(strings.Join(missingArgs, " ")))
+		missing = append(missing, strconv.Quote(strings.Join(missingArgs, delimiterSpace)))
 	}
-
-	for _, child := range node.Children {
-		if child.Hidden {
+	for _, child = range node.Children {
+		if child.Hidden || (child.Argument != nil && !child.Argument.Required) {
 			continue
 		}
 		if child.Argument != nil {
-			if !child.Argument.Required {
-				continue
-			}
 			missing = append(missing, strconv.Quote(child.Summary()))
 		} else {
 			missing = append(missing, strconv.Quote(child.Name))
 		}
 	}
-	if len(missing) == 0 {
-		return nil
+	err = checkErrorOfMissingChildren(missing)
+
+	return
+}
+
+func checkErrorOfMissingChildren(missing []string) (err error) {
+	const maxMissing = 5
+
+	if len(missing) > maxMissing {
+		missing = append(missing[:maxMissing], onyOther)
+	}
+	switch len(missing) {
+	case 0:
+		return
+	case 1:
+		err = Errors().Expected(missing[0])
+	default:
+		err = Errors().ExpectedOneOf(strings.Join(missing, delimiterCommaSpace))
 	}
 
-	if len(missing) > 5 {
-		missing = append(missing[:5], "...")
-	}
-	if len(missing) == 1 {
-		return fmt.Errorf("expected %s", missing[0])
-	}
-	return fmt.Errorf("expected one of %s", strings.Join(missing, ",  "))
+	return
 }
 
 // If we're missing any positionals and they're required, return an error.
-func checkMissingPositionals(positional int, values []*Value) error {
+func checkMissingPositional(positional int, values []*Value) (err error) {
+	var (
+		missing []string
+		arg     *Value
+		ok      bool
+	)
+
 	// All the positionals are in.
 	if positional >= len(values) {
-		return nil
+		return
 	}
-
 	// We're low on supplied positionals, but the missing one is optional.
 	if !values[positional].Required {
-		return nil
+		return
 	}
-
-	missing := []string{}
 	for ; positional < len(values); positional++ {
-		arg := values[positional]
+		arg = values[positional]
+		//
 		// TODO(aat): Fix hardcoding of these env checks all over the place :\
+		//
 		if arg.Tag.Env != "" {
-			_, ok := os.LookupEnv(arg.Tag.Env)
-			if ok {
+			if _, ok = os.LookupEnv(arg.Tag.Env); ok {
 				continue
 			}
 		}
 		missing = append(missing, "<"+arg.Name+">")
 	}
 	if len(missing) == 0 {
-		return nil
+		return
 	}
-	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+	err = Errors().MissingPositionalArguments(strings.Join(missing, delimiterSpace))
+
+	return
 }
 
-func checkEnum(value *Value, target reflect.Value) error {
+func checkEnum(value *Value, target reflect.Value) (err error) {
+	var (
+		enums, enumSlice []string
+		enum             string
+		tmp              string
+		i                int
+	)
+
 	switch target.Kind() {
 	case reflect.Slice, reflect.Array:
-		for i := 0; i < target.Len(); i++ {
-			if err := checkEnum(value, target.Index(i)); err != nil {
-				return err
+		for i = 0; i < target.Len(); i++ {
+			if err = checkEnum(value, target.Index(i)); err != nil {
+				break
 			}
 		}
-		return nil
-
 	case reflect.Map, reflect.Struct:
-		return errors.New("enum can only be applied to a slice or value")
-
+		err = Errors().EnumSliceOrValue()
 	default:
-		enumSlice := value.EnumSlice()
-		v := fmt.Sprintf("%v", target)
-		enums := []string{}
-		for _, enum := range enumSlice {
-			if enum == v {
-				return nil
+		enumSlice = value.EnumSlice()
+		tmp = fmt.Sprintf("%v", target)
+		for _, enum = range enumSlice {
+			if enum == tmp {
+				return
 			}
 			enums = append(enums, fmt.Sprintf("%q", enum))
 		}
-		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
+		err = Errors().MustBeOneOfButGot(value.ShortSummary(), strings.Join(enums, delimiterComma), target.Interface())
 	}
+
+	return
 }
 
 func checkPassthroughArg(target reflect.Value) bool {
@@ -931,23 +957,31 @@ func checkXorDuplicates(paths []*Path) error {
 	return nil
 }
 
-func findPotentialCandidates(needle string, haystack []string, format string, args ...interface{}) error {
-	if len(haystack) == 0 {
-		return fmt.Errorf(format, args...)
+func findPotentialCandidates(needle string, haystack []string, inErr error) (err error) {
+	var (
+		closestCandidates []string
+		candidate         string
+	)
+
+	if err = inErr; len(haystack) == 0 {
+		return
 	}
-	closestCandidates := []string{}
-	for _, candidate := range haystack {
+	closestCandidates = make([]string, 0, len(haystack))
+	for _, candidate = range haystack {
 		if strings.HasPrefix(candidate, needle) || levenshtein(candidate, needle) <= 2 {
 			closestCandidates = append(closestCandidates, fmt.Sprintf("%q", candidate))
 		}
 	}
-	prefix := fmt.Sprintf(format, args...)
-	if len(closestCandidates) == 1 {
-		return fmt.Errorf("%s, did you mean %s?", prefix, closestCandidates[0])
-	} else if len(closestCandidates) > 1 {
-		return fmt.Errorf("%s, did you mean one of %s?", prefix, strings.Join(closestCandidates, ", "))
+	switch len(closestCandidates) {
+	case 0:
+		return
+	case 1:
+		err = Errors().HelperErrorDidYouMean(inErr, closestCandidates[0])
+	default:
+		err = Errors().HelperErrorDidYouMeanOneOf(inErr, closestCandidates)
 	}
-	return fmt.Errorf("%s", prefix)
+
+	return
 }
 
 type validatable interface{ Validate() error }

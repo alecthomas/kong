@@ -82,11 +82,11 @@ func (t Token) InferredType() TokenType {
 		return t.Type
 	}
 	if v, ok := t.Value.(string); ok {
-		if strings.HasPrefix(v, "--") { // nolint: gocritic
+		if strings.HasPrefix(v, delimiterDoubleDash) { // nolint: gocritic
 			return FlagToken
-		} else if v == "-" {
+		} else if v == delimiterDash {
 			return PositionalArgumentToken
-		} else if strings.HasPrefix(v, "-") {
+		} else if strings.HasPrefix(v, delimiterDash) {
 			return ShortFlagToken
 		}
 	}
@@ -99,7 +99,7 @@ func (t Token) InferredType() TokenType {
 func (t Token) IsValue() bool {
 	tt := t.InferredType()
 	return tt.IsAny(FlagValueToken, ShortFlagTailToken, PositionalArgumentToken) ||
-		(tt == UntypedToken && !strings.HasPrefix(t.String(), "-"))
+		(tt == UntypedToken && !strings.HasPrefix(t.String(), delimiterDash))
 }
 
 // Scanner is a stack-based scanner over command-line tokens.

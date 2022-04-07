@@ -40,7 +40,7 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 }
 
 func dashedString(s string) string {
-	return strings.Join(camelCase(s), "-")
+	return strings.Join(camelCase(s), delimiterDash)
 }
 
 type flattenedField struct {
@@ -123,7 +123,7 @@ func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool
 MAIN:
 	for _, field := range fields {
 		for _, r := range k.ignoreFields {
-			if r.MatchString(v.Type().Name() + "." + field.field.Name) {
+			if r.MatchString(v.Type().Name() + delimiterPoint + field.field.Name) {
 				continue MAIN
 			}
 		}
@@ -160,9 +160,9 @@ MAIN:
 
 	// "Unsee" flags.
 	for _, flag := range node.Flags {
-		delete(seenFlags, "--"+flag.Name)
+		delete(seenFlags, delimiterDoubleDash+flag.Name)
 		if flag.Short != 0 {
-			delete(seenFlags, "-"+string(flag.Short))
+			delete(seenFlags, delimiterDash+string(flag.Short))
 		}
 	}
 
@@ -216,7 +216,7 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 			if node.DefaultCmd != nil {
 				return failField(v, ft, "can't have more than one default command under %s", node.Summary())
 			}
-			if tag.Default != "withargs" && (len(child.Children) > 0 || len(child.Positional) > 0) {
+			if tag.Default != cmdWithArgs && (len(child.Children) > 0 || len(child.Positional) > 0) {
 				return failField(v, ft, "default command %s must not have subcommands or arguments", child.Summary())
 			}
 			node.DefaultCmd = child
@@ -270,15 +270,15 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 	if tag.Arg {
 		node.Positional = append(node.Positional, value)
 	} else {
-		if seenFlags["--"+value.Name] {
+		if seenFlags[delimiterDoubleDash+value.Name] {
 			return failField(v, ft, "duplicate flag --%s", value.Name)
 		}
-		seenFlags["--"+value.Name] = true
+		seenFlags[delimiterDoubleDash+value.Name] = true
 		if tag.Short != 0 {
-			if seenFlags["-"+string(tag.Short)] {
+			if seenFlags[delimiterDash+string(tag.Short)] {
 				return failField(v, ft, "duplicate short flag -%c", tag.Short)
 			}
-			seenFlags["-"+string(tag.Short)] = true
+			seenFlags[delimiterDash+string(tag.Short)] = true
 		}
 		flag := &Flag{
 			Value:       value,

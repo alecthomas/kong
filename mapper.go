@@ -66,7 +66,7 @@ type textUnmarshalerAdapter struct{}
 
 func (m *textUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
 	var value string
-	err := ctx.Scan.PopValueInto("value", &value)
+	err := ctx.Scan.PopValueInto(keyValue, &value)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ type binaryUnmarshalerAdapter struct{}
 
 func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
 	var value string
-	err := ctx.Scan.PopValueInto("value", &value)
+	err := ctx.Scan.PopValueInto(keyValue, &value)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ type jsonUnmarshalerAdapter struct{}
 
 func (j *jsonUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
 	var value string
-	err := ctx.Scan.PopValueInto("value", &value)
+	err := ctx.Scan.PopValueInto(keyValue, &value)
 	if err != nil {
 		return err
 	}
@@ -567,7 +567,7 @@ func pathMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
-		if path != "-" {
+		if path != delimiterDash {
 			path = ExpandPath(path)
 		}
 		target.SetString(path)
@@ -586,7 +586,7 @@ func fileMapper(r *Registry) MapperFunc {
 			return err
 		}
 		var file *os.File
-		if path == "-" {
+		if path == delimiterDash {
 			file = os.Stdin
 		} else {
 			path = ExpandPath(path)
@@ -613,7 +613,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
-		if path != "-" {
+		if path != delimiterDash {
 			path = ExpandPath(path)
 			stat, err := os.Stat(path)
 			if err != nil {

@@ -1,9 +1,6 @@
 package kong
 
-import (
-	"fmt"
-	"regexp"
-)
+import "regexp"
 
 var interpolationRegex = regexp.MustCompile(`(\$\$)|((?:\${([[:alpha:]_][[:word:]]*))(?:=([^}]+))?})|(\$)|([^$]+)`)
 
@@ -19,27 +16,36 @@ func HasInterpolatedVar(s string, v string) bool {
 }
 
 // Interpolate variables from vars into s for substrings in the form ${var} or ${var=default}.
-func interpolate(s string, vars Vars, updatedVars map[string]string) (string, error) {
-	out := ""
-	matches := interpolationRegex.FindAllStringSubmatch(s, -1)
-	if len(matches) == 0 {
-		return s, nil
+func interpolate(s string, vars Vars, updatedVars map[string]string) (out string, err error) {
+	var (
+		matches  [][]string
+		match    []string
+		key, val string
+		dollar   string
+		name     string
+		value    string
+		ok       bool
+	)
+
+	if matches = interpolationRegex.FindAllStringSubmatch(s, -1); len(matches) == 0 {
+		out = s
+		return
 	}
-	for key, val := range updatedVars {
+	for key, val = range updatedVars {
 		if vars[key] != val {
 			vars = vars.CloneWith(updatedVars)
 			break
 		}
 	}
-	for _, match := range matches {
-		if dollar := match[1]; dollar != "" {
-			out += "$"
-		} else if name := match[3]; name != "" {
-			value, ok := vars[name]
-			if !ok {
+	for _, match = range matches {
+		if dollar = match[1]; dollar != "" {
+			out += delimiterDollar
+		} else if name = match[3]; name != "" {
+			if value, ok = vars[name]; !ok {
 				// No default value.
 				if match[4] == "" {
-					return "", fmt.Errorf("undefined variable ${%s}", name)
+					err = Errors().UndefinedVariable(name)
+					return
 				}
 				value = match[4]
 			}
@@ -48,5 +54,6 @@ func interpolate(s string, vars Vars, updatedVars map[string]string) (string, er
 			out += match[0]
 		}
 	}
-	return out, nil
+
+	return
 }

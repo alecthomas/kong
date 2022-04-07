@@ -8,11 +8,6 @@ import (
 	"strings"
 )
 
-const (
-	defaultIndent        = 2
-	defaultColumnPadding = 4
-)
-
 // Help flag.
 type helpValue bool
 
@@ -91,12 +86,12 @@ func DefaultHelpValueFormatter(value *Value) string {
 	}
 	suffix := "($" + value.Tag.Env + ")"
 	switch {
-	case strings.HasSuffix(value.Help, "."):
-		return value.Help[:len(value.Help)-1] + " " + suffix + "."
+	case strings.HasSuffix(value.Help, delimiterPoint):
+		return value.Help[:len(value.Help)-1] + delimiterSpace + suffix + delimiterPoint
 	case value.Help == "":
 		return suffix
 	default:
-		return value.Help + " " + suffix
+		return value.Help + delimiterSpace + suffix
 	}
 }
 
@@ -391,7 +386,7 @@ func (h *helpWriter) Printf(format string, args ...interface{}) {
 }
 
 func (h *helpWriter) Print(text string) {
-	*h.lines = append(*h.lines, strings.TrimRight(h.indent+text, " "))
+	*h.lines = append(*h.lines, strings.TrimRight(h.indent+text, delimiterSpace))
 }
 
 // Indent returns a new helpWriter indented by two characters.
@@ -466,11 +461,11 @@ func writeTwoColumns(w *helpWriter, rows [][2]string) {
 		}
 	}
 
-	offsetStr := strings.Repeat(" ", leftSize+defaultColumnPadding)
+	offsetStr := strings.Repeat(delimiterSpace, leftSize+defaultColumnPadding)
 
 	for _, row := range rows {
 		buf := bytes.NewBuffer(nil)
-		doc.ToText(buf, row[1], "", strings.Repeat(" ", defaultIndent), w.width-leftSize-defaultColumnPadding)
+		doc.ToText(buf, row[1], "", strings.Repeat(delimiterSpace, defaultIndent), w.width-leftSize-defaultColumnPadding)
 		lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
 
 		line := fmt.Sprintf("%-*s", leftSize, row[0])
@@ -524,7 +519,7 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 	default:
 		nodeName += prefix + node.Name
 		if len(node.Aliases) != 0 {
-			nodeName += fmt.Sprintf(" (%s)", strings.Join(node.Aliases, ","))
+			nodeName += fmt.Sprintf(" (%s)", strings.Join(node.Aliases, delimiterComma))
 		}
 	case ArgumentNode:
 		nodeName += prefix + "<" + node.Name + ">"
@@ -549,7 +544,7 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 
 // SpaceIndenter adds a space indent to the given prefix.
 func SpaceIndenter(prefix string) string {
-	return prefix + strings.Repeat(" ", defaultIndent)
+	return prefix + strings.Repeat(delimiterSpace, defaultIndent)
 }
 
 // LineIndenter adds line points to every new indent.
@@ -557,7 +552,7 @@ func LineIndenter(prefix string) string {
 	if prefix == "" {
 		return "- "
 	}
-	return strings.Repeat(" ", defaultIndent) + prefix
+	return strings.Repeat(delimiterSpace, defaultIndent) + prefix
 }
 
 // TreeIndenter adds line points to every new indent and vertical lines to every layer.
@@ -565,5 +560,5 @@ func TreeIndenter(prefix string) string {
 	if prefix == "" {
 		return "|- "
 	}
-	return "|" + strings.Repeat(" ", defaultIndent) + prefix
+	return "|" + strings.Repeat(delimiterSpace, defaultIndent) + prefix
 }

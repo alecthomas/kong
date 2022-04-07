@@ -1290,7 +1290,7 @@ func TestDynamicCommands(t *testing.T) {
 	require.True(t, two.ran)
 
 	_, err = p.Parse([]string{"--help"})
-	require.EqualError(t, err, `expected one of "one",  "two"`)
+	require.EqualError(t, err, `expected one of "one", "two"`)
 	require.NotContains(t, help.String(), "three", help.String())
 }
 

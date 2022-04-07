@@ -37,13 +37,13 @@ func JSON(r io.Reader) (Resolver, error) {
 		return nil, err
 	}
 	var f ResolverFunc = func(context *Context, parent *Path, flag *Flag) (interface{}, error) {
-		name := strings.ReplaceAll(flag.Name, "-", "_")
+		name := strings.ReplaceAll(flag.Name, delimiterDash, delimiterUnderscore)
 		raw, ok := values[name]
 		if ok {
 			return raw, nil
 		}
 		raw = values
-		for _, part := range strings.Split(name, ".") {
+		for _, part := range strings.Split(name, delimiterPoint) {
 			if values, ok := raw.(map[string]interface{}); ok {
 				raw, ok = values[part]
 				if !ok {

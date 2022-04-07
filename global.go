@@ -1,8 +1,6 @@
 package kong
 
-import (
-	"os"
-)
+import "os"
 
 // Parse constructs a new parser and parses the default command-line.
 func Parse(cli interface{}, options ...Option) *Context {

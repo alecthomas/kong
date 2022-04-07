@@ -143,7 +143,7 @@ func (n *Node) Depth() int {
 func (n *Node) Summary() string {
 	summary := n.Path()
 	if flags := n.FlagSummary(true); flags != "" {
-		summary += " " + flags
+		summary += delimiterSpace + flags
 	}
 	args := []string{}
 	optional := 0
@@ -156,7 +156,7 @@ func (n *Node) Summary() string {
 		args = append(args, argSummary)
 	}
 	if len(args) != 0 {
-		summary += " " + strings.Join(args, " ") + strings.Repeat("]", optional)
+		summary += delimiterSpace + strings.Join(args, delimiterSpace) + strings.Repeat("]", optional)
 	} else if len(n.Children) > 0 {
 		summary += " <command>"
 	}
@@ -175,7 +175,7 @@ func (n *Node) FlagSummary(hide bool) string {
 			}
 		}
 	}
-	return strings.Join(required, " ")
+	return strings.Join(required, delimiterSpace)
 }
 
 // FullPath is like Path() but includes the Application root node.
@@ -184,7 +184,7 @@ func (n *Node) FullPath() string {
 	for root.Parent != nil {
 		root = root.Parent
 	}
-	return strings.TrimSpace(root.Name + " " + n.Path())
+	return strings.TrimSpace(root.Name + delimiterSpace + n.Path())
 }
 
 // Vars returns the combined Vars defined by all ancestors of this Node.
@@ -198,16 +198,16 @@ func (n *Node) Vars() Vars {
 // Path through ancestors to this Node.
 func (n *Node) Path() (out string) {
 	if n.Parent != nil {
-		out += " " + n.Parent.Path()
+		out += delimiterSpace + n.Parent.Path()
 	}
 	switch n.Type {
 	case CommandNode:
-		out += " " + n.Name
+		out += delimiterSpace + n.Name
 		if len(n.Aliases) > 0 {
-			out += fmt.Sprintf(" (%s)", strings.Join(n.Aliases, ","))
+			out += fmt.Sprintf(" (%s)", strings.Join(n.Aliases, delimiterComma))
 		}
 	case ArgumentNode:
-		out += " " + "<" + n.Name + ">"
+		out += delimiterSpace + "<" + n.Name + ">"
 	default:
 	}
 	return strings.TrimSpace(out)
@@ -247,7 +247,7 @@ type Value struct {
 
 // EnumMap returns a map of the enums in this value.
 func (v *Value) EnumMap() map[string]bool {
-	parts := strings.Split(v.Enum, ",")
+	parts := strings.Split(v.Enum, delimiterComma)
 	out := make(map[string]bool, len(parts))
 	for _, part := range parts {
 		out[strings.TrimSpace(part)] = true
@@ -257,7 +257,7 @@ func (v *Value) EnumMap() map[string]bool {
 
 // EnumSlice returns a slice of the enums in this value.
 func (v *Value) EnumSlice() []string {
-	parts := strings.Split(v.Enum, ",")
+	parts := strings.Split(v.Enum, delimiterComma)
 	out := make([]string, len(parts))
 	for i, part := range parts {
 		out[i] = strings.TrimSpace(part)
@@ -394,7 +394,7 @@ type Flag struct {
 }
 
 func (f *Flag) String() string {
-	out := "--" + f.Name
+	out := delimiterDoubleDash + f.Name
 	if f.Short != 0 {
 		out = fmt.Sprintf("-%c, %s", f.Short, out)
 	}
