@@ -4,58 +4,62 @@ package kong
 import "strings"
 
 const (
-	cUnknownError                          = "unknown error: %s"
-	cNoCommandSelected                     = "no command selected"
-	cExpected                              = "expected %s"
-	cExpectedOneOf                         = "expected one of %s"
-	cUnexpectedArgument                    = "unexpected argument %s"
-	cUnexpectedFlagArgument                = "unexpected flag argument %q"
-	cUnexpectedToken                       = "unexpected token %s"
-	cUnknownFlag                           = "unknown flag %s"
-	cMissingFlags                          = "missing flags: %s"
-	cHelperErrorDidYouMean                 = "%s, did you mean %s?"
-	cHelperErrorDidYouMeanOneOf            = "%s, did you mean one of %s?"
-	cDefaultValueFor                       = "default value for %s: %s"
-	cEnumValueFor                          = "enum value for %s: %s"
-	cEnvValueFor                           = "env value for %s: %s"
-	cHelpFor                               = "help for %s: %s"
-	cIsRequired                            = "%s is required"
-	cEnumSliceOrValue                      = "enum can only be applied to a slice or value"
-	cMustBeOneOfButGot                     = "%s must be one of %s but got %q"
-	cMissingPositionalArguments            = "missing positional arguments %s"
-	cFailField                             = "%s.%s: %s"
-	cRegexInputCannotBeEmpty               = "regex input cannot be empty"
-	cRegexUnableToCompile                  = "unable to compile regex: %s"
-	cKongMustBeConfiguredWithConfiguration = "kong must be configured with kong.Configuration"
-	cUndefinedVariable                     = "undefined variable ${%s}"
+	cUnknownError                                 = "unknown error: %s"
+	cNoCommandSelected                            = "no command selected"
+	cExpected                                     = "expected %s"
+	cExpectedOneOf                                = "expected one of %s"
+	cUnexpectedArgument                           = "unexpected argument %s"
+	cUnexpectedFlagArgument                       = "unexpected flag argument %q"
+	cUnexpectedToken                              = "unexpected token %s"
+	cUnknownFlag                                  = "unknown flag %s"
+	cMissingFlags                                 = "missing flags: %s"
+	cHelperErrorDidYouMean                        = "%s, did you mean %s?"
+	cHelperErrorDidYouMeanOneOf                   = "%s, did you mean one of %s?"
+	cDefaultValueFor                              = "default value for %s: %s"
+	cEnumValueFor                                 = "enum value for %s: %s"
+	cEnvValueFor                                  = "env value for %s: %s"
+	cHelpFor                                      = "help for %s: %s"
+	cIsRequired                                   = "%s is required"
+	cEnumSliceOrValue                             = "enum can only be applied to a slice or value"
+	cMustBeOneOfButGot                            = "%s must be one of %s but got %q"
+	cMissingPositionalArguments                   = "missing positional arguments %s"
+	cFailField                                    = "%s.%s: %s"
+	cRegexInputCannotBeEmpty                      = "regex input cannot be empty"
+	cRegexUnableToCompile                         = "unable to compile regex: %s"
+	cKongMustBeConfiguredWithConfiguration        = "kong must be configured with kong.Configuration"
+	cUndefinedVariable                            = "undefined variable ${%s}"
+	cExpectedPointerToStructButGot                = "expected a pointer to a struct but got %T"
+	cCantMixPositionalArgumentsBranchingArguments = "can't mix positional arguments and branching arguments on %T"
 )
 
 var (
-	errSingleton                             = &Error{}
-	errUnknownError                          = err{tpl: cUnknownError}
-	errNoCommandSelected                     = err{tpl: cNoCommandSelected}
-	errExpected                              = err{tpl: cExpected}
-	errExpectedOneOf                         = err{tpl: cExpectedOneOf}
-	errUnexpectedArgument                    = err{tpl: cUnexpectedArgument}
-	errUnexpectedFlagArgument                = err{tpl: cUnexpectedFlagArgument}
-	errUnexpectedToken                       = err{tpl: cUnexpectedToken}
-	errUnknownFlag                           = err{tpl: cUnknownFlag}
-	errMissingFlags                          = err{tpl: cMissingFlags}
-	errHelperErrorDidYouMean                 = err{tpl: cHelperErrorDidYouMean}
-	errHelperErrorDidYouMeanOneOf            = err{tpl: cHelperErrorDidYouMeanOneOf}
-	errDefaultValueFor                       = err{tpl: cDefaultValueFor}
-	errEnumValueFor                          = err{tpl: cEnumValueFor}
-	errEnvValueFor                           = err{tpl: cEnvValueFor}
-	errHelpFor                               = err{tpl: cHelpFor}
-	errIsRequired                            = err{tpl: cIsRequired}
-	errEnumSliceOrValue                      = err{tpl: cEnumSliceOrValue}
-	errMustBeOneOfButGot                     = err{tpl: cMustBeOneOfButGot}
-	errMissingPositionalArguments            = err{tpl: cMissingPositionalArguments}
-	errFailField                             = err{tpl: cFailField}
-	errRegexInputCannotBeEmpty               = err{tpl: cRegexInputCannotBeEmpty}
-	errRegexUnableToCompile                  = err{tpl: cRegexUnableToCompile}
-	errKongMustBeConfiguredWithConfiguration = err{tpl: cKongMustBeConfiguredWithConfiguration}
-	errUndefinedVariable                     = err{tpl: cUndefinedVariable}
+	errSingleton                                    = &Error{}
+	errUnknownError                                 = err{tpl: cUnknownError}
+	errNoCommandSelected                            = err{tpl: cNoCommandSelected}
+	errExpected                                     = err{tpl: cExpected}
+	errExpectedOneOf                                = err{tpl: cExpectedOneOf}
+	errUnexpectedArgument                           = err{tpl: cUnexpectedArgument}
+	errUnexpectedFlagArgument                       = err{tpl: cUnexpectedFlagArgument}
+	errUnexpectedToken                              = err{tpl: cUnexpectedToken}
+	errUnknownFlag                                  = err{tpl: cUnknownFlag}
+	errMissingFlags                                 = err{tpl: cMissingFlags}
+	errHelperErrorDidYouMean                        = err{tpl: cHelperErrorDidYouMean}
+	errHelperErrorDidYouMeanOneOf                   = err{tpl: cHelperErrorDidYouMeanOneOf}
+	errDefaultValueFor                              = err{tpl: cDefaultValueFor}
+	errEnumValueFor                                 = err{tpl: cEnumValueFor}
+	errEnvValueFor                                  = err{tpl: cEnvValueFor}
+	errHelpFor                                      = err{tpl: cHelpFor}
+	errIsRequired                                   = err{tpl: cIsRequired}
+	errEnumSliceOrValue                             = err{tpl: cEnumSliceOrValue}
+	errMustBeOneOfButGot                            = err{tpl: cMustBeOneOfButGot}
+	errMissingPositionalArguments                   = err{tpl: cMissingPositionalArguments}
+	errFailField                                    = err{tpl: cFailField}
+	errRegexInputCannotBeEmpty                      = err{tpl: cRegexInputCannotBeEmpty}
+	errRegexUnableToCompile                         = err{tpl: cRegexUnableToCompile}
+	errKongMustBeConfiguredWithConfiguration        = err{tpl: cKongMustBeConfiguredWithConfiguration}
+	errUndefinedVariable                            = err{tpl: cUndefinedVariable}
+	errExpectedPointerToStructButGot                = err{tpl: cExpectedPointerToStructButGot}
+	errCantMixPositionalArgumentsBranchingArguments = err{tpl: cCantMixPositionalArgumentsBranchingArguments}
 )
 
 // ERRORS: Implementation of errors with the ability to compare errors with each other
@@ -148,3 +152,13 @@ func (e *Error) KongMustBeConfiguredWithConfiguration() Err {
 
 // UndefinedVariable undefined variable ...
 func (e *Error) UndefinedVariable(name string) Err { return newErr(&errUndefinedVariable, name) }
+
+// ExpectedPointerToStructButGot expected a pointer to a struct but got ...
+func (e *Error) ExpectedPointerToStructButGot(ast interface{}) Err {
+	return newErr(&errExpectedPointerToStructButGot, ast)
+}
+
+// CantMixPositionalArgumentsBranchingArguments Can't mix positional arguments and branching arguments on ...
+func (e *Error) CantMixPositionalArgumentsBranchingArguments(ast interface{}) Err {
+	return newErr(&errCantMixPositionalArgumentsBranchingArguments, ast)
+}

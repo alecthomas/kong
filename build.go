@@ -15,7 +15,7 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 	v := reflect.ValueOf(ast)
 	iv := reflect.Indirect(v)
 	if v.Kind() != reflect.Ptr || iv.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("expected a pointer to a struct but got %T", ast)
+		return nil, Errors().ExpectedPointerToStructButGot(ast)
 	}
 
 	app = &Application{}
@@ -30,7 +30,7 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 		return nil, err
 	}
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
-		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
+		return nil, Errors().CantMixPositionalArgumentsBranchingArguments(ast)
 	}
 	app.Node = node
 	app.Node.Flags = append(extraFlags, app.Node.Flags...)

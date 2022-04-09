@@ -393,7 +393,6 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 }
 
 // ExpandPath is a helper function to expand a relative or home-relative path to an absolute path.
-//
 // eg. ~/.someconf -> /home/alec/.someconf
 func ExpandPath(path string) string {
 	if filepath.IsAbs(path) {
@@ -480,6 +479,57 @@ func HelpDisplaySetup(
 		k.helpFlag.Value.OrigHelp = valueOrDefaultValue(origin, helpOrigin).(string)
 		k.helpFlag.Short = valueOrDefaultValue(short, helpShort).(int32)
 		k.helpFlag.Value.DefaultValue = reflect.ValueOf(valueOrDefaultValue(defaultValue, helpDefaultValue).(bool))
+		return
+	})
+}
+
+func HelpCommandsLabelSetup(labelCommands string) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		k.labelCommands = labelCommands
+		return
+	})
+}
+
+func HelpFlagsLabelSetup(labelFlags string) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		k.labelFlags = labelFlags
+		return
+	})
+}
+
+func HelpArgumentsLabelSetup(labelArguments string) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		k.labelArguments = labelArguments
+		return
+	})
+}
+
+// UsageHelperFunc Assigning a usage print function via a custom template
+func UsageHelperFunc(usageHelperFn UsageHelperFn) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		if usageHelperFn != nil {
+			k.usageHelper = usageHelperFn
+		}
+		return
+	})
+}
+
+// RunArgumentHelperFunc Assigning a usage run print function via a custom template
+func RunArgumentHelperFunc(runArgumentHelperFn RunArgumentHelperFn) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		if runArgumentHelperFn != nil {
+			k.runArgumentHelper = runArgumentHelperFn
+		}
+		return
+	})
+}
+
+// RunCommandArgumentHelperFunc Assigning a usage print function via a custom template
+func RunCommandArgumentHelperFunc(runCommandArgumentHelperFn RunCommandArgumentHelperFn) Option {
+	return PostBuild(func(k *Kong) (err error) {
+		if runCommandArgumentHelperFn != nil {
+			k.runCommandArgumentHelper = runCommandArgumentHelperFn
+		}
 		return
 	})
 }

@@ -23,6 +23,7 @@ const (
 	delimiterSpace          = ` `
 	delimiterDollar         = `$`
 	cmdWithArgs             = `withargs`
+	keyError                = `error`
 
 	// help constants
 	helpName             = `help`
@@ -32,6 +33,9 @@ const (
 	helpDefaultValue     = false
 	defaultIndent        = 2
 	defaultColumnPadding = 4
+	labelCommands        = `Commands:`
+	labelFlags           = `Flags:`
+	labelArguments       = `Arguments:`
 )
 
 const (

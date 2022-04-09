@@ -101,11 +101,11 @@ func DefaultShortHelpPrinter(options HelpOptions, ctx *Context) error {
 	cmd := ctx.Selected()
 	app := ctx.Model
 	if cmd == nil {
-		w.Printf("Usage: %s%s", app.Name, app.Summary())
-		w.Printf(`Run "%s --help" for more information.`, app.Name)
+		w.Print(ctx.Kong.usageHelper(app.Name, app.Summary()))
+		w.Print(ctx.Kong.runArgumentHelper(app.Name, helpName))
 	} else {
-		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
-		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
+		w.Print(ctx.Kong.usageHelper(app.Name, cmd.Summary()))
+		w.Print(ctx.Kong.runCommandArgumentHelper(cmd.FullPath(), helpName))
 	}
 	return w.Write(ctx.Stdout)
 }
@@ -127,28 +127,28 @@ func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 
 func printApp(w *helpWriter, app *Application) {
 	if !w.NoAppSummary {
-		w.Printf("Usage: %s%s", app.Name, app.Summary())
+		w.Print(w.context.Kong.usageHelper(app.Name, app.Summary()))
 	}
 	printNodeDetail(w, app.Node, true)
 	cmds := app.Leaves(true)
 	if len(cmds) > 0 && app.HelpFlag != nil {
 		w.Print("")
 		if w.Summary {
-			w.Printf(`Run "%s --help" for more information.`, app.Name)
+			w.Print(w.context.Kong.runArgumentHelper(app.Name, helpName))
 		} else {
-			w.Printf(`Run "%s <command> --help" for more information on a command.`, app.Name)
+			w.Print(w.context.Kong.runCommandArgumentHelper(app.Name, helpName))
 		}
 	}
 }
 
 func printCommand(w *helpWriter, app *Application, cmd *Command) {
 	if !w.NoAppSummary {
-		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
+		w.Print(w.context.Kong.usageHelper(app.Name, cmd.Summary()))
 	}
 	printNodeDetail(w, cmd, true)
 	if w.Summary && app.HelpFlag != nil {
 		w.Print("")
-		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
+		w.Print(w.context.Kong.runArgumentHelper(cmd.FullPath(), helpName))
 	}
 }
 
@@ -166,12 +166,12 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	}
 	if len(node.Positional) > 0 {
 		w.Print("")
-		w.Print("Arguments:")
+		w.Print(labelArguments)
 		writePositionals(w.Indent(), node.Positional)
 	}
 	printFlags := func() {
 		if flags := node.AllFlags(true); len(flags) > 0 {
-			groupedFlags := collectFlagGroups(flags)
+			groupedFlags := collectFlagGroups(w.context, flags)
 			for _, group := range groupedFlags {
 				w.Print("")
 				if group.Metadata.Title != "" {
@@ -198,7 +198,7 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 		iw := w.Indent()
 		if w.Tree {
 			w.Print("")
-			w.Print("Commands:")
+			w.Print(labelCommands)
 			writeCommandTree(iw, node)
 		} else {
 			groupedCmds := collectCommandGroups(cmds)
@@ -267,21 +267,28 @@ type helpFlagGroup struct {
 	Flags    [][]*Flag
 }
 
-func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
-	// Group keys in order of appearance.
-	groups := []*Group{}
-	// Flags grouped by their group key.
-	flagsByGroup := map[string][][]*Flag{}
+func collectFlagGroups(ctx *Context, flags [][]*Flag) (out []helpFlagGroup) {
+	var (
+		groups            []*Group             // Group keys in order of appearance.
+		flagsByGroup      map[string][][]*Flag // Flags grouped by their group key.
+		levelFlagsByGroup map[string][]*Flag
+		ungroupedFlags    [][]*Flag
+		levelFlags        []*Flag
+		flag              *Flag
+		group             *Group
+		key               string
+		groupAlreadySeen  bool
+		ok                bool
+	)
 
-	for _, levelFlags := range flags {
-		levelFlagsByGroup := map[string][]*Flag{}
-
-		for _, flag := range levelFlags {
-			key := ""
-			if flag.Group != nil {
+	flagsByGroup = make(map[string][][]*Flag)
+	for _, levelFlags = range flags {
+		levelFlagsByGroup = make(map[string][]*Flag)
+		for _, flag = range levelFlags {
+			if key = ""; flag.Group != nil {
 				key = flag.Group.Key
-				groupAlreadySeen := false
-				for _, group := range groups {
+				groupAlreadySeen = false
+				for _, group = range groups {
 					if key == group.Key {
 						groupAlreadySeen = true
 						break
@@ -291,27 +298,24 @@ func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
 					groups = append(groups, flag.Group)
 				}
 			}
-
 			levelFlagsByGroup[key] = append(levelFlagsByGroup[key], flag)
 		}
-
 		for key, flags := range levelFlagsByGroup {
 			flagsByGroup[key] = append(flagsByGroup[key], flags)
 		}
 	}
-
-	out := []helpFlagGroup{}
 	// Ungrouped flags are always displayed first.
-	if ungroupedFlags, ok := flagsByGroup[""]; ok {
+	if ungroupedFlags, ok = flagsByGroup[""]; ok {
 		out = append(out, helpFlagGroup{
-			Metadata: &Group{Title: "Flags:"},
+			Metadata: &Group{Title: ctx.Kong.labelFlags},
 			Flags:    ungroupedFlags,
 		})
 	}
-	for _, group := range groups {
+	for _, group = range groups {
 		out = append(out, helpFlagGroup{Metadata: group, Flags: flagsByGroup[group.Key]})
 	}
-	return out
+
+	return
 }
 
 type helpCommandGroup struct {
@@ -340,7 +344,7 @@ func collectCommandGroups(nodes []*Node) []helpCommandGroup {
 	// Ungrouped nodes are always displayed first.
 	if ungroupedNodes, ok := nodesByGroup[""]; ok {
 		out = append(out, helpCommandGroup{
-			Metadata: &Group{Title: "Commands:"},
+			Metadata: &Group{Title: labelCommands},
 			Commands: ungroupedNodes,
 		})
 	}
@@ -361,6 +365,7 @@ type helpWriter struct {
 	indent        string
 	width         int
 	lines         *[]string
+	context       *Context
 	helpFormatter HelpValueFormatter
 	HelpOptions
 }
@@ -375,6 +380,7 @@ func newHelpWriter(ctx *Context, options HelpOptions) *helpWriter {
 		indent:        "",
 		width:         wrapWidth,
 		lines:         &lines,
+		context:       ctx,
 		helpFormatter: ctx.Kong.helpFormatter,
 		HelpOptions:   options,
 	}
@@ -514,7 +520,16 @@ func formatFlag(haveShort bool, flag *Flag) string {
 
 // CommandTree creates a tree with the given node name as root and its children's arguments and sub commands as leaves.
 func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) {
-	var nodeName string
+	const (
+		openTriangularBracket  = `<`
+		closeTriangularBracket = `>`
+	)
+	var (
+		nodeName string
+		arg      *Positional
+		subCmd   *Node
+	)
+
 	switch node.Type {
 	default:
 		nodeName += prefix + node.Name
@@ -522,7 +537,7 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 			nodeName += fmt.Sprintf(" (%s)", strings.Join(node.Aliases, delimiterComma))
 		}
 	case ArgumentNode:
-		nodeName += prefix + "<" + node.Name + ">"
+		nodeName += prefix + openTriangularBracket + node.Name + closeTriangularBracket
 	}
 	rows = append(rows, [2]string{nodeName, node.Help})
 	if h.Indenter == nil {
@@ -530,15 +545,16 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 	} else {
 		prefix = h.Indenter(prefix)
 	}
-	for _, arg := range node.Positional {
+	for _, arg = range node.Positional {
 		rows = append(rows, [2]string{prefix + arg.Summary(), arg.Help})
 	}
-	for _, subCmd := range node.Children {
+	for _, subCmd = range node.Children {
 		if subCmd.Hidden {
 			continue
 		}
 		rows = append(rows, h.CommandTree(subCmd, prefix)...)
 	}
+
 	return
 }
 
@@ -561,4 +577,22 @@ func TreeIndenter(prefix string) string {
 		return "|- "
 	}
 	return "|" + strings.Repeat(delimiterSpace, defaultIndent) + prefix
+}
+
+func defaultUsageHelperFunc(name string, summary string) (ret string) {
+	const defaultUsageHelperTemplate = `Usage: %s %s`
+	ret = fmt.Sprintf(oneSpace(defaultUsageHelperTemplate, name, summary))
+	return
+}
+
+func defaultRunArgumentHelperFunc(name string, argument string) (ret string) {
+	const defaultUsageHelperTemplate = `Run "%s --%s" for more information.`
+	ret = fmt.Sprintf(oneSpace(defaultUsageHelperTemplate, name, argument))
+	return
+}
+
+func defaultRunCommandArgumentHelperFunc(name string, argument string) (ret string) {
+	const defaultUsageHelperTemplate = `Run "%s <command> --%s" for more information on a command.`
+	ret = fmt.Sprintf(oneSpace(defaultUsageHelperTemplate, name, argument))
+	return
 }

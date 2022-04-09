@@ -35,6 +35,12 @@ func Must(ast interface{}, options ...Option) (k *Kong) {
 
 type usageOnError int
 
+type (
+	UsageHelperFn              func(name string, summary string) string
+	RunArgumentHelperFn        func(name string, summary string) string
+	RunCommandArgumentHelperFn func(name string, summary string) string
+)
+
 // Kong is the main parser type.
 type Kong struct {
 	// Grammar model.
@@ -62,6 +68,13 @@ type Kong struct {
 	groups        []Group
 	vars          Vars
 
+	usageHelper              UsageHelperFn
+	runArgumentHelper        RunArgumentHelperFn
+	runCommandArgumentHelper RunCommandArgumentHelperFn
+	labelCommands            string
+	labelFlags               string
+	labelArguments           string
+
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
 	dynamicCommands  []*dynamicCommand
@@ -72,14 +85,20 @@ type Kong struct {
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
 func New(grammar interface{}, options ...Option) (*Kong, error) {
 	k := &Kong{
-		Exit:          os.Exit,
-		Stdout:        os.Stdout,
-		Stderr:        os.Stderr,
-		registry:      NewRegistry().RegisterDefaults(),
-		vars:          Vars{},
-		bindings:      bindings{},
-		helpFormatter: DefaultHelpValueFormatter,
-		ignoreFields:  make([]*regexp.Regexp, 0),
+		Exit:                     os.Exit,
+		Stdout:                   os.Stdout,
+		Stderr:                   os.Stderr,
+		registry:                 NewRegistry().RegisterDefaults(),
+		vars:                     Vars{},
+		bindings:                 bindings{},
+		helpFormatter:            DefaultHelpValueFormatter,
+		ignoreFields:             make([]*regexp.Regexp, 0),
+		usageHelper:              defaultUsageHelperFunc,
+		runArgumentHelper:        defaultRunArgumentHelperFunc,
+		runCommandArgumentHelper: defaultRunCommandArgumentHelperFunc,
+		labelCommands:            labelCommands,
+		labelFlags:               labelFlags,
+		labelArguments:           labelArguments,
 	}
 
 	options = append(options, Bind(k))
@@ -370,7 +389,7 @@ func (k *Kong) Printf(format string, args ...interface{}) *Kong {
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
 func (k *Kong) Errorf(format string, args ...interface{}) *Kong {
-	formatMultilineMessage(k.Stderr, []string{k.Model.Name, "error"}, format, args...)
+	formatMultilineMessage(k.Stderr, []string{k.Model.Name, keyError}, format, args...)
 	return k
 }
 
