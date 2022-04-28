@@ -1542,3 +1542,234 @@ func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
 	_, err := kong.New(&cli)
 	require.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must contain exactly one positional argument of []string type")
 }
+
+func TestStringPointer(t *testing.T) {
+	var cli struct {
+		Foo *string
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--foo", "wtf"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.Foo)
+	require.Equal(t, "wtf", *cli.Foo)
+}
+
+func TestStringPointerNoValue(t *testing.T) {
+	var cli struct {
+		Foo *string
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.Nil(t, cli.Foo)
+}
+
+func TestStringPointerDefault(t *testing.T) {
+	var cli struct {
+		Foo *string `default:"stuff"`
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.Foo)
+	require.Equal(t, "stuff", *cli.Foo)
+}
+
+func TestStringPointerAliasNoValue(t *testing.T) {
+	type Foo string
+	var cli struct {
+		F *Foo
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.Nil(t, cli.F)
+}
+
+func TestStringPointerAlias(t *testing.T) {
+	type Foo string
+	var cli struct {
+		F *Foo
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--f=value"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.F)
+	require.Equal(t, Foo("value"), *cli.F)
+}
+
+func TestStringPointerEmptyValue(t *testing.T) {
+	var cli struct {
+		F *string
+		G *string
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--f", "", "--g="})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.F)
+	require.NotNil(t, cli.G)
+	require.Equal(t, "", *cli.F)
+	require.Equal(t, "", *cli.G)
+}
+
+func TestIntPtr(t *testing.T) {
+	var cli struct {
+		F *int
+		G *int
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--f=6"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.F)
+	require.Nil(t, cli.G)
+	require.Equal(t, 6, *cli.F)
+}
+
+func TestBoolPtr(t *testing.T) {
+	var cli struct {
+		X *bool
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--x"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.X)
+	require.Equal(t, true, *cli.X)
+}
+
+func TestBoolPtrFalse(t *testing.T) {
+	var cli struct {
+		X *bool
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--x=false"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.X)
+	require.Equal(t, false, *cli.X)
+}
+
+func TestBoolPtrNegated(t *testing.T) {
+	var cli struct {
+		X *bool `negatable:""`
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--no-x"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.X)
+	require.Equal(t, false, *cli.X)
+}
+
+func TestNilNegatableBoolPtr(t *testing.T) {
+	var cli struct {
+		X *bool `negatable:""`
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.Nil(t, cli.X)
+}
+
+func TestBoolPtrNil(t *testing.T) {
+	var cli struct {
+		X *bool
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.Nil(t, cli.X)
+}
+
+func TestUnsupportedPtr(t *testing.T) {
+	//nolint:structcheck,unused
+	type Foo struct {
+		x int
+		y int
+	}
+
+	var cli struct {
+		F *Foo
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--f=whatever"})
+	require.Nil(t, ctx)
+	require.Error(t, err)
+	require.Equal(t, "--f: cannot find mapper for kong_test.Foo", err.Error())
+}
+
+func TestEnumPtr(t *testing.T) {
+	var cli struct {
+		X *string `enum:"A,B,C" default:"C"`
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{"--x=A"})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.X)
+	require.Equal(t, "A", *cli.X)
+}
+
+func TestEnumPtrOmitted(t *testing.T) {
+	var cli struct {
+		X *string `enum:"A,B,C" default:"C"`
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.NotNil(t, cli.X)
+	require.Equal(t, "C", *cli.X)
+}
+
+func TestEnumPtrOmittedNoDefault(t *testing.T) {
+	var cli struct {
+		X *string `enum:"A,B,C"`
+	}
+	k, err := kong.New(&cli)
+	require.NoError(t, err)
+	require.NotNil(t, k)
+	ctx, err := k.Parse([]string{})
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	require.Nil(t, cli.X)
+}
