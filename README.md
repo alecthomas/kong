@@ -10,11 +10,11 @@
 
 1. [Introduction](#introduction)
 1. [Help](#help)
-   1. [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
-   1. [Defining help in Kong](#defining-help-in-kong)
+    1. [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
+    1. [Defining help in Kong](#defining-help-in-kong)
 1. [Command handling](#command-handling)
-   1. [Switch on the command string](#switch-on-the-command-string)
-   1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+    1. [Switch on the command string](#switch-on-the-command-string)
+    1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
 1. [Hooks: BeforeResolve\(\), BeforeApply\(\), AfterApply\(\) and the Bind\(\) option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
 1. [Flags](#flags)
 1. [Commands and sub-commands](#commands-and-sub-commands)
@@ -31,13 +31,13 @@
 1. [Variable interpolation](#variable-interpolation)
 1. [Validation](#validation)
 1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
-   1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
-   1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
-   1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
-   1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-   1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-   1. [`Bind(...)` - bind values for callback hooks and Run\(\) methods](#bind---bind-values-for-callback-hooks-and-run-methods)
-   1. [Other options](#other-options)
+    1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
+    1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+    1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
+    1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    1. [`Bind(...)` - bind values for callback hooks and Run\(\) methods](#bind---bind-values-for-callback-hooks-and-run-methods)
+    1. [Other options](#other-options)
 
 <!-- /MarkdownTOC -->
 
@@ -60,26 +60,26 @@ package main
 import "github.com/alecthomas/kong"
 
 var CLI struct {
-   Rm struct {
-      Force     bool `help:"Force removal."`
-      Recursive bool `help:"Recursively remove files."`
+  Rm struct {
+    Force     bool `help:"Force removal."`
+    Recursive bool `help:"Recursively remove files."`
 
-      Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
-   } `cmd:"" help:"Remove files."`
+    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  } `cmd:"" help:"Remove files."`
 
-   Ls struct {
-      Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
-   } `cmd:"" help:"List paths."`
+  Ls struct {
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
-   ctx := kong.Parse(&CLI)
-   switch ctx.Command() {
-   case "rm <path>":
-   case "ls":
-   default:
-      panic(ctx.Command())
-   }
+  ctx := kong.Parse(&CLI)
+  switch ctx.Command() {
+  case "rm <path>":
+  case "ls":
+  default:
+    panic(ctx.Command())
+  }
 }
 ```
 
@@ -154,26 +154,26 @@ package main
 import "github.com/alecthomas/kong"
 
 var CLI struct {
-   Rm struct {
-      Force     bool `help:"Force removal."`
-      Recursive bool `help:"Recursively remove files."`
+  Rm struct {
+    Force     bool `help:"Force removal."`
+    Recursive bool `help:"Recursively remove files."`
 
-      Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
-   } `cmd:"" help:"Remove files."`
+    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  } `cmd:"" help:"Remove files."`
 
-   Ls struct {
-      Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
-   } `cmd:"" help:"List paths."`
+  Ls struct {
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
-   ctx := kong.Parse(&CLI)
-   switch ctx.Command() {
-   case "rm <path>":
-   case "ls":
-   default:
-      panic(ctx.Command())
-   }
+  ctx := kong.Parse(&CLI)
+  switch ctx.Command() {
+  case "rm <path>":
+  case "ls":
+  default:
+    panic(ctx.Command())
+  }
 }
 ```
 
@@ -204,42 +204,42 @@ eg.
 
 ```go
 type Context struct {
-Debug bool
+  Debug bool
 }
 
 type RmCmd struct {
-Force     bool `help:"Force removal."`
-Recursive bool `help:"Recursively remove files."`
+  Force     bool `help:"Force removal."`
+  Recursive bool `help:"Recursively remove files."`
 
-Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
 }
 
 func (r *RmCmd) Run(ctx *Context) error {
-fmt.Println("rm", r.Paths)
-return nil
+  fmt.Println("rm", r.Paths)
+  return nil
 }
 
 type LsCmd struct {
-Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
 }
 
 func (l *LsCmd) Run(ctx *Context) error {
-fmt.Println("ls", l.Paths)
-return nil
+  fmt.Println("ls", l.Paths)
+  return nil
 }
 
 var cli struct {
-Debug bool `help:"Enable debug mode."`
+  Debug bool `help:"Enable debug mode."`
 
-Rm RmCmd `cmd:"" help:"Remove files."`
-Ls LsCmd `cmd:"" help:"List paths."`
+  Rm RmCmd `cmd:"" help:"Remove files."`
+  Ls LsCmd `cmd:"" help:"List paths."`
 }
 
 func main() {
-ctx := kong.Parse(&cli)
-// Call the Run() method of the selected parsed command.
-err := ctx.Run(&Context{Debug: cli.Debug})
-ctx.FatalIfErrorf(err)
+  ctx := kong.Parse(&cli)
+  // Call the Run() method of the selected parsed command.
+  err := ctx.Run(&Context{Debug: cli.Debug})
+  ctx.FatalIfErrorf(err)
 }
 
 ```
@@ -259,21 +259,21 @@ eg.
 type debugFlag bool
 
 func (d debugFlag) BeforeApply(logger *log.Logger) error {
-logger.SetOutput(os.Stdout)
-return nil
+  logger.SetOutput(os.Stdout)
+  return nil
 }
 
 var cli struct {
-Debug debugFlag `help:"Enable debug logging."`
+  Debug debugFlag `help:"Enable debug logging."`
 }
 
 func main() {
-// Debug logger going to discard.
-logger := log.New(ioutil.Discard, "", log.LstdFlags)
+  // Debug logger going to discard.
+  logger := log.New(ioutil.Discard, "", log.LstdFlags)
 
-ctx := kong.Parse(&cli, kong.Bind(logger))
+  ctx := kong.Parse(&cli, kong.Bind(logger))
 
-// ...
+  // ...
 }
 ```
 
@@ -285,7 +285,7 @@ eg. The command-line `app [--flag="foo"]` can be represented by the following.
 
 ```go
 type CLI struct {
-Flag string
+  Flag string
 }
 ```
 
@@ -297,12 +297,12 @@ eg. The following struct represents the CLI structure `command [--flag="str"] su
 
 ```go
 type CLI struct {
-Command struct {
-Flag string
+  Command struct {
+    Flag string
 
-SubCommand struct {
-} `cmd`
-} `cmd`
+    SubCommand struct {
+    } `cmd`
+  } `cmd`
 }
 ```
 
@@ -320,16 +320,16 @@ Can be represented with the following:
 
 ```go
 var CLI struct {
-Rename struct {
-Name struct {
-Name string `arg` // <-- NOTE: identical name to enclosing struct field.
-To struct {
-Name struct {
-Name string `arg`
-} `arg`
-} `cmd`
-} `arg`
-} `cmd`
+  Rename struct {
+    Name struct {
+      Name string `arg` // <-- NOTE: identical name to enclosing struct field.
+      To struct {
+        Name struct {
+          Name string `arg`
+        } `arg`
+      } `cmd`
+    } `arg`
+  } `cmd`
 }
 ```
 
@@ -356,9 +356,9 @@ You would use the following:
 
 ```go
 var CLI struct {
-Ls struct {
-Files []string `arg:"" type:"existingfile"`
-} `cmd`
+  Ls struct {
+    Files []string `arg:"" type:"existingfile"`
+  } `cmd`
 }
 ```
 
@@ -374,11 +374,11 @@ You would use the following:
 
 ```go
 var CLI struct {
-Config struct {
-Set struct {
-Config map[string]float64 `arg:"" type:"file:"`
-} `cmd`
-} `cmd`
+  Config struct {
+    Set struct {
+      Config map[string]float64 `arg:"" type:"file:"`
+    } `cmd`
+  } `cmd`
 }
 ```
 
