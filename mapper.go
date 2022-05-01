@@ -612,6 +612,14 @@ func existingFileMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
+
+		if ctx.Value.Set {
+			// early return to avoid checking extra files that may not exist;
+			// this hack only works because the value provided on the cli is
+			// checked before the default value is checked (if default is set).
+			return nil
+		}
+
 		if path != "-" {
 			path = ExpandPath(path)
 			stat, err := os.Stat(path)
@@ -640,6 +648,14 @@ func existingDirMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
+
+		if ctx.Value.Set {
+			// early return to avoid checking extra dirs that may not exist;
+			// this hack only works because the value provided on the cli is
+			// checked before the default value is checked (if default is set).
+			return nil
+		}
+
 		path = ExpandPath(path)
 		stat, err := os.Stat(path)
 		if err != nil {

@@ -423,6 +423,72 @@ func TestFileMapper(t *testing.T) {
 	require.Equal(t, os.Stdin, cli.File)
 }
 
+//nolint:dupl
+func TestExistingFileMapper(t *testing.T) {
+	type CLI struct {
+		File string `type:"existingfile"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--file", "testdata/file.txt"})
+	require.NoError(t, err)
+	require.NotNil(t, cli.File)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--file", "testdata/missing.txt"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--file", "testdata/"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "exists but is a directory")
+}
+
+func TestExistingFileMapperDefaultMissing(t *testing.T) {
+	type CLI struct {
+		File string `type:"existingfile" default:"testdata/missing.txt"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	file := "testdata/file.txt"
+	_, err := p.Parse([]string{"--file", file})
+	require.NoError(t, err)
+	require.NotNil(t, cli.File)
+	require.Contains(t, cli.File, file)
+}
+
+//nolint:dupl
+func TestExistingDirMapper(t *testing.T) {
+	type CLI struct {
+		Dir string `type:"existingdir"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--dir", "testdata/"})
+	require.NoError(t, err)
+	require.NotNil(t, cli.Dir)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--dir", "missingdata/"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "missingdata: no such file or directory")
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--dir", "testdata/file.txt"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "exists but is not a directory")
+}
+
+func TestExistingDirMapperDefaultMissing(t *testing.T) {
+	type CLI struct {
+		Dir string `type:"existingdir" default:"missing-dir"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	dir := "testdata"
+	_, err := p.Parse([]string{"--dir", dir})
+	require.NoError(t, err)
+	require.NotNil(t, cli.Dir)
+	require.Contains(t, cli.Dir, dir)
+}
+
 func TestMapperPlaceHolder(t *testing.T) {
 	var cli struct {
 		Flag string
