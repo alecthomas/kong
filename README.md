@@ -248,7 +248,7 @@ func main() {
 
 If a node in the grammar has a `BeforeResolve(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those methods will be called before validation/assignment and after validation/assignment, respectively.
 
-The `--help` flag is implemented with a `BeforeApply` hook.
+The `--help` flag is implemented with a `BeforeResolve` hook.
 
 Arguments to hooks are provided via the `Run(...)` method or `Bind(...)` option. `*Kong`, `*Context` and `*Path` are also bound and finally, hooks can also contribute bindings via `kong.Context.Bind()` and `kong.Context.BindTo()`.
 
