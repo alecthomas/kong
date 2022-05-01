@@ -1542,3 +1542,22 @@ func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
 	_, err := kong.New(&cli)
 	require.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must contain exactly one positional argument of []string type")
 }
+
+func TestHelpShouldStillWork(t *testing.T) {
+	type CLI struct {
+		Dir string `type:"existingdir" default:"missing-dir"`
+	}
+	var cli CLI
+	k := mustNew(t, &cli)
+	rc := -1 // init nonzero to help assert help hook was called
+	k.Exit = func(i int) {
+		rc = i
+	}
+	_, err := k.Parse([]string{"--help"})
+	// checking return code validates the help hook was called
+	require.Zero(t, rc)
+	// allow for error propagation from other validation (only for the
+	// sake of this test, due to the exit function not actually exiting the
+	// program; errors will not propagate in the real world).
+	require.Error(t, err)
+}

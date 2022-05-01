@@ -16,7 +16,7 @@ const (
 // Help flag.
 type helpValue bool
 
-func (h helpValue) BeforeApply(ctx *Context) error {
+func (h helpValue) BeforeResolve(ctx *Context) error {
 	options := ctx.Kong.helpOptions
 	options.Summary = false
 	err := ctx.Kong.help(options, ctx)
