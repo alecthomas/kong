@@ -721,12 +721,15 @@ func SplitEscaped(s string, sep rune) (out []string) {
 	}
 	escaped := false
 	token := ""
-	for _, ch := range s {
+	for i, ch := range s {
 		switch {
 		case escaped:
+			if ch != sep {
+				token += `\`
+			}
 			token += string(ch)
 			escaped = false
-		case ch == '\\':
+		case ch == '\\' && i < len(s)-1:
 			escaped = true
 		case ch == sep && !escaped:
 			out = append(out, token)

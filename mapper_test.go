@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -412,25 +413,14 @@ func TestFileMapper(t *testing.T) {
 	_ = cli.File.Close()
 	_, err = p.Parse([]string{"testdata/missing.txt"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	if runtime.GOOS == "windows" {
+		require.Contains(t, err.Error(), "missing.txt: The system cannot find the file specified.")
+	} else {
+		require.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	}
 	_, err = p.Parse([]string{"-"})
 	require.NoError(t, err)
 	require.Equal(t, os.Stdin, cli.File)
-}
-
-func TestPathMapper(t *testing.T) {
-	var cli struct {
-		Path string `arg:"" type:"path"`
-	}
-	p := mustNew(t, &cli)
-
-	_, err := p.Parse([]string{"/an/absolute/path"})
-	require.NoError(t, err)
-	require.Equal(t, "/an/absolute/path", cli.Path)
-
-	_, err = p.Parse([]string{"-"})
-	require.NoError(t, err)
-	require.Equal(t, "-", cli.Path)
 }
 
 func TestMapperPlaceHolder(t *testing.T) {
