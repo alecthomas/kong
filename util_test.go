@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -62,7 +63,9 @@ func TestChangeDirFlag(t *testing.T) {
 	p := Must(&cli)
 	_, err = p.Parse([]string{"-C", dir, "out.txt"})
 	require.NoError(t, err)
-	file, err = filepath.EvalSymlinks(file) // Needed because OSX uses a symlinked tmp dir.
-	require.NoError(t, err)
+	if runtime.GOOS != "windows" {
+		file, err = filepath.EvalSymlinks(file) // Needed because OSX uses a symlinked tmp dir.
+		require.NoError(t, err)
+	}
 	require.Equal(t, file, cli.Path)
 }
