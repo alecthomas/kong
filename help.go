@@ -123,19 +123,19 @@ func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 	w := NewHelpWriter(ctx, options)
 	selected := ctx.Selected()
 	if selected == nil {
-		WriteApp(w, ctx.Model)
+		w.WriteApp(ctx.Model)
 	} else {
-		WriteCommand(w, ctx.Model, selected)
+		w.WriteCommand(ctx.Model, selected)
 	}
 	return w.Write(ctx.Stdout)
 }
 
 // WriteApp writes the help output for the whole app.
-func WriteApp(w *HelpWriter, app *Application) {
+func (w *HelpWriter) WriteApp(app *Application) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s%s", app.Name, app.Summary())
 	}
-	WriteNodeDetail(w, app.Node, true)
+	w.WriteNodeDetail(app.Node, true)
 	cmds := app.Leaves(true)
 	if len(cmds) > 0 && app.HelpFlag != nil {
 		w.Print("")
@@ -148,11 +148,11 @@ func WriteApp(w *HelpWriter, app *Application) {
 }
 
 // WriteCommand writes the help output for a specific command.
-func WriteCommand(w *HelpWriter, app *Application, cmd *Command) {
+func (w *HelpWriter) WriteCommand(app *Application, cmd *Command) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
 	}
-	WriteNodeDetail(w, cmd, true)
+	w.WriteNodeDetail(cmd, true)
 	if w.Summary && app.HelpFlag != nil {
 		w.Print("")
 		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
@@ -160,7 +160,7 @@ func WriteCommand(w *HelpWriter, app *Application, cmd *Command) {
 }
 
 // WriteNodeDetail writes the help output for a node.
-func WriteNodeDetail(w *HelpWriter, node *Node, hide bool) {
+func (w *HelpWriter) WriteNodeDetail(node *Node, hide bool) {
 	if node.Help != "" {
 		w.Print("")
 		w.Wrap(node.Help)
