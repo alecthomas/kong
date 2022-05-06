@@ -186,7 +186,6 @@ func WriteNodeDetail(w *HelpWriter, node *Node, hide bool) {
 		cmds = node.Leaves(hide)
 	}
 	if len(cmds) > 0 {
-
 		if w.Tree {
 			w.Print("")
 			WriteCommandTree(w, node, "Commands:")
