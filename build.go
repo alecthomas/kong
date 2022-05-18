@@ -281,6 +281,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 		Mapper:       mapper,
 		Tag:          tag,
 		Target:       fv,
+		Parent:       node,
 		Enum:         tag.Enum,
 		Passthrough:  tag.Passthrough,
 

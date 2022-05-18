@@ -193,15 +193,23 @@ func (n *Node) Summary() string {
 // FlagSummary for the node.
 func (n *Node) FlagSummary(hide bool, showOptional bool) string {
 	required := []string{}
+	optional := []string{}
 	count := 0
 	for _, group := range n.AllFlags(hide) {
 		for _, flag := range group {
 			count++
-			// Show required flags, or optional flags which aren't help
-			if flag.Required || (showOptional && flag.Name != "help") {
+			// Show required flags
+			if flag.Required {
 				required = append(required, flag.Summary())
+			} else if showOptional && (flag.Parent == n) {
+				// Show optional flags _if they belong to us_
+				optional = append(optional, flag.Summary())
 			}
 		}
+	}
+	if len(optional) > 0 {
+		// Group optional flags together and surround with brackets
+		required = append(required, fmt.Sprintf("[%s]", strings.Join(optional, " ")))
 	}
 	return strings.Join(required, " ")
 }
@@ -266,6 +274,7 @@ type Value struct {
 	Mapper       Mapper
 	Tag          *Tag
 	Target       reflect.Value
+	Parent       *Node
 	Required     bool
 	Set          bool   // Set to true when this value is set through some mechanism.
 	Format       string // Formatting directive, if applicable.

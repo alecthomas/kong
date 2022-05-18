@@ -373,10 +373,19 @@ Commands:
 	})
 }
 
-func TestSubCommandFlags(t *testing.T) {
+// Tests HelpOptions.SubcommandsWithOptionalFlags
+//
+// MUST retain original behaviour by default (see "default" sub test)
+// MUST show optional subcommand flags when SubcommandsWithOptionalFlags
+//      is enabled (see "forced" sub test)
+// MUST show any _required_ parent flags on subcommands
+// MUST NOT show any optional parent flags on subcommands
+func TestSubcommandsWithOptionalFlags(t *testing.T) {
 	var cli struct {
 		Sub struct {
-			MoreSub struct {
+			ParentFlag string `help:"I should only appear on parent"`
+			Mandatory  string `required:"" help:"I should appear on all sub commands"`
+			MoreSub    struct {
 				Flag     string `help:"A flag."`
 				Required string `required:"" help:"A required flag."`
 			} `cmd help:"more sub help"`
@@ -395,7 +404,7 @@ func TestSubCommandFlags(t *testing.T) {
 
 	// Default: don't show flags on nested items unless they are `required`
 	t.Run("default", func(t *testing.T) {
-		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --required=STRING\n    more sub help\n\n  sub another\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
+		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --mandatory=STRING --required=STRING\n    more sub help\n\n  sub another --mandatory=STRING\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
 		_, _ = app.Parse([]string{"--help"})
 		require.Equal(t, expected, w.String())
 	})
@@ -406,14 +415,14 @@ func TestSubCommandFlags(t *testing.T) {
 		kong.Description("A test app."),
 		kong.Writers(w, w),
 		kong.HelpOptions{
-			IncludeOptionalFlagsInSummary: true,
+			SubcommandsWithOptionalFlags: true,
 		},
 		kong.Exit(func(int) {}),
 	)
 
 	// Force flag display: don't show flags on nested items unless they are `required`
 	t.Run("forced", func(t *testing.T) {
-		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --flag=STRING --required=STRING\n    more sub help\n\n  sub another\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
+		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --mandatory=STRING --required=STRING [--flag=STRING]\n    more sub help\n\n  sub another --mandatory=STRING\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
 		_, _ = app.Parse([]string{"--help"})
 		require.Equal(t, expected, w.String())
 	})
