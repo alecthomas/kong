@@ -141,10 +141,19 @@ func (n *Node) Depth() int {
 	return depth
 }
 
-// Summary help string for the node (not including application name).
-func (n *Node) Summary() string {
+// SummaryWithOptions help string for the node (not including application name)
+//
+// Used both by help writing as well as other parts of the application
+//
+// Most cases just use Summary() (default settings)
+//
+// The help printer uses this optional version to pass options along.
+//
+// if includeOptionalFlags is true, all flags for a command will
+// be included. see HelpOptions.IncludeOptionalFlagsInSummary
+func (n *Node) SummaryWithOptions(includeOptionalFlags bool) string {
 	summary := n.Path()
-	if flags := n.FlagSummary(true); flags != "" {
+	if flags := n.FlagSummary(true, includeOptionalFlags); flags != "" {
 		summary += " " + flags
 	}
 	args := []string{}
@@ -175,14 +184,21 @@ func (n *Node) Summary() string {
 	return summary
 }
 
+// Summary help string for the node (not including application name).
+// Default behaviour used throughout the application
+func (n *Node) Summary() string {
+	return n.SummaryWithOptions(false)
+}
+
 // FlagSummary for the node.
-func (n *Node) FlagSummary(hide bool) string {
+func (n *Node) FlagSummary(hide bool, showOptional bool) string {
 	required := []string{}
 	count := 0
 	for _, group := range n.AllFlags(hide) {
 		for _, flag := range group {
 			count++
-			if flag.Required {
+			// Show required flags, or optional flags which aren't help
+			if flag.Required || (showOptional && flag.Name != "help") {
 				required = append(required, flag.Summary())
 			}
 		}

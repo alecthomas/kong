@@ -52,6 +52,11 @@ type HelpOptions struct {
 	// Don't show the help associated with subcommands
 	NoExpandSubcommands bool
 
+	// Whether to show optional flags in command summaries
+	// If true, command summaries will include flags not marked as required
+	// If false (the default), command summaries will only show required flags
+	IncludeOptionalFlagsInSummary bool
+
 	// Clamp the help wrap width to a value smaller than the terminal width.
 	// If this is set to a non-positive number, the terminal width is used; otherwise,
 	// the min of this value or the terminal width is used.
@@ -356,7 +361,7 @@ func collectCommandGroups(nodes []*Node) []helpCommandGroup {
 }
 
 func printCommandSummary(w *helpWriter, cmd *Command) {
-	w.Print(cmd.Summary())
+	w.Print(cmd.SummaryWithOptions(w.HelpOptions.IncludeOptionalFlagsInSummary))
 	if cmd.Help != "" {
 		w.Indent().Wrap(cmd.Help)
 	}

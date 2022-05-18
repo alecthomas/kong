@@ -373,6 +373,52 @@ Commands:
 	})
 }
 
+func TestSubCommandFlags(t *testing.T) {
+	var cli struct {
+		Sub struct {
+			MoreSub struct {
+				Flag     string `help:"A flag."`
+				Required string `required:"" help:"A required flag."`
+			} `cmd help:"more sub help"`
+			Another struct {
+			} `cmd help:"another help"`
+		} `cmd help:"sub help"`
+	}
+	w := bytes.NewBuffer(nil)
+
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+	)
+
+	// Default: don't show flags on nested items unless they are `required`
+	t.Run("default", func(t *testing.T) {
+		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --required=STRING\n    more sub help\n\n  sub another\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
+		_, _ = app.Parse([]string{"--help"})
+		require.Equal(t, expected, w.String())
+	})
+
+	w.Truncate(0)
+	app = mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.HelpOptions{
+			IncludeOptionalFlagsInSummary: true,
+		},
+		kong.Exit(func(int) {}),
+	)
+
+	// Force flag display: don't show flags on nested items unless they are `required`
+	t.Run("forced", func(t *testing.T) {
+		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --flag=STRING --required=STRING\n    more sub help\n\n  sub another\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
+		_, _ = app.Parse([]string{"--help"})
+		require.Equal(t, expected, w.String())
+	})
+}
+
 func TestHelpCompactNoExpand(t *testing.T) {
 	var cli struct {
 		One struct {
