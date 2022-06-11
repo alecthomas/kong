@@ -1561,3 +1561,103 @@ func TestHelpShouldStillWork(t *testing.T) {
 	// program; errors will not propagate in the real world).
 	require.Error(t, err)
 }
+
+func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
+	tests := []struct {
+		name string
+		cli  interface{}
+		args []string
+		err  string
+	}{
+		{
+			"DefaultRune",
+			&struct {
+				Stuff []string
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<arg>,..."`,
+		},
+		{
+			"SpecifiedRune",
+			&struct {
+				Stuff []string `sep:","`
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<arg>,..."`,
+		},
+		{
+			"SpaceRune",
+			&struct {
+				Stuff []string `sep:" "`
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<arg> ..."`,
+		},
+		{
+			"OtherRune",
+			&struct {
+				Stuff []string `sep:"_"`
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<arg>_..."`,
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			p := mustNew(t, test.cli)
+			_, err := p.Parse(test.args)
+			require.EqualError(t, err, test.err)
+		})
+	}
+}
+
+func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
+	tests := []struct {
+		name     string
+		cli      interface{}
+		args     []string
+		expected string
+	}{
+		{
+			"DefaultRune",
+			&struct {
+				Stuff map[string]int
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<key>=<value>;..."`,
+		},
+		{
+			"SpecifiedRune",
+			&struct {
+				Stuff map[string]int `mapsep:";"`
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<key>=<value>;..."`,
+		},
+		{
+			"SpaceRune",
+			&struct {
+				Stuff map[string]int `mapsep:" "`
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<key>=<value> ..."`,
+		},
+		{
+			"OtherRune",
+			&struct {
+				Stuff map[string]int `mapsep:","`
+			}{},
+			[]string{"--stuff"},
+			`--stuff: missing argument: expecting "<key>=<value>,..."`,
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			p := mustNew(t, test.cli)
+			_, err := p.Parse(test.args)
+			require.EqualError(t, err, test.expected)
+		})
+	}
+}
