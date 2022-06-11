@@ -1575,7 +1575,7 @@ func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff []string
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<arg>,..."`,
+			`--stuff: missing value, expecting "<arg>,..."`,
 		},
 		{
 			"SpecifiedRune",
@@ -1583,7 +1583,7 @@ func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff []string `sep:","`
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<arg>,..."`,
+			`--stuff: missing value, expecting "<arg>,..."`,
 		},
 		{
 			"SpaceRune",
@@ -1591,7 +1591,7 @@ func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff []string `sep:" "`
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<arg> ..."`,
+			`--stuff: missing value, expecting "<arg> ..."`,
 		},
 		{
 			"OtherRune",
@@ -1599,7 +1599,7 @@ func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff []string `sep:"_"`
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<arg>_..."`,
+			`--stuff: missing value, expecting "<arg>_..."`,
 		},
 	}
 	for _, test := range tests {
@@ -1625,7 +1625,7 @@ func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff map[string]int
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<key>=<value>;..."`,
+			`--stuff: missing value, expecting "<key>=<value>;..."`,
 		},
 		{
 			"SpecifiedRune",
@@ -1633,7 +1633,7 @@ func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff map[string]int `mapsep:";"`
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<key>=<value>;..."`,
+			`--stuff: missing value, expecting "<key>=<value>;..."`,
 		},
 		{
 			"SpaceRune",
@@ -1641,7 +1641,7 @@ func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff map[string]int `mapsep:" "`
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<key>=<value> ..."`,
+			`--stuff: missing value, expecting "<key>=<value> ..."`,
 		},
 		{
 			"OtherRune",
@@ -1649,7 +1649,7 @@ func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 				Stuff map[string]int `mapsep:","`
 			}{},
 			[]string{"--stuff"},
-			`--stuff: missing argument: expecting "<key>=<value>,..."`,
+			`--stuff: missing value, expecting "<key>=<value>,..."`,
 		},
 	}
 	for _, test := range tests {

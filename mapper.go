@@ -443,9 +443,9 @@ func mapDecoder(r *Registry) MapperFunc {
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
-			// If decoding a flag, we need an argument.
+			// If decoding a flag, we need an value.
 			if t.IsEOL() {
-				return fmt.Errorf("missing argument: expecting \"<key>=<value>%c...\"", mapsep)
+				return fmt.Errorf("missing value, expecting \"<key>=<value>%c...\"", mapsep)
 			}
 			switch v := t.Value.(type) {
 			case string:
@@ -518,9 +518,9 @@ func sliceDecoder(r *Registry) MapperFunc {
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
-			// If decoding a flag, we need an argument.
+			// If decoding a flag, we need an value.
 			if t.IsEOL() {
-				return fmt.Errorf("missing argument: expecting \"<arg>%c...\"", sep)
+				return fmt.Errorf("missing value, expecting \"<arg>%c...\"", sep)
 			}
 			switch v := t.Value.(type) {
 			case string:
