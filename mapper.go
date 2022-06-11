@@ -439,17 +439,17 @@ func mapDecoder(r *Registry) MapperFunc {
 			target.Set(reflect.MakeMap(target.Type()))
 		}
 		el := target.Type()
-		sep := ctx.Value.Tag.MapSep
+		mapsep := ctx.Value.Tag.MapSep
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
-			// If decoding a flag, we need an argument.
+			// If decoding a flag, we need an value.
 			if t.IsEOL() {
-				return errors.New("unexpected EOL")
+				return fmt.Errorf("missing value, expecting \"<key>=<value>%c...\"", mapsep)
 			}
 			switch v := t.Value.(type) {
 			case string:
-				childScanner = ScanAsType(t.Type, SplitEscaped(v, sep)...)
+				childScanner = ScanAsType(t.Type, SplitEscaped(v, mapsep)...)
 
 			case []map[string]interface{}:
 				for _, m := range v {
@@ -518,9 +518,9 @@ func sliceDecoder(r *Registry) MapperFunc {
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
-			// If decoding a flag, we need an argument.
+			// If decoding a flag, we need an value.
 			if t.IsEOL() {
-				return errors.New("unexpected EOL")
+				return fmt.Errorf("missing value, expecting \"<arg>%c...\"", sep)
 			}
 			switch v := t.Value.(type) {
 			case string:
