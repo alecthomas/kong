@@ -8,40 +8,39 @@
 
 <!-- MarkdownTOC autolink="true" style="ordered" indent="    " -->
 
-- [Kong is a command-line parser for Go](#kong-is-a-command-line-parser-for-go)
-  - [Introduction](#introduction)
-  - [Help](#help)
-    - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
-    - [Defining help in Kong](#defining-help-in-kong)
-      - [Showing the _command_'s detailed help](#showing-the-commands-detailed-help)
-      - [Showing an _argument_'s detailed help](#showing-an-arguments-detailed-help)
-  - [Command handling](#command-handling)
-    - [Switch on the command string](#switch-on-the-command-string)
-    - [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
-  - [Hooks: BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option)
-  - [Flags](#flags)
-  - [Commands and sub-commands](#commands-and-sub-commands)
-  - [Branching positional arguments](#branching-positional-arguments)
-  - [Positional arguments](#positional-arguments)
-  - [Slices](#slices)
-  - [Maps](#maps)
-  - [Nested data structure](#nested-data-structure)
-  - [Custom named decoders](#custom-named-decoders)
-  - [Supported field types](#supported-field-types)
-  - [Custom decoders (mappers)](#custom-decoders-mappers)
-  - [Supported tags](#supported-tags)
-  - [Plugins](#plugins)
-  - [Dynamic Commands](#dynamic-commands)
-  - [Variable interpolation](#variable-interpolation)
-  - [Validation](#validation)
-  - [Modifying Kong's behaviour](#modifying-kongs-behaviour)
-    - [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
-    - [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
-    - [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
-    - [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    - [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-    - [`Bind(...)` - bind values for callback hooks and Run() methods](#bind---bind-values-for-callback-hooks-and-run-methods)
-    - [Other options](#other-options)
+1. [Introduction](#introduction)
+1. [Help](#help)
+    1. [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
+    1. [Defining help in Kong](#defining-help-in-kong)
+        1. [Showing the _command_'s detailed help](#showing-the-_command_s-detailed-help)
+        1. [Showing an _argument_'s detailed help](#showing-an-_argument_s-detailed-help)
+1. [Command handling](#command-handling)
+    1. [Switch on the command string](#switch-on-the-command-string)
+    1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+1. [Hooks: BeforeReset\(\), BeforeResolve\(\), BeforeApply\(\), AfterApply\(\) and the Bind\(\) option](#hooks-beforereset-beforeresolve-beforeapply-afterapply-and-the-bind-option)
+1. [Flags](#flags)
+1. [Commands and sub-commands](#commands-and-sub-commands)
+1. [Branching positional arguments](#branching-positional-arguments)
+1. [Positional arguments](#positional-arguments)
+1. [Slices](#slices)
+1. [Maps](#maps)
+1. [Nested data structure](#nested-data-structure)
+1. [Custom named decoders](#custom-named-decoders)
+1. [Supported field types](#supported-field-types)
+1. [Custom decoders \(mappers\)](#custom-decoders-mappers)
+1. [Supported tags](#supported-tags)
+1. [Plugins](#plugins)
+1. [Dynamic Commands](#dynamic-commands)
+1. [Variable interpolation](#variable-interpolation)
+1. [Validation](#validation)
+1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
+    1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
+    1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+    1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
+    1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    1. [`Bind(...)` - bind values for callback hooks and Run\(\) methods](#bind---bind-values-for-callback-hooks-and-run-methods)
+    1. [Other options](#other-options)
 
 <!-- /MarkdownTOC -->
 
@@ -302,11 +301,14 @@ func main() {
 
 ```
 
-## Hooks: BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option
+## Hooks: BeforeReset(), BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option
 
-If a node in the grammar has a `BeforeResolve(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those methods will be called before validation/assignment and after validation/assignment, respectively.
+If a node in the grammar has a `BeforeReset(...)`, `BeforeResolve
+(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those
+methods will be called before values are reset, before validation/assignment,
+and after validation/assignment, respectively.
 
-The `--help` flag is implemented with a `BeforeResolve` hook.
+The `--help` flag is implemented with a `BeforeReset` hook.
 
 Arguments to hooks are provided via the `Run(...)` method or `Bind(...)` option. `*Kong`, `*Context` and `*Path` are also bound and finally, hooks can also contribute bindings via `kong.Context.Bind()` and `kong.Context.BindTo()`.
 

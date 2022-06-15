@@ -1548,12 +1548,14 @@ func TestHelpShouldStillWork(t *testing.T) {
 		Dir string `type:"existingdir" default:"missing-dir"`
 	}
 	var cli CLI
-	k := mustNew(t, &cli)
+	w := &strings.Builder{}
+	k := mustNew(t, &cli, kong.Writers(w, w))
 	rc := -1 // init nonzero to help assert help hook was called
 	k.Exit = func(i int) {
 		rc = i
 	}
 	_, err := k.Parse([]string{"--help"})
+	t.Log(w.String())
 	// checking return code validates the help hook was called
 	require.Zero(t, rc)
 	// allow for error propagation from other validation (only for the

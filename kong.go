@@ -251,13 +251,16 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if ctx.Error != nil {
 		return nil, &ParseError{error: ctx.Error, Context: ctx}
 	}
+	if err = k.applyHook(ctx, "BeforeReset"); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
+	if err = ctx.Reset(); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
 	if err = k.applyHook(ctx, "BeforeResolve"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Resolve(); err != nil {
-		return nil, &ParseError{error: err, Context: ctx}
-	}
-	if err = ctx.Reset(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
