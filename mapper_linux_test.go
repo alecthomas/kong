@@ -6,7 +6,7 @@ package kong_test
 import (
 	"testing"
 
-	require "github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestPathMapper(t *testing.T) {

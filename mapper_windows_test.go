@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	require "github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestWindowsPathMapper(t *testing.T) {
