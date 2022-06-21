@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func BenchmarkKong_interpolate(b *testing.B) {
@@ -23,7 +23,7 @@ func BenchmarkKong_interpolate(b *testing.B) {
 			Param0 string `help:"${help_param0}"`
 		}{}
 		model, err := build(k, grammar)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		for i := 0; i < count; i++ {
 			model.Node.Flags = append(model.Node.Flags, &Flag{
 				Value: &Value{
@@ -44,7 +44,7 @@ func BenchmarkKong_interpolate(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				err = k.interpolate(k.Model.Node)
 			}
-			require.NoError(b, err)
+			assert.NoError(b, err)
 			b.ReportAllocs()
 		})
 	}

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestApplyDefaults(t *testing.T) {
@@ -26,8 +26,8 @@ func TestApplyDefaults(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ApplyDefaults(&tt.target)
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, tt.target)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, tt.target)
 		})
 	}
 }

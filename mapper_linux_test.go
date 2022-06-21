@@ -6,7 +6,7 @@ package kong_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	require "github.com/alecthomas/assert/v2"
 )
 
 func TestPathMapper(t *testing.T) {
@@ -16,10 +16,10 @@ func TestPathMapper(t *testing.T) {
 	p := mustNew(t, &cli)
 
 	_, err := p.Parse([]string{"/an/absolute/path"})
-	require.NoError(t, err)
-	require.Equal(t, "/an/absolute/path", cli.Path)
+	assert.NoError(t, err)
+	assert.Equal(t, "/an/absolute/path", cli.Path)
 
 	_, err = p.Parse([]string{"-"})
-	require.NoError(t, err)
-	require.Equal(t, "-", cli.Path)
+	assert.NoError(t, err)
+	assert.Equal(t, "-", cli.Path)
 }

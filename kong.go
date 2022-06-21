@@ -379,7 +379,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
 	}
 	msg := err.Error()
 	if len(args) > 0 {
-		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error()
+		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": " + err.Error() // nolint
 	}
 	// Maybe display usage information.
 	var parseErr *ParseError

@@ -7,8 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 )
 
@@ -53,10 +52,10 @@ func TestEnvarsFlagBasic(t *testing.T) {
 	defer unsetEnvs()
 
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "bye", cli.String)
-	require.Equal(t, []int{5, 2, 9}, cli.Slice)
-	require.Equal(t, "foo", cli.Interp)
+	assert.NoError(t, err)
+	assert.Equal(t, "bye", cli.String)
+	assert.Equal(t, []int{5, 2, 9}, cli.Slice)
+	assert.Equal(t, "foo", cli.Interp)
 }
 
 func TestEnvarsFlagOverride(t *testing.T) {
@@ -67,8 +66,8 @@ func TestEnvarsFlagOverride(t *testing.T) {
 	defer restoreEnv()
 
 	_, err := parser.Parse([]string{"--flag=hello"})
-	require.NoError(t, err)
-	require.Equal(t, "hello", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", cli.Flag)
 }
 
 func TestEnvarsTag(t *testing.T) {
@@ -79,8 +78,8 @@ func TestEnvarsTag(t *testing.T) {
 	defer restoreEnv()
 
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, []int{5, 2, 9}, cli.Slice)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{5, 2, 9}, cli.Slice)
 }
 
 func TestEnvarsEnvPrefix(t *testing.T) {
@@ -94,8 +93,8 @@ func TestEnvarsEnvPrefix(t *testing.T) {
 	defer restoreEnv()
 
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3}, cli.Slice)
 }
 
 func TestEnvarsNestedEnvPrefix(t *testing.T) {
@@ -112,8 +111,8 @@ func TestEnvarsNestedEnvPrefix(t *testing.T) {
 	defer restoreEnv()
 
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "abc", cli.String)
+	assert.NoError(t, err)
+	assert.Equal(t, "abc", cli.String)
 }
 
 func TestEnvarsWithDefault(t *testing.T) {
@@ -124,14 +123,14 @@ func TestEnvarsWithDefault(t *testing.T) {
 	defer restoreEnv()
 
 	_, err := parser.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "default", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "default", cli.Flag)
 
 	parser, restoreEnv = newEnvParser(t, &cli, envMap{"KONG_FLAG": "moo"})
 	defer restoreEnv()
 	_, err = parser.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "moo", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "moo", cli.Flag)
 }
 
 func TestEnv(t *testing.T) {
@@ -169,8 +168,8 @@ func TestEnv(t *testing.T) {
 	defer unsetEnvs()
 
 	_, err := parser.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, expected, cli)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, cli)
 
 	// Without the prefix
 	parser, unsetEnvs = newEnvParser(t, &cli, envMap{
@@ -184,8 +183,8 @@ func TestEnv(t *testing.T) {
 	defer unsetEnvs()
 
 	_, err = parser.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, expected, cli)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, cli)
 }
 
 func TestJSONBasic(t *testing.T) {
@@ -215,17 +214,17 @@ func TestJSONBasic(t *testing.T) {
 	}`
 
 	r, err := kong.JSON(strings.NewReader(json))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	parser := mustNew(t, &cli, kong.Resolvers(r))
 	_, err = parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "🍕", cli.String)
-	require.Equal(t, []int{5, 8}, cli.Slice)
-	require.Equal(t, []string{"a,b", "c"}, cli.SliceWithCommas)
-	require.Equal(t, "one value", cli.One.String)
-	require.Equal(t, "two value", cli.Two.String)
-	require.True(t, cli.Bool)
+	assert.NoError(t, err)
+	assert.Equal(t, "🍕", cli.String)
+	assert.Equal(t, []int{5, 8}, cli.Slice)
+	assert.Equal(t, []string{"a,b", "c"}, cli.SliceWithCommas)
+	assert.Equal(t, "one value", cli.One.String)
+	assert.Equal(t, "two value", cli.Two.String)
+	assert.True(t, cli.Bool)
 }
 
 type testUppercaseMapper struct{}
@@ -252,8 +251,8 @@ func TestResolversWithMappers(t *testing.T) {
 		kong.NamedMapper("upper", testUppercaseMapper{}),
 	)
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "MEOW", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "MEOW", cli.Flag)
 }
 
 func TestResolverWithBool(t *testing.T) {
@@ -271,8 +270,8 @@ func TestResolverWithBool(t *testing.T) {
 	p := mustNew(t, &cli, kong.Resolvers(resolver))
 
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.True(t, cli.Bool)
+	assert.NoError(t, err)
+	assert.True(t, cli.Bool)
 }
 
 func TestLastResolverWins(t *testing.T) {
@@ -296,8 +295,8 @@ func TestLastResolverWins(t *testing.T) {
 
 	p := mustNew(t, &cli, kong.Resolvers(first, second))
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, []int{2}, cli.Int)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{2}, cli.Int)
 }
 
 func TestResolverSatisfiesRequired(t *testing.T) {
@@ -311,8 +310,8 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 		return nil, nil
 	}
 	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, 1, cli.Int)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, cli.Int)
 }
 
 func TestResolverTriggersHooks(t *testing.T) {
@@ -330,10 +329,10 @@ func TestResolverTriggersHooks(t *testing.T) {
 	}
 
 	_, err := mustNew(t, &cli, kong.Bind(ctx), kong.Resolvers(first)).Parse(nil)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.Equal(t, "one", string(cli.Flag))
-	require.Equal(t, []string{"before:", "after:one"}, ctx.values)
+	assert.Equal(t, "one", string(cli.Flag))
+	assert.Equal(t, []string{"before:", "after:one"}, ctx.values)
 }
 
 type validatingResolver struct {
@@ -349,5 +348,5 @@ func TestValidatingResolverErrors(t *testing.T) {
 	resolver := &validatingResolver{err: errors.New("invalid")}
 	var cli struct{}
 	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
-	require.EqualError(t, err, "invalid")
+	assert.EqualError(t, err, "invalid")
 }

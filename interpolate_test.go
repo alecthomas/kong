@@ -3,7 +3,7 @@ package kong
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestInterpolate(t *testing.T) {
@@ -15,16 +15,16 @@ func TestInterpolate(t *testing.T) {
 		"height": "180",
 	}
 	actual, err := interpolate("${name=Bobby Brown} is ${age} years old, ${height} cm tall, lives in ${city=<unknown>}, and likes $${AUD}", vars, updatedVars)
-	require.NoError(t, err)
-	require.Equal(t, `Bobby Brown is 35 years old, 180 cm tall, lives in Melbourne, and likes ${AUD}`, actual)
+	assert.NoError(t, err)
+	assert.Equal(t, `Bobby Brown is 35 years old, 180 cm tall, lives in Melbourne, and likes ${AUD}`, actual)
 }
 
 func TestHasInterpolatedVar(t *testing.T) {
 	for _, tag := range []string{"name", "age", "height", "city"} {
-		require.True(t, HasInterpolatedVar("${name=Bobby Brown} is ${age} years old, ${height} cm tall, lives in ${city=<unknown>}, and likes $${AUD}", tag), tag)
+		assert.True(t, HasInterpolatedVar("${name=Bobby Brown} is ${age} years old, ${height} cm tall, lives in ${city=<unknown>}, and likes $${AUD}", tag), tag)
 	}
 
 	for _, tag := range []string{"name", "age", "height", "AUD"} {
-		require.False(t, HasInterpolatedVar("$name $$age {height} $${AUD}", tag), tag)
+		assert.False(t, HasInterpolatedVar("$name $$age {height} $${AUD}", tag), tag)
 	}
 }

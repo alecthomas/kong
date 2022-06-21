@@ -4,8 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 )
 
@@ -15,8 +14,8 @@ func TestDefaultValueForOptionalArg(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "👌", cli.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "👌", cli.Arg)
 }
 
 func TestNoValueInTag(t *testing.T) {
@@ -26,9 +25,9 @@ func TestNoValueInTag(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "", cli.Empty1)
-	require.Equal(t, "", cli.Empty2)
+	assert.NoError(t, err)
+	assert.Equal(t, "", cli.Empty1)
+	assert.Equal(t, "", cli.Empty2)
 }
 
 func TestCommaInQuotes(t *testing.T) {
@@ -37,8 +36,8 @@ func TestCommaInQuotes(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "1,2", cli.Numbers)
+	assert.NoError(t, err)
+	assert.Equal(t, "1,2", cli.Numbers)
 }
 
 func TestBadString(t *testing.T) {
@@ -46,7 +45,7 @@ func TestBadString(t *testing.T) {
 		Numbers string `kong:"default='yay'n"`
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestNoQuoteEnd(t *testing.T) {
@@ -54,7 +53,7 @@ func TestNoQuoteEnd(t *testing.T) {
 		Numbers string `kong:"default='yay"`
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestEscapedQuote(t *testing.T) {
@@ -63,8 +62,8 @@ func TestEscapedQuote(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "i don't know", cli.DoYouKnow)
+	assert.NoError(t, err)
+	assert.Equal(t, "i don't know", cli.DoYouKnow)
 }
 
 func TestBareTags(t *testing.T) {
@@ -77,9 +76,9 @@ func TestBareTags(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"cmd", "arg", "--flag=hi"})
-	require.NoError(t, err)
-	require.Equal(t, "hi", cli.Cmd.Flag)
-	require.Equal(t, "arg", cli.Cmd.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "hi", cli.Cmd.Flag)
+	assert.Equal(t, "arg", cli.Cmd.Arg)
 }
 
 func TestBareTagsWithJsonTag(t *testing.T) {
@@ -92,9 +91,9 @@ func TestBareTagsWithJsonTag(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"cmd"})
-	require.NoError(t, err)
-	require.Equal(t, "\"'👌'\"", cli.Cmd.Flag)
-	require.Equal(t, "", cli.Cmd.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "\"'👌'\"", cli.Cmd.Flag)
+	assert.Equal(t, "", cli.Cmd.Arg)
 }
 
 func TestManySeps(t *testing.T) {
@@ -104,8 +103,8 @@ func TestManySeps(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "hi", cli.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "hi", cli.Arg)
 }
 
 func TestTagSetOnEmbeddedStruct(t *testing.T) {
@@ -118,8 +117,8 @@ func TestTagSetOnEmbeddedStruct(t *testing.T) {
 	buf := &strings.Builder{}
 	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
 	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, buf.String(), `A key from somewhere.`)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `A key from somewhere.`)
 }
 
 func TestTagSetOnCommand(t *testing.T) {
@@ -132,8 +131,8 @@ func TestTagSetOnCommand(t *testing.T) {
 	buf := &strings.Builder{}
 	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
 	_, err := p.Parse([]string{"command", "--help"})
-	require.NoError(t, err)
-	require.Contains(t, buf.String(), `A key from somewhere.`)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `A key from somewhere.`)
 }
 
 func TestTagSetOnFlag(t *testing.T) {
@@ -143,8 +142,8 @@ func TestTagSetOnFlag(t *testing.T) {
 	buf := &strings.Builder{}
 	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
 	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, buf.String(), `A key from somewhere.`)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `A key from somewhere.`)
 }
 
 func TestTagAliases(t *testing.T) {
@@ -156,11 +155,11 @@ func TestTagAliases(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"alias1", "arg"})
-	require.NoError(t, err)
-	require.Equal(t, "arg", cli.Cmd.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.Cmd.Arg)
 	_, err = p.Parse([]string{"alias2", "arg"})
-	require.NoError(t, err)
-	require.Equal(t, "arg", cli.Cmd.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.Cmd.Arg)
 }
 
 func TestTagAliasesConflict(t *testing.T) {
@@ -173,8 +172,8 @@ func TestTagAliasesConflict(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"other-cmd", "arg"})
-	require.NoError(t, err)
-	require.Equal(t, "arg", cli.OtherCmd.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.OtherCmd.Arg)
 }
 
 func TestTagAliasesSub(t *testing.T) {
@@ -189,8 +188,8 @@ func TestTagAliasesSub(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"cmd", "other-sub-cmd", "arg"})
-	require.NoError(t, err)
-	require.Equal(t, "arg", cli.Cmd.SubCmd.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.Cmd.SubCmd.Arg)
 }
 
 func TestInvalidRuneErrors(t *testing.T) {
@@ -198,5 +197,5 @@ func TestInvalidRuneErrors(t *testing.T) {
 		Flag bool `short:"invalid"`
 	}{}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.Flag: invalid short flag name \"invalid\": invalid rune")
+	assert.EqualError(t, err, "<anonymous struct>.Flag: invalid short flag name \"invalid\": invalid rune")
 }

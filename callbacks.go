@@ -96,5 +96,5 @@ func callMethod(name string, v, f reflect.Value, bindings bindings) error {
 	if out[0].IsNil() {
 		return nil
 	}
-	return out[0].Interface().(error)
+	return out[0].Interface().(error) // nolint
 }

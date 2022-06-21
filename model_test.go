@@ -3,7 +3,7 @@ package kong_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestModelApplicationCommands(t *testing.T) {
@@ -23,7 +23,7 @@ func TestModelApplicationCommands(t *testing.T) {
 	for _, cmd := range p.Model.Leaves(false) {
 		actual = append(actual, cmd.Path())
 	}
-	require.Equal(t, []string{"one two", "one three <four>"}, actual)
+	assert.Equal(t, []string{"one two", "one three <four>"}, actual)
 }
 
 func TestFlagString(t *testing.T) {
@@ -66,7 +66,7 @@ func TestFlagString(t *testing.T) {
 	p := mustNew(t, &cli)
 	for _, flag := range p.Model.Flags {
 		want, ok := tests[flag.Name]
-		require.Truef(t, ok, "unknown flag name: %s", flag.Name)
-		require.Equal(t, want, flag.String())
+		assert.True(t, ok, "unknown flag name: %s", flag.Name)
+		assert.Equal(t, want, flag.String())
 	}
 }

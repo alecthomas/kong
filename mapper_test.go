@@ -14,8 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 )
 
@@ -25,11 +24,11 @@ func TestValueMapper(t *testing.T) {
 	}
 	k := mustNew(t, &cli, kong.ValueMapper(&cli.Flag, testMooMapper{}))
 	_, err := k.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "", cli.Flag)
 	_, err = k.Parse([]string{"--flag"})
-	require.NoError(t, err)
-	require.Equal(t, "MOO", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "MOO", cli.Flag)
 }
 
 type textUnmarshalerValue int
@@ -50,10 +49,10 @@ func TestTextUnmarshaler(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--value=hello"})
-	require.NoError(t, err)
-	require.Equal(t, 10, int(cli.Value))
+	assert.NoError(t, err)
+	assert.Equal(t, 10, int(cli.Value))
 	_, err = p.Parse([]string{"--value=other"})
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 type jsonUnmarshalerValue string
@@ -74,8 +73,8 @@ func TestJSONUnmarshaler(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--value=\"hello\""})
-	require.NoError(t, err)
-	require.Equal(t, "HELLO", string(cli.Value))
+	assert.NoError(t, err)
+	assert.Equal(t, "HELLO", string(cli.Value))
 }
 
 func TestNamedMapper(t *testing.T) {
@@ -84,11 +83,11 @@ func TestNamedMapper(t *testing.T) {
 	}
 	k := mustNew(t, &cli, kong.NamedMapper("moo", testMooMapper{}))
 	_, err := k.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "", cli.Flag)
 	_, err = k.Parse([]string{"--flag"})
-	require.NoError(t, err)
-	require.Equal(t, "MOO", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "MOO", cli.Flag)
 }
 
 type testMooMapper struct {
@@ -111,11 +110,11 @@ func TestTimeMapper(t *testing.T) {
 	}
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--flag=2008"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	expected, err := time.Parse("2006", "2008")
-	require.NoError(t, err)
-	require.Equal(t, 2008, expected.Year())
-	require.Equal(t, expected, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, 2008, expected.Year())
+	assert.Equal(t, expected, cli.Flag)
 }
 
 func TestDurationMapper(t *testing.T) {
@@ -124,8 +123,8 @@ func TestDurationMapper(t *testing.T) {
 	}
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--flag=5s"})
-	require.NoError(t, err)
-	require.Equal(t, time.Second*5, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Second*5, cli.Flag)
 }
 
 func TestDurationMapperJSONResolver(t *testing.T) {
@@ -133,23 +132,23 @@ func TestDurationMapperJSONResolver(t *testing.T) {
 		Flag time.Duration
 	}
 	resolver, err := kong.JSON(strings.NewReader(`{"flag": 5000000000}`))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	k := mustNew(t, &cli, kong.Resolvers(resolver))
 	_, err = k.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, time.Second*5, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Second*5, cli.Flag)
 }
 
 func TestSplitEscaped(t *testing.T) {
-	require.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
-	require.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
-	require.Equal(t, []string{"a,b,c"}, kong.SplitEscaped(`a,b,c`, -1))
+	assert.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
+	assert.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
+	assert.Equal(t, []string{"a,b,c"}, kong.SplitEscaped(`a,b,c`, -1))
 }
 
 func TestJoinEscaped(t *testing.T) {
-	require.Equal(t, `a,b`, kong.JoinEscaped([]string{"a", "b"}, ','))
-	require.Equal(t, `a\,b,c`, kong.JoinEscaped([]string{`a,b`, `c`}, ','))
-	require.Equal(t, kong.JoinEscaped(kong.SplitEscaped(`a\,b,c`, ','), ','), `a\,b,c`)
+	assert.Equal(t, `a,b`, kong.JoinEscaped([]string{"a", "b"}, ','))
+	assert.Equal(t, `a\,b,c`, kong.JoinEscaped([]string{`a,b`, `c`}, ','))
+	assert.Equal(t, kong.JoinEscaped(kong.SplitEscaped(`a\,b,c`, ','), ','), `a\,b,c`)
 }
 
 func TestMapWithNamedTypes(t *testing.T) {
@@ -159,11 +158,11 @@ func TestMapWithNamedTypes(t *testing.T) {
 	}
 	k := mustNew(t, &cli, kong.NamedMapper("moo", testMooMapper{}), kong.NamedMapper("upper", testUppercaseMapper{}))
 	_, err := k.Parse([]string{"--typed-value", "first=5s", "--typed-value", "second=10s"})
-	require.NoError(t, err)
-	require.Equal(t, map[string]string{"first": "MOO", "second": "MOO"}, cli.TypedValue)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"first": "MOO", "second": "MOO"}, cli.TypedValue)
 	_, err = k.Parse([]string{"--typed-key", "first=5s", "--typed-key", "second=10s"})
-	require.NoError(t, err)
-	require.Equal(t, map[string]string{"FIRST": "5s", "SECOND": "10s"}, cli.TypedKey)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"FIRST": "5s", "SECOND": "10s"}, cli.TypedKey)
 }
 
 func TestMapWithMultipleValues(t *testing.T) {
@@ -172,8 +171,8 @@ func TestMapWithMultipleValues(t *testing.T) {
 	}
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--value=a=b;c=d"})
-	require.NoError(t, err)
-	require.Equal(t, map[string]string{"a": "b", "c": "d"}, cli.Value)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"a": "b", "c": "d"}, cli.Value)
 }
 
 func TestMapWithDifferentSeparator(t *testing.T) {
@@ -182,8 +181,8 @@ func TestMapWithDifferentSeparator(t *testing.T) {
 	}
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--value=a=b,c=d"})
-	require.NoError(t, err)
-	require.Equal(t, map[string]string{"a": "b", "c": "d"}, cli.Value)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"a": "b", "c": "d"}, cli.Value)
 }
 
 func TestMapWithNoSeparator(t *testing.T) {
@@ -193,9 +192,9 @@ func TestMapWithNoSeparator(t *testing.T) {
 	}
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--slice=a,n,c", "--value=a=b;n=d"})
-	require.NoError(t, err)
-	require.Equal(t, []string{"a,n,c"}, cli.Slice)
-	require.Equal(t, map[string]string{"a": "b;n=d"}, cli.Value)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a,n,c"}, cli.Slice)
+	assert.Equal(t, map[string]string{"a": "b;n=d"}, cli.Value)
 }
 
 func TestURLMapper(t *testing.T) {
@@ -204,10 +203,10 @@ func TestURLMapper(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"http://w3.org"})
-	require.NoError(t, err)
-	require.Equal(t, "http://w3.org", cli.URL.String())
+	assert.NoError(t, err)
+	assert.Equal(t, "http://w3.org", cli.URL.String())
 	_, err = p.Parse([]string{":foo"})
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestSliceConsumesRemainingPositionalArgs(t *testing.T) {
@@ -216,8 +215,8 @@ func TestSliceConsumesRemainingPositionalArgs(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--", "ls", "-lart"})
-	require.NoError(t, err)
-	require.Equal(t, []string{"ls", "-lart"}, cli.Remainder)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"ls", "-lart"}, cli.Remainder)
 }
 
 func TestPassthroughStopsParsing(t *testing.T) {
@@ -231,16 +230,16 @@ func TestPassthroughStopsParsing(t *testing.T) {
 	p := mustNew(t, &actual)
 
 	_, err := p.Parse([]string{"alpine", "sudo", "-i", "true"})
-	require.NoError(t, err)
-	require.Equal(t, cli{
+	assert.NoError(t, err)
+	assert.Equal(t, cli{
 		Interactive: false,
 		Image:       "alpine",
 		Argv:        []string{"sudo", "-i", "true"},
 	}, actual)
 
 	_, err = p.Parse([]string{"alpine", "-i", "sudo", "-i", "true"})
-	require.NoError(t, err)
-	require.Equal(t, cli{
+	assert.NoError(t, err)
+	assert.Equal(t, cli{
 		Interactive: true,
 		Image:       "alpine",
 		Argv:        []string{"sudo", "-i", "true"},
@@ -262,8 +261,8 @@ func TestMapperValue(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"foo"})
-	require.NoError(t, err)
-	require.Equal(t, "foo", cli.Value.decoded)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", cli.Value.decoded)
 }
 
 func TestFileContentFlag(t *testing.T) {
@@ -271,13 +270,13 @@ func TestFileContentFlag(t *testing.T) {
 		File kong.FileContentFlag
 	}
 	f, err := ioutil.TempFile("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
 	f.Close()
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
-	require.NoError(t, err)
-	require.Equal(t, []byte("hello world"), []byte(cli.File))
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hello world"), []byte(cli.File))
 }
 
 func TestNamedFileContentFlag(t *testing.T) {
@@ -285,14 +284,14 @@ func TestNamedFileContentFlag(t *testing.T) {
 		File kong.NamedFileContentFlag
 	}
 	f, err := ioutil.TempFile("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
 	f.Close()
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
-	require.NoError(t, err)
-	require.Equal(t, []byte("hello world"), cli.File.Contents)
-	require.Equal(t, f.Name(), cli.File.Filename)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hello world"), cli.File.Contents)
+	assert.Equal(t, f.Name(), cli.File.Filename)
 }
 
 func TestNamedSliceTypesDontHaveEllipsis(t *testing.T) {
@@ -302,11 +301,11 @@ func TestNamedSliceTypesDontHaveEllipsis(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	parser := mustNew(t, &cli, kong.Writers(b, b), kong.Exit(func(int) { panic("exit") }))
 	// Ensure that --help
-	require.Panics(t, func() {
+	assert.Panics(t, func() {
 		_, err := parser.Parse([]string{"--help"})
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
-	require.NotContains(t, b.String(), `--file=FILE-CONTENT-FLAG,...`)
+	assert.NotContains(t, b.String(), `--file=FILE-CONTENT-FLAG,...`)
 }
 
 func TestCounter(t *testing.T) {
@@ -318,24 +317,24 @@ func TestCounter(t *testing.T) {
 	p := mustNew(t, &cli)
 
 	_, err := p.Parse([]string{"--int", "--int", "--int"})
-	require.NoError(t, err)
-	require.Equal(t, 3, cli.Int)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, cli.Int)
 
 	_, err = p.Parse([]string{"--int=5"})
-	require.NoError(t, err)
-	require.Equal(t, 5, cli.Int)
+	assert.NoError(t, err)
+	assert.Equal(t, 5, cli.Int)
 
 	_, err = p.Parse([]string{"-iii"})
-	require.NoError(t, err)
-	require.Equal(t, 3, cli.Int)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, cli.Int)
 
 	_, err = p.Parse([]string{"-uuu"})
-	require.NoError(t, err)
-	require.Equal(t, uint(3), cli.Uint)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(3), cli.Uint)
 
 	_, err = p.Parse([]string{"-fff"})
-	require.NoError(t, err)
-	require.Equal(t, 3., cli.Float)
+	assert.NoError(t, err)
+	assert.Equal(t, 3., cli.Float)
 }
 
 func TestNumbers(t *testing.T) {
@@ -366,8 +365,8 @@ func TestNumbers(t *testing.T) {
 			"--u-32", fmt.Sprintf("%v", uint32(math.MaxUint32)),
 			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)),
 		})
-		require.NoError(t, err)
-		require.Equal(t, CLI{
+		assert.NoError(t, err)
+		assert.Equal(t, CLI{
 			F32: math.MaxFloat32,
 			F64: math.MaxFloat64,
 			I8:  math.MaxInt8,
@@ -391,8 +390,8 @@ func TestNumbers(t *testing.T) {
 			fmt.Sprintf("--u-32=%v", 0),
 			fmt.Sprintf("--u-64=%v", 0),
 		})
-		require.NoError(t, err)
-		require.Equal(t, CLI{
+		assert.NoError(t, err)
+		assert.Equal(t, CLI{
 			I8:  math.MinInt8,
 			I16: math.MinInt16,
 			I32: math.MinInt32,
@@ -408,19 +407,19 @@ func TestFileMapper(t *testing.T) {
 	var cli CLI
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"testdata/file.txt"})
-	require.NoError(t, err)
-	require.NotNil(t, cli.File)
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.File)
 	_ = cli.File.Close()
 	_, err = p.Parse([]string{"testdata/missing.txt"})
-	require.Error(t, err)
+	assert.Error(t, err)
 	if runtime.GOOS == "windows" {
-		require.Contains(t, err.Error(), "missing.txt: The system cannot find the file specified.")
+		assert.Contains(t, err.Error(), "missing.txt: The system cannot find the file specified.")
 	} else {
-		require.Contains(t, err.Error(), "missing.txt: no such file or directory")
+		assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
 	}
 	_, err = p.Parse([]string{"-"})
-	require.NoError(t, err)
-	require.Equal(t, os.Stdin, cli.File)
+	assert.NoError(t, err)
+	assert.Equal(t, os.Stdin, cli.File)
 }
 
 //nolint:dupl
@@ -431,16 +430,16 @@ func TestExistingFileMapper(t *testing.T) {
 	var cli CLI
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--file", "testdata/file.txt"})
-	require.NoError(t, err)
-	require.NotNil(t, cli.File)
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.File)
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--file", "testdata/missing.txt"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--file", "testdata/"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "exists but is a directory")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "exists but is a directory")
 }
 
 func TestExistingFileMapperDefaultMissing(t *testing.T) {
@@ -451,9 +450,9 @@ func TestExistingFileMapperDefaultMissing(t *testing.T) {
 	p := mustNew(t, &cli)
 	file := "testdata/file.txt"
 	_, err := p.Parse([]string{"--file", file})
-	require.NoError(t, err)
-	require.NotNil(t, cli.File)
-	require.Contains(t, cli.File, file)
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.File)
+	assert.Contains(t, cli.File, file)
 }
 
 //nolint:dupl
@@ -464,16 +463,16 @@ func TestExistingDirMapper(t *testing.T) {
 	var cli CLI
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--dir", "testdata/"})
-	require.NoError(t, err)
-	require.NotNil(t, cli.Dir)
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.Dir)
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--dir", "missingdata/"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "missingdata: no such file or directory")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missingdata: no such file or directory")
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--dir", "testdata/file.txt"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "exists but is not a directory")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "exists but is not a directory")
 }
 
 func TestExistingDirMapperDefaultMissing(t *testing.T) {
@@ -484,9 +483,9 @@ func TestExistingDirMapperDefaultMissing(t *testing.T) {
 	p := mustNew(t, &cli)
 	dir := "testdata"
 	_, err := p.Parse([]string{"--dir", dir})
-	require.NoError(t, err)
-	require.NotNil(t, cli.Dir)
-	require.Contains(t, cli.Dir, dir)
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.Dir)
+	assert.Contains(t, cli.Dir, dir)
 }
 
 func TestMapperPlaceHolder(t *testing.T) {
@@ -502,11 +501,11 @@ func TestMapperPlaceHolder(t *testing.T) {
 		kong.Exit(func(int) { panic("exit") }),
 	)
 	// Ensure that --help
-	require.Panics(t, func() {
+	assert.Panics(t, func() {
 		_, err := k.Parse([]string{"--help"})
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
-	require.Contains(t, b.String(), "--flag=/a/b/c")
+	assert.Contains(t, b.String(), "--flag=/a/b/c")
 }
 
 type testMapperWithPlaceHolder struct {
@@ -534,11 +533,12 @@ func TestMapperVarsContributor(t *testing.T) {
 		kong.Exit(func(int) { panic("exit") }),
 	)
 	// Ensure that --help
-	require.Panics(t, func() {
+	assert.Panics(t, func() {
 		_, err := k.Parse([]string{"--help"})
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
-	require.Regexp(t, "--flag=STRING\\s+Some help with a var", b.String())
+	assert.Contains(t, b.String(), "--flag=STRING")
+	assert.Contains(t, b.String(), "Some help with a var", b.String())
 }
 
 type testMapperVarsContributor struct{}
@@ -559,13 +559,13 @@ func TestValuesThatLookLikeFlags(t *testing.T) {
 	}
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--slice", "-foo"})
-	require.Error(t, err)
+	assert.Error(t, err)
 	_, err = k.Parse([]string{"--map", "-foo=-bar"})
-	require.Error(t, err)
+	assert.Error(t, err)
 	_, err = k.Parse([]string{"--slice=-foo", "--slice=-bar"})
-	require.NoError(t, err)
-	require.Equal(t, []string{"-foo", "-bar"}, cli.Slice)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"-foo", "-bar"}, cli.Slice)
 	_, err = k.Parse([]string{"--map=-foo=-bar"})
-	require.NoError(t, err)
-	require.Equal(t, map[string]string{"-foo": "-bar"}, cli.Map)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"-foo": "-bar"}, cli.Map)
 }

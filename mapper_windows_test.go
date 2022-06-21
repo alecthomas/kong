@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	require "github.com/alecthomas/assert/v2"
 )
 
 func TestWindowsPathMapper(t *testing.T) {
@@ -16,13 +16,13 @@ func TestWindowsPathMapper(t *testing.T) {
 		Files []string `short:"f" type:"path"`
 	}
 	wd, err := os.Getwd()
-	require.NoError(t, err, "Getwd failed")
+	assert.NoError(t, err, "Getwd failed")
 	p := mustNew(t, &cli)
 
 	_, err = p.Parse([]string{`-p`, `c:\an\absolute\path`, `-f`, `c:\second\absolute\path\`, `-f`, `relative\path\file`})
-	require.NoError(t, err)
-	require.Equal(t, `c:\an\absolute\path`, cli.Path)
-	require.Equal(t, []string{`c:\second\absolute\path\`, wd + `\relative\path\file`}, cli.Files)
+	assert.NoError(t, err)
+	assert.Equal(t, `c:\an\absolute\path`, cli.Path)
+	assert.Equal(t, []string{`c:\second\absolute\path\`, wd + `\relative\path\file`}, cli.Files)
 }
 
 func TestWindowsFileMapper(t *testing.T) {
@@ -32,13 +32,13 @@ func TestWindowsFileMapper(t *testing.T) {
 	var cli CLI
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"testdata\\file.txt"})
-	require.NoError(t, err)
-	require.NotNil(t, cli.File)
+	assert.NoError(t, err)
+	assert.NotNil(t, cli.File)
 	_ = cli.File.Close()
 	_, err = p.Parse([]string{"testdata\\missing.txt"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing.txt: The system cannot find the file specified.")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing.txt: The system cannot find the file specified.")
 	_, err = p.Parse([]string{"-"})
-	require.NoError(t, err)
-	require.Equal(t, os.Stdin, cli.File)
+	assert.NoError(t, err)
+	assert.Equal(t, os.Stdin, cli.File)
 }

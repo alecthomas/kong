@@ -53,9 +53,9 @@ type mapperValueAdapter struct {
 
 func (m *mapperValueAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
 	if target.Type().Implements(mapperValueType) {
-		return target.Interface().(MapperValue).Decode(ctx)
+		return target.Interface().(MapperValue).Decode(ctx) // nolint
 	}
-	return target.Addr().Interface().(MapperValue).Decode(ctx)
+	return target.Addr().Interface().(MapperValue).Decode(ctx) // nolint
 }
 
 func (m *mapperValueAdapter) IsBool() bool {
@@ -71,9 +71,9 @@ func (m *textUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value
 		return err
 	}
 	if target.Type().Implements(textUnmarshalerType) {
-		return target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value))
+		return target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)) // nolint
 	}
-	return target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value))
+	return target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)) // nolint
 }
 
 type binaryUnmarshalerAdapter struct{}
@@ -85,9 +85,9 @@ func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Val
 		return err
 	}
 	if target.Type().Implements(binaryUnmarshalerType) {
-		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
+		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value)) // nolint
 	}
-	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value))
+	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value)) // nolint
 }
 
 type jsonUnmarshalerAdapter struct{}
@@ -99,9 +99,9 @@ func (j *jsonUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value
 		return err
 	}
 	if target.Type().Implements(jsonUnmarshalerType) {
-		return target.Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value))
+		return target.Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value)) // nolint
 	}
-	return target.Addr().Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value))
+	return target.Addr().Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value)) // nolint
 }
 
 // A Mapper represents how a field is mapped from command-line values to Go.

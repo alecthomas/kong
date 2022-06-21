@@ -36,6 +36,11 @@ linters:
     - thelper
     - godox
     - goconst
+    - varnamelen
+    - ireturn
+    - exhaustruct
+    - nonamedreturns
+    - nilnil
 
 linters-settings:
   govet:

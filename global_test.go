@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestParseHandlingBadBuild(t *testing.T) {
@@ -21,11 +21,11 @@ func TestParseHandlingBadBuild(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			require.Equal(t, "fail=' is not quoted properly", r.(error).Error())
+			assert.Equal(t, "fail=' is not quoted properly", r.(error).Error()) // nolint
 		}
 	}()
 
 	Parse(&cli, Exit(func(_ int) { panic("exiting") }))
 
-	require.Fail(t, "we were expecting a panic")
+	t.Fatal("we were expecting a panic")
 }

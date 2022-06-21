@@ -6,10 +6,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 )
+
+func panicsTrue(t *testing.T, f func()) {
+	defer func() {
+		if value := recover(); value != nil {
+			if boolval, ok := value.(bool); !ok || !boolval {
+				t.Fatalf("expected panic with true but got %v", value)
+			}
+		}
+	}()
+	f()
+	t.Fatal("expected panic did not occur")
+}
 
 type threeArg struct {
 	RequiredThree bool   `required`
@@ -35,11 +46,11 @@ func TestHelpOptionalArgs(t *testing.T) {
 			panic(true) // Panic to fake "exit".
 		}),
 	)
-	require.PanicsWithValue(t, true, func() {
+	panicsTrue(t, func() {
 		_, err := app.Parse([]string{"--help"})
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
-	require.True(t, exited)
+	assert.True(t, exited)
 	expected := `Usage: test-app [<one> [<two>]]
 
 Arguments:
@@ -49,7 +60,7 @@ Arguments:
 Flags:
   -h, --help    Show context-sensitive help.
 `
-	require.Equal(t, expected, w.String())
+	assert.Equal(t, expected, w.String())
 }
 
 func TestHelp(t *testing.T) {
@@ -89,11 +100,11 @@ func TestHelp(t *testing.T) {
 	)
 
 	t.Run("Full", func(t *testing.T) {
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app --required <command>
 
 A test app.
@@ -122,17 +133,17 @@ Run "test-app <command> --help" for more information on a command.
 `
 		t.Log(w.String())
 		t.Log(expected)
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 
 	t.Run("Selected", func(t *testing.T) {
 		exited = false
 		w.Truncate(0)
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"two", "hello", "--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
@@ -156,7 +167,7 @@ Flags:
 `
 		t.Log(expected)
 		t.Log(w.String())
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 }
 
@@ -199,11 +210,11 @@ func TestFlagsLast(t *testing.T) {
 	)
 
 	t.Run("Full", func(t *testing.T) {
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app --required <command>
 
 A test app.
@@ -231,17 +242,17 @@ Run "test-app <command> --help" for more information on a command.
 `
 		t.Log(w.String())
 		t.Log(expected)
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 
 	t.Run("Selected", func(t *testing.T) {
 		exited = false
 		w.Truncate(0)
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"two", "hello", "--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app two <three> --required --required-two --required-three
 
 Sub-sub-arg.
@@ -264,7 +275,7 @@ Flags:
 `
 		t.Log(expected)
 		t.Log(w.String())
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 }
 
@@ -304,11 +315,11 @@ func TestHelpTree(t *testing.T) {
 	)
 
 	t.Run("Full", func(t *testing.T) {
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app <command>
 
 A test app.
@@ -331,17 +342,17 @@ Run "test-app <command> --help" for more information on a command.
 		if expected != w.String() {
 			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
 		}
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 
 	t.Run("Selected", func(t *testing.T) {
 		exited = false
 		w.Truncate(0)
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"one", "--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app one (un,uno) <command>
 
 subcommand one
@@ -358,7 +369,7 @@ Commands:
 		if expected != w.String() {
 			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
 		}
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 }
 
@@ -398,11 +409,11 @@ func TestHelpCompactNoExpand(t *testing.T) {
 	)
 
 	t.Run("Full", func(t *testing.T) {
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app <command>
 
 A test app.
@@ -421,17 +432,17 @@ Run "test-app <command> --help" for more information on a command.
 		if expected != w.String() {
 			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
 		}
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 
 	t.Run("Selected", func(t *testing.T) {
 		exited = false
 		w.Truncate(0)
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"one", "--help"})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		})
-		require.True(t, exited)
+		assert.True(t, exited)
 		expected := `Usage: test-app one (un,uno) <command>
 
 subcommand one
@@ -446,7 +457,7 @@ Group A
 		if expected != w.String() {
 			t.Errorf("help command returned:\n%v\n\nwant:\n%v", w.String(), expected)
 		}
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 }
 
@@ -457,8 +468,8 @@ func TestEnvarAutoHelp(t *testing.T) {
 	w := &strings.Builder{}
 	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
 	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, w.String(), "A flag ($FLAG).")
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag ($FLAG).")
 }
 
 func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
@@ -472,9 +483,9 @@ func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	w := &strings.Builder{}
 	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
 	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, w.String(), "A flag ($ANON_FLAG).")
-	require.Contains(t, w.String(), "A different flag.")
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag ($ANON_FLAG).")
+	assert.Contains(t, w.String(), "A different flag.")
 }
 
 func TestCustomValueFormatter(t *testing.T) {
@@ -490,8 +501,8 @@ func TestCustomValueFormatter(t *testing.T) {
 		}),
 	)
 	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, w.String(), "A flag.")
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag.")
 }
 
 func TestAutoGroup(t *testing.T) {
@@ -541,14 +552,14 @@ func TestAutoGroup(t *testing.T) {
 			if node, ok := parent.(*kong.Node); ok {
 				return &kong.Group{
 					Key:   node.Name,
-					Title: strings.Title(node.Name) + " flags:",
+					Title: strings.Title(node.Name) + " flags:", // nolint
 				}
 			}
 			return nil
 		}),
 	)
 	_, _ = app.Parse([]string{"--help", "two"})
-	require.Equal(t, `Usage: test two
+	assert.Equal(t, `Usage: test two
 
 A non grouped subcommand.
 
@@ -627,10 +638,10 @@ func TestHelpGrouping(t *testing.T) {
 	)
 
 	t.Run("Full", func(t *testing.T) {
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"--help"})
-			require.True(t, exited)
-			require.NoError(t, err)
+			assert.True(t, exited)
+			assert.NoError(t, err)
 		})
 		expected := `Usage: test-app <command>
 
@@ -677,16 +688,16 @@ Run "test-app <command> --help" for more information on a command.
 `
 		t.Log(w.String())
 		t.Log(expected)
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 
 	t.Run("Selected", func(t *testing.T) {
 		exited = false
 		w.Truncate(0)
-		require.PanicsWithValue(t, true, func() {
+		panicsTrue(t, func() {
 			_, err := app.Parse([]string{"two", "--help"})
-			require.NoError(t, err)
-			require.True(t, exited)
+			assert.NoError(t, err)
+			assert.True(t, exited)
 		})
 		expected := `Usage: test-app two
 
@@ -719,7 +730,7 @@ Group 2
 `
 		t.Log(expected)
 		t.Log(w.String())
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 }
 
@@ -747,7 +758,7 @@ Flags:
 
 test: error: missing flags: --flag=STRING
 `
-	require.Equal(t, expected, w.String())
+	assert.Equal(t, expected, w.String())
 }
 
 func TestShortUsageOnError(t *testing.T) {
@@ -762,7 +773,7 @@ func TestShortUsageOnError(t *testing.T) {
 		kong.ShortUsageOnError(),
 	)
 	_, err := p.Parse([]string{})
-	require.Error(t, err)
+	assert.Error(t, err)
 	p.FatalIfErrorf(err)
 
 	expected := `Usage: test --flag=STRING
@@ -770,7 +781,7 @@ Run "test --help" for more information.
 
 test: error: missing flags: --flag=STRING
 `
-	require.Equal(t, expected, w.String())
+	assert.Equal(t, expected, w.String())
 }
 
 func TestCustomShortUsageOnError(t *testing.T) {
@@ -790,14 +801,14 @@ func TestCustomShortUsageOnError(t *testing.T) {
 		kong.ShortUsageOnError(),
 	)
 	_, err := p.Parse([]string{})
-	require.Error(t, err)
+	assert.Error(t, err)
 	p.FatalIfErrorf(err)
 
 	expected := `🤷 wish I could help
 
 test: error: missing flags: --flag=STRING
 `
-	require.Equal(t, expected, w.String())
+	assert.Equal(t, expected, w.String())
 }
 
 func TestCustomWrap(t *testing.T) {
@@ -817,7 +828,7 @@ func TestCustomWrap(t *testing.T) {
 	)
 
 	_, err := app.Parse([]string{"--help"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	expected := `Usage: test-app
 
 A test app.
@@ -832,5 +843,5 @@ Flags:
 `
 	t.Log(w.String())
 	t.Log(expected)
-	require.Equal(t, expected, w.String())
+	assert.Equal(t, expected, w.String())
 }

@@ -4,18 +4,18 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestOptions(t *testing.T) {
 	var cli struct{}
 	p, err := New(&cli, Name("name"), Description("description"), Writers(nil, nil), Exit(nil))
-	require.NoError(t, err)
-	require.Equal(t, "name", p.Model.Name)
-	require.Equal(t, "description", p.Model.Help)
-	require.Nil(t, p.Stdout)
-	require.Nil(t, p.Stderr)
-	require.Nil(t, p.Exit)
+	assert.NoError(t, err)
+	assert.Equal(t, "name", p.Model.Name)
+	assert.Equal(t, "description", p.Model.Help)
+	assert.Zero(t, p.Stdout)
+	assert.Zero(t, p.Stderr)
+	assert.Zero(t, p.Exit)
 }
 
 type impl string
@@ -29,17 +29,17 @@ func TestBindTo(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) error {
-		saw = string(i.(impl))
+		saw = string(i.(impl)) // nolint
 		return nil
 	}
 
 	var cli struct{}
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
-	require.NoError(t, err)
-	require.Equal(t, "foo", saw)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", saw)
 }
 
 func TestInvalidCallback(t *testing.T) {
@@ -49,16 +49,16 @@ func TestInvalidCallback(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) string {
-		saw = string(i.(impl))
+		saw = string(i.(impl)) // nolint
 		return saw
 	}
 
 	var cli struct{}
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
-	require.EqualError(t, err, `return value of *reflect.rtype.method() must implement "error"`)
+	assert.EqualError(t, err, `return value of *reflect.rtype.method() must implement "error"`)
 }
 
 type zrror struct{}
@@ -74,17 +74,17 @@ func TestCallbackCustomError(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) *zrror {
-		saw = string(i.(impl))
+		saw = string(i.(impl)) // nolint
 		return nil
 	}
 
 	var cli struct{}
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
-	require.NoError(t, err)
-	require.Equal(t, "foo", saw)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", saw)
 }
 
 type bindToProviderCLI struct {
@@ -105,10 +105,10 @@ func (*bindToProviderCmd) Run(cli *bindToProviderCLI, b *boundThing) error {
 func TestBindToProvider(t *testing.T) {
 	var cli bindToProviderCLI
 	app, err := New(&cli, BindToProvider(func() (*boundThing, error) { return &boundThing{}, nil }))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	ctx, err := app.Parse([]string{"cmd"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = ctx.Run()
-	require.NoError(t, err)
-	require.True(t, cli.Called)
+	assert.NoError(t, err)
+	assert.True(t, cli.Called)
 }

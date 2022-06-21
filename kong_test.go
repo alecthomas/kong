@@ -7,8 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/repr"
 )
@@ -23,7 +22,7 @@ func mustNew(t *testing.T, cli interface{}, options ...kong.Option) *kong.Kong {
 		}),
 	}, options...)
 	parser, err := kong.New(cli, options...)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	return parser
 }
 
@@ -39,11 +38,11 @@ func TestPositionalArguments(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	ctx, err := p.Parse([]string{"user", "create", "10", "Alec", "Thomas"})
-	require.NoError(t, err)
-	require.Equal(t, "user create <id> <first> <last>", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, "user create <id> <first> <last>", ctx.Command())
 	t.Run("Missing", func(t *testing.T) {
 		_, err := p.Parse([]string{"user", "create", "10"})
-		require.Error(t, err)
+		assert.Error(t, err)
 	})
 }
 
@@ -75,12 +74,12 @@ func TestBranchingArgument(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	ctx, err := p.Parse([]string{"user", "10", "delete"})
-	require.NoError(t, err)
-	require.Equal(t, 10, cli.User.ID.ID)
-	require.Equal(t, "user <id> delete", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, 10, cli.User.ID.ID)
+	assert.Equal(t, "user <id> delete", ctx.Command())
 	t.Run("Missing", func(t *testing.T) {
 		_, err = p.Parse([]string{"user"})
-		require.Error(t, err)
+		assert.Error(t, err)
 	})
 }
 
@@ -93,9 +92,9 @@ func TestResetWithDefaults(t *testing.T) {
 	cli.FlagWithDefault = "BLAH"
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "", cli.Flag)
-	require.Equal(t, "default", cli.FlagWithDefault)
+	assert.NoError(t, err)
+	assert.Equal(t, "", cli.Flag)
+	assert.Equal(t, "default", cli.FlagWithDefault)
 }
 
 func TestFlagSlice(t *testing.T) {
@@ -104,8 +103,8 @@ func TestFlagSlice(t *testing.T) {
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"--slice=1,2,3"})
-	require.NoError(t, err)
-	require.Equal(t, []int{1, 2, 3}, cli.Slice)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3}, cli.Slice)
 }
 
 func TestFlagSliceWithSeparator(t *testing.T) {
@@ -114,8 +113,8 @@ func TestFlagSliceWithSeparator(t *testing.T) {
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{`--slice=a\,b,c`})
-	require.NoError(t, err)
-	require.Equal(t, []string{"a,b", "c"}, cli.Slice)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "c"}, cli.Slice)
 }
 
 func TestArgSlice(t *testing.T) {
@@ -125,9 +124,9 @@ func TestArgSlice(t *testing.T) {
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"1", "2", "3", "--flag"})
-	require.NoError(t, err)
-	require.Equal(t, []int{1, 2, 3}, cli.Slice)
-	require.Equal(t, true, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3}, cli.Slice)
+	assert.Equal(t, true, cli.Flag)
 }
 
 func TestArgSliceWithSeparator(t *testing.T) {
@@ -137,9 +136,9 @@ func TestArgSliceWithSeparator(t *testing.T) {
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"a,b", "c", "--flag"})
-	require.NoError(t, err)
-	require.Equal(t, []string{"a,b", "c"}, cli.Slice)
-	require.Equal(t, true, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "c"}, cli.Slice)
+	assert.Equal(t, true, cli.Flag)
 }
 
 func TestUnsupportedFieldErrors(t *testing.T) {
@@ -147,7 +146,7 @@ func TestUnsupportedFieldErrors(t *testing.T) {
 		Keys struct{}
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestMatchingArgField(t *testing.T) {
@@ -158,7 +157,7 @@ func TestMatchingArgField(t *testing.T) {
 	}
 
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestCantMixPositionalAndBranches(t *testing.T) {
@@ -168,7 +167,7 @@ func TestCantMixPositionalAndBranches(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestPropagatedFlags(t *testing.T) {
@@ -182,9 +181,9 @@ func TestPropagatedFlags(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"command-1", "command-2", "--flag-2", "--flag-1=moo"})
-	require.NoError(t, err)
-	require.Equal(t, "moo", cli.Flag1)
-	require.Equal(t, true, cli.Command1.Flag2)
+	assert.NoError(t, err)
+	assert.Equal(t, "moo", cli.Flag1)
+	assert.Equal(t, true, cli.Command1.Flag2)
 }
 
 func TestRequiredFlag(t *testing.T) {
@@ -194,7 +193,7 @@ func TestRequiredFlag(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestOptionalArg(t *testing.T) {
@@ -204,7 +203,7 @@ func TestOptionalArg(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestOptionalArgWithDefault(t *testing.T) {
@@ -214,8 +213,8 @@ func TestOptionalArgWithDefault(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "moo", cli.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "moo", cli.Arg)
 }
 
 func TestArgWithDefaultIsOptional(t *testing.T) {
@@ -225,8 +224,8 @@ func TestArgWithDefaultIsOptional(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "moo", cli.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "moo", cli.Arg)
 }
 
 func TestRequiredArg(t *testing.T) {
@@ -236,7 +235,7 @@ func TestRequiredArg(t *testing.T) {
 
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestInvalidRequiredAfterOptional(t *testing.T) {
@@ -246,7 +245,7 @@ func TestInvalidRequiredAfterOptional(t *testing.T) {
 	}
 
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestOptionalStructArg(t *testing.T) {
@@ -261,20 +260,20 @@ func TestOptionalStructArg(t *testing.T) {
 
 	t.Run("WithFlag", func(t *testing.T) {
 		_, err := parser.Parse([]string{"gak", "--enabled"})
-		require.NoError(t, err)
-		require.Equal(t, "gak", cli.Name.Name)
-		require.Equal(t, true, cli.Name.Enabled)
+		assert.NoError(t, err)
+		assert.Equal(t, "gak", cli.Name.Name)
+		assert.Equal(t, true, cli.Name.Enabled)
 	})
 
 	t.Run("WithoutFlag", func(t *testing.T) {
 		_, err := parser.Parse([]string{"gak"})
-		require.NoError(t, err)
-		require.Equal(t, "gak", cli.Name.Name)
+		assert.NoError(t, err)
+		assert.Equal(t, "gak", cli.Name.Name)
 	})
 
 	t.Run("WithNothing", func(t *testing.T) {
 		_, err := parser.Parse([]string{})
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
 }
 
@@ -288,15 +287,15 @@ func TestMixedRequiredArgs(t *testing.T) {
 
 	t.Run("SingleRequired", func(t *testing.T) {
 		_, err := parser.Parse([]string{"gak", "5"})
-		require.NoError(t, err)
-		require.Equal(t, "gak", cli.Name)
-		require.Equal(t, 5, cli.ID)
+		assert.NoError(t, err)
+		assert.Equal(t, "gak", cli.Name)
+		assert.Equal(t, 5, cli.ID)
 	})
 
 	t.Run("ExtraOptional", func(t *testing.T) {
 		_, err := parser.Parse([]string{"gak"})
-		require.NoError(t, err)
-		require.Equal(t, "gak", cli.Name)
+		assert.NoError(t, err)
+		assert.Equal(t, "gak", cli.Name)
 	})
 }
 
@@ -306,7 +305,7 @@ func TestInvalidDefaultErrors(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestCommandMissingTagIsInvalid(t *testing.T) {
@@ -314,7 +313,7 @@ func TestCommandMissingTagIsInvalid(t *testing.T) {
 		One struct{}
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestDuplicateFlag(t *testing.T) {
@@ -325,7 +324,7 @@ func TestDuplicateFlag(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
@@ -338,7 +337,7 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 		} `kong:"cmd"`
 	}
 	_, err := kong.New(&cli)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestTraceErrorPartiallySucceeds(t *testing.T) {
@@ -350,9 +349,9 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	ctx, err := kong.Trace(p, []string{"one", "bad"})
-	require.NoError(t, err)
-	require.Error(t, ctx.Error)
-	require.Equal(t, "one", ctx.Command())
+	assert.NoError(t, err)
+	assert.Error(t, ctx.Error)
+	assert.Equal(t, "one", ctx.Command())
 }
 
 type commandWithNegatableFlag struct {
@@ -406,13 +405,13 @@ func TestNegatableFlag(t *testing.T) {
 
 			p := mustNew(t, &cli)
 			kctx, err := p.Parse(tt.args)
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, cli.Cmd.Flag)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, cli.Cmd.Flag)
 
 			err = kctx.Run()
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, cli.Cmd.Flag)
-			require.True(t, cli.Cmd.ran)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, cli.Cmd.Flag)
+			assert.True(t, cli.Cmd.ran)
 		})
 	}
 }
@@ -427,9 +426,9 @@ func TestExistingNoFlag(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"cmd", "--no-flag=none"})
-	require.NoError(t, err)
-	require.Equal(t, true, cli.Cmd.Flag)
-	require.Equal(t, "none", cli.Cmd.NoFlag)
+	assert.NoError(t, err)
+	assert.Equal(t, true, cli.Cmd.Flag)
+	assert.Equal(t, "none", cli.Cmd.NoFlag)
 }
 
 func TestInvalidNegatedNonBool(t *testing.T) {
@@ -440,7 +439,7 @@ func TestInvalidNegatedNonBool(t *testing.T) {
 	}
 
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 type hookContext struct {
@@ -499,8 +498,8 @@ func TestHooks(t *testing.T) {
 		cli.One = hookCmd{}
 		t.Run(test.name, func(t *testing.T) {
 			_, err := p.Parse(strings.Split(test.input, " "))
-			require.NoError(t, err)
-			require.Equal(t, &test.values, ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, &test.values, ctx)
 		})
 	}
 }
@@ -512,9 +511,9 @@ func TestShort(t *testing.T) {
 	}
 	app := mustNew(t, &cli)
 	_, err := app.Parse([]string{"-b", "-shello"})
-	require.NoError(t, err)
-	require.True(t, cli.Bool)
-	require.Equal(t, "hello", cli.String)
+	assert.NoError(t, err)
+	assert.True(t, cli.Bool)
+	assert.Equal(t, "hello", cli.String)
 }
 
 func TestDuplicateFlagChoosesLast(t *testing.T) {
@@ -523,8 +522,8 @@ func TestDuplicateFlagChoosesLast(t *testing.T) {
 	}
 
 	_, err := mustNew(t, &cli).Parse([]string{"--flag=1", "--flag=2"})
-	require.NoError(t, err)
-	require.Equal(t, 2, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, cli.Flag)
 }
 
 func TestDuplicateSliceAccumulates(t *testing.T) {
@@ -534,8 +533,8 @@ func TestDuplicateSliceAccumulates(t *testing.T) {
 
 	args := []string{"--flag=1,2", "--flag=3,4"}
 	_, err := mustNew(t, &cli).Parse(args)
-	require.NoError(t, err)
-	require.Equal(t, []int{1, 2, 3, 4}, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3, 4}, cli.Flag)
 }
 
 func TestMapFlag(t *testing.T) {
@@ -543,8 +542,8 @@ func TestMapFlag(t *testing.T) {
 		Set map[string]int
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=10", "--set", "b=20"})
-	require.NoError(t, err)
-	require.Equal(t, map[string]int{"a": 10, "b": 20}, cli.Set)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]int{"a": 10, "b": 20}, cli.Set)
 }
 
 func TestMapFlagWithSliceValue(t *testing.T) {
@@ -552,8 +551,8 @@ func TestMapFlagWithSliceValue(t *testing.T) {
 		Set map[string][]int
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=1,2", "--set", "b=3"})
-	require.NoError(t, err)
-	require.Equal(t, map[string][]int{"a": {1, 2}, "b": {3}}, cli.Set)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string][]int{"a": {1, 2}, "b": {3}}, cli.Set)
 }
 
 type embeddedFlags struct {
@@ -567,9 +566,9 @@ func TestEmbeddedStruct(t *testing.T) {
 	}
 
 	_, err := mustNew(t, &cli).Parse([]string{"--embedded=moo", "--not-embedded=foo"})
-	require.NoError(t, err)
-	require.Equal(t, "moo", cli.Embedded)
-	require.Equal(t, "foo", cli.NotEmbedded)
+	assert.NoError(t, err)
+	assert.Equal(t, "moo", cli.Embedded)
+	assert.Equal(t, "foo", cli.NotEmbedded)
 }
 
 func TestSliceWithDisabledSeparator(t *testing.T) {
@@ -577,8 +576,8 @@ func TestSliceWithDisabledSeparator(t *testing.T) {
 		Flag []string `sep:"none"`
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--flag=a,b", "--flag=b,c"})
-	require.NoError(t, err)
-	require.Equal(t, []string{"a,b", "b,c"}, cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a,b", "b,c"}, cli.Flag)
 }
 
 func TestMultilineMessage(t *testing.T) {
@@ -586,7 +585,7 @@ func TestMultilineMessage(t *testing.T) {
 	var cli struct{}
 	p := mustNew(t, &cli, kong.Writers(w, w))
 	p.Printf("hello\nworld")
-	require.Equal(t, "test: hello\n      world\n", w.String())
+	assert.Equal(t, "test: hello\n      world\n", w.String())
 }
 
 type cmdWithRun struct {
@@ -624,21 +623,21 @@ func TestRun(t *testing.T) {
 	p := mustNew(t, cli)
 
 	ctx, err := p.Parse([]string{"one", "two"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = ctx.Run("hello")
-	require.NoError(t, err)
-	require.Equal(t, "twohello", cli.One.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "twohello", cli.One.Arg)
 
 	ctx, err = p.Parse([]string{"two", "three"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = ctx.Run("ERROR")
-	require.Error(t, err)
+	assert.Error(t, err)
 
 	ctx, err = p.Parse([]string{"three", "sub-command", "arg"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = ctx.Run("ping")
-	require.NoError(t, err)
-	require.Equal(t, "argping", cli.Three.SubCommand.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "argping", cli.Three.SubCommand.Arg)
 }
 
 func TestInterpolationIntoModel(t *testing.T) {
@@ -648,25 +647,25 @@ func TestInterpolationIntoModel(t *testing.T) {
 		EnvRef  string `env:"${env}" help:"God ${env}"`
 	}
 	_, err := kong.New(&cli)
-	require.Error(t, err)
+	assert.Error(t, err)
 	p, err := kong.New(&cli, kong.Vars{
 		"default":  "Some default value.",
 		"somebody": "chickens!",
 		"enum":     "a,b,c,d",
 		"env":      "SAVE_THE_QUEEN",
 	})
-	require.NoError(t, err)
-	require.Len(t, p.Model.Flags, 4)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(p.Model.Flags))
 	flag := p.Model.Flags[1]
 	flag2 := p.Model.Flags[2]
 	flag3 := p.Model.Flags[3]
-	require.Equal(t, "Some default value.", flag.Default)
-	require.Equal(t, "Help, I need chickens!", flag.Help)
-	require.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
-	require.Equal(t, []string{"a", "b", "c", "d"}, flag.EnumSlice())
-	require.Equal(t, "One of a,b", flag2.Help)
-	require.Equal(t, "SAVE_THE_QUEEN", flag3.Env)
-	require.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
+	assert.Equal(t, "Some default value.", flag.Default)
+	assert.Equal(t, "Help, I need chickens!", flag.Help)
+	assert.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
+	assert.Equal(t, []string{"a", "b", "c", "d"}, flag.EnumSlice())
+	assert.Equal(t, "One of a,b", flag2.Help)
+	assert.Equal(t, "SAVE_THE_QUEEN", flag3.Env)
+	assert.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
 
 func TestIssue244(t *testing.T) {
@@ -676,8 +675,8 @@ func TestIssue244(t *testing.T) {
 	w := &strings.Builder{}
 	k := mustNew(t, &Config{}, kong.Exit(func(int) {}), kong.Writers(w, w))
 	_, err := k.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
 }
 
 func TestErrorMissingArgs(t *testing.T) {
@@ -688,8 +687,8 @@ func TestErrorMissingArgs(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.Error(t, err)
-	require.Equal(t, "expected \"<one> <two>\"", err.Error())
+	assert.Error(t, err)
+	assert.Equal(t, "expected \"<one> <two>\"", err.Error())
 }
 
 func TestBoolOverride(t *testing.T) {
@@ -698,9 +697,9 @@ func TestBoolOverride(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--flag=false"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = p.Parse([]string{"--flag", "false"})
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestAnonymousPrefix(t *testing.T) {
@@ -712,8 +711,8 @@ func TestAnonymousPrefix(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--anon-flag=moo"})
-	require.NoError(t, err)
-	require.Equal(t, "moo", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "moo", cli.Flag)
 }
 
 type TestInterface interface {
@@ -734,9 +733,9 @@ func TestEmbedInterface(t *testing.T) {
 	cli := &CLI{TestInterface: &TestImpl{}}
 	p := mustNew(t, cli)
 	_, err := p.Parse([]string{"--some-flag=foo", "--flag=yes"})
-	require.NoError(t, err)
-	require.Equal(t, "foo", cli.SomeFlag)
-	require.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", cli.SomeFlag)
+	assert.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag) // nolint
 }
 
 func TestExcludedField(t *testing.T) {
@@ -747,9 +746,9 @@ func TestExcludedField(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--flag=foo"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = p.Parse([]string{"--excluded=foo"})
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestUnnamedFieldEmbeds(t *testing.T) {
@@ -763,9 +762,9 @@ func TestUnnamedFieldEmbeds(t *testing.T) {
 	buf := &strings.Builder{}
 	p := mustNew(t, &cli, kong.Writers(buf, buf), kong.Exit(func(int) {}))
 	_, err := p.Parse([]string{"--help"})
-	require.NoError(t, err)
-	require.Contains(t, buf.String(), `--one-flag=STRING`)
-	require.Contains(t, buf.String(), `--two-flag=STRING`)
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), `--one-flag=STRING`)
+	assert.Contains(t, buf.String(), `--two-flag=STRING`)
 }
 
 func TestHooksCalledForDefault(t *testing.T) {
@@ -775,9 +774,9 @@ func TestHooksCalledForDefault(t *testing.T) {
 
 	ctx := &hookContext{}
 	_, err := mustNew(t, &cli, kong.Bind(ctx)).Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "default", string(cli.Flag))
-	require.Equal(t, []string{"before:default", "after:default"}, ctx.values)
+	assert.NoError(t, err)
+	assert.Equal(t, "default", string(cli.Flag))
+	assert.Equal(t, []string{"before:default", "after:default"}, ctx.values)
 }
 
 func TestEnum(t *testing.T) {
@@ -785,7 +784,7 @@ func TestEnum(t *testing.T) {
 		Flag string `enum:"a,b,c" required:""`
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--flag", "d"})
-	require.EqualError(t, err, "--flag must be one of \"a\",\"b\",\"c\" but got \"d\"")
+	assert.EqualError(t, err, "--flag must be one of \"a\",\"b\",\"c\" but got \"d\"")
 }
 
 func TestEnumMeaningfulOrder(t *testing.T) {
@@ -793,7 +792,7 @@ func TestEnumMeaningfulOrder(t *testing.T) {
 		Flag string `enum:"first,second,third,fourth,fifth" required:""`
 	}
 	_, err := mustNew(t, &cli).Parse([]string{"--flag", "sixth"})
-	require.EqualError(t, err, "--flag must be one of \"first\",\"second\",\"third\",\"fourth\",\"fifth\" but got \"sixth\"")
+	assert.EqualError(t, err, "--flag must be one of \"first\",\"second\",\"third\",\"fourth\",\"fifth\" but got \"sixth\"")
 }
 
 type commandWithHook struct {
@@ -818,8 +817,8 @@ func (c *cliWithHook) AfterApply(ctx *kong.Context) error {
 func TestParentBindings(t *testing.T) {
 	cli := &cliWithHook{}
 	_, err := mustNew(t, cli).Parse([]string{"command", "--flag=foo"})
-	require.NoError(t, err)
-	require.Equal(t, "foo", cli.Command.value)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", cli.Command.value)
 }
 
 func TestNumericParamErrors(t *testing.T) {
@@ -828,7 +827,7 @@ func TestNumericParamErrors(t *testing.T) {
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"--name", "-10"})
-	require.EqualError(t, err, `--name: expected string value but got "-10" (short flag); perhaps try --name="-10"?`)
+	assert.EqualError(t, err, `--name: expected string value but got "-10" (short flag); perhaps try --name="-10"?`)
 }
 
 func TestDefaultValueIsHyphen(t *testing.T) {
@@ -837,8 +836,8 @@ func TestDefaultValueIsHyphen(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "-", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "-", cli.Flag)
 }
 
 func TestDefaultEnumValidated(t *testing.T) {
@@ -847,7 +846,7 @@ func TestDefaultEnumValidated(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
+	assert.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }
 
 func TestEnvarEnumValidated(t *testing.T) {
@@ -860,7 +859,7 @@ func TestEnvarEnumValidated(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
+	assert.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }
 
 func TestXor(t *testing.T) {
@@ -871,11 +870,11 @@ func TestXor(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--hello", "--one", "--two=hi"})
-	require.EqualError(t, err, "--one and --two can't be used together")
+	assert.EqualError(t, err, "--one and --two can't be used together")
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--one", "--hello"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestXorChild(t *testing.T) {
@@ -888,11 +887,11 @@ func TestXorChild(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--one", "cmd", "--two=hi"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--two=hi", "cmd", "--three"})
-	require.Error(t, err, "--two and --three can't be used together")
+	assert.Error(t, err, "--two and --three can't be used together")
 }
 
 func TestMultiXor(t *testing.T) {
@@ -904,11 +903,11 @@ func TestMultiXor(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--hello", "--one"})
-	require.EqualError(t, err, "--hello and --one can't be used together")
+	assert.EqualError(t, err, "--hello and --one can't be used together")
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--hello", "--two=foo"})
-	require.EqualError(t, err, "--hello and --two can't be used together")
+	assert.EqualError(t, err, "--hello and --two can't be used together")
 }
 
 func TestXorRequired(t *testing.T) {
@@ -920,15 +919,15 @@ func TestXorRequired(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--one"})
-	require.EqualError(t, err, "missing flags: --four")
+	assert.EqualError(t, err, "missing flags: --four")
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--two"})
-	require.EqualError(t, err, "missing flags: --four, --one or --three")
+	assert.EqualError(t, err, "missing flags: --four, --one or --three")
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
-	require.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
+	assert.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
 }
 
 func TestXorRequiredMany(t *testing.T) {
@@ -939,15 +938,15 @@ func TestXorRequiredMany(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--one"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--three"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
-	require.EqualError(t, err, "missing flags: --one or --two or --three")
+	assert.EqualError(t, err, "missing flags: --one or --two or --three")
 }
 
 func TestEnumSequence(t *testing.T) {
@@ -956,8 +955,8 @@ func TestEnumSequence(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, []string{"a"}, cli.State)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a"}, cli.State)
 }
 
 func TestIssue40EnumAcrossCommands(t *testing.T) {
@@ -975,13 +974,13 @@ func TestIssue40EnumAcrossCommands(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"one", "two"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = p.Parse([]string{"two", "d"})
-	require.Error(t, err)
+	assert.Error(t, err)
 	_, err = p.Parse([]string{"three", "d"})
-	require.Error(t, err)
+	assert.Error(t, err)
 	_, err = p.Parse([]string{"three", "c"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestIssue179(t *testing.T) {
@@ -998,7 +997,7 @@ func TestIssue179(t *testing.T) {
 
 	p := mustNew(t, &root)
 	_, err := p.Parse([]string{"b"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestIssue153(t *testing.T) {
@@ -1017,8 +1016,8 @@ func TestIssue153(t *testing.T) {
 	})
 	defer revert()
 	_, err := p.Parse([]string{"ls"})
-	require.NoError(t, err)
-	require.Equal(t, []string{"hello"}, cli.Ls.Paths)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"hello"}, cli.Ls.Paths)
 }
 
 func TestEnumArg(t *testing.T) {
@@ -1030,9 +1029,9 @@ func TestEnumArg(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"nested", "a", "b"})
-	require.NoError(t, err)
-	require.Equal(t, "a", cli.Nested.One)
-	require.Equal(t, "b", cli.Nested.Two)
+	assert.NoError(t, err)
+	assert.Equal(t, "a", cli.Nested.One)
+	assert.Equal(t, "b", cli.Nested.Two)
 }
 
 func TestDefaultCommand(t *testing.T) {
@@ -1042,8 +1041,8 @@ func TestDefaultCommand(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	ctx, err := p.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, "one", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, "one", ctx.Command())
 }
 
 func TestMultipleDefaultCommands(t *testing.T) {
@@ -1052,7 +1051,7 @@ func TestMultipleDefaultCommands(t *testing.T) {
 		Two struct{} `cmd:"" default:"1"`
 	}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.Two: can't have more than one default command under  <command>")
+	assert.EqualError(t, err, "<anonymous struct>.Two: can't have more than one default command under  <command>")
 }
 
 func TestDefaultCommandWithSubCommand(t *testing.T) {
@@ -1062,7 +1061,7 @@ func TestDefaultCommandWithSubCommand(t *testing.T) {
 		} `cmd:"" default:"1"`
 	}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
+	assert.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
 }
 
 func TestDefaultCommandWithAllowedSubCommand(t *testing.T) {
@@ -1073,8 +1072,8 @@ func TestDefaultCommandWithAllowedSubCommand(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	ctx, err := p.Parse([]string{"two"})
-	require.NoError(t, err)
-	require.Equal(t, "one two", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, "one two", ctx.Command())
 }
 
 func TestDefaultCommandWithArgument(t *testing.T) {
@@ -1084,7 +1083,7 @@ func TestDefaultCommandWithArgument(t *testing.T) {
 		} `cmd:"" default:"1"`
 	}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.One: default command one <arg> must not have subcommands or arguments")
+	assert.EqualError(t, err, "<anonymous struct>.One: default command one <arg> must not have subcommands or arguments")
 }
 
 func TestDefaultCommandWithAllowedArgument(t *testing.T) {
@@ -1096,9 +1095,9 @@ func TestDefaultCommandWithAllowedArgument(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"arg", "--flag=value"})
-	require.NoError(t, err)
-	require.Equal(t, "arg", cli.One.Arg)
-	require.Equal(t, "value", cli.One.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.One.Arg)
+	assert.Equal(t, "value", cli.One.Flag)
 }
 
 func TestDefaultCommandWithBranchingArgument(t *testing.T) {
@@ -1110,7 +1109,7 @@ func TestDefaultCommandWithBranchingArgument(t *testing.T) {
 		} `cmd:"" default:"1"`
 	}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
+	assert.EqualError(t, err, "<anonymous struct>.One: default command one <command> must not have subcommands or arguments")
 }
 
 func TestDefaultCommandWithAllowedBranchingArgument(t *testing.T) {
@@ -1124,9 +1123,9 @@ func TestDefaultCommandWithAllowedBranchingArgument(t *testing.T) {
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"arg", "--flag=value"})
-	require.NoError(t, err)
-	require.Equal(t, "arg", cli.One.Two.Two)
-	require.Equal(t, "value", cli.One.Two.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.One.Two.Two)
+	assert.Equal(t, "value", cli.One.Two.Flag)
 }
 
 func TestDefaultCommandPrecedence(t *testing.T) {
@@ -1141,22 +1140,22 @@ func TestDefaultCommandPrecedence(t *testing.T) {
 
 	// A named command should take precedence over a default command with arg
 	ctx, err := p.Parse([]string{"one"})
-	require.NoError(t, err)
-	require.Equal(t, "one", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, "one", ctx.Command())
 
 	// An explicitly named command with arg should parse, even if labeled default:"witharg"
 	ctx, err = p.Parse([]string{"two", "arg"})
-	require.NoError(t, err)
-	require.Equal(t, "two <arg>", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, "two <arg>", ctx.Command())
 
 	// An arg to a default command that does not match another command should select the default
 	ctx, err = p.Parse([]string{"arg"})
-	require.NoError(t, err)
-	require.Equal(t, "two <arg>", ctx.Command())
+	assert.NoError(t, err)
+	assert.Equal(t, "two <arg>", ctx.Command())
 
 	// A flag on a default command should not be valid on a sibling command
 	_, err = p.Parse([]string{"one", "--flag"})
-	require.EqualError(t, err, "unknown flag --flag")
+	assert.EqualError(t, err, "unknown flag --flag")
 }
 
 func TestLoneHpyhen(t *testing.T) {
@@ -1167,12 +1166,12 @@ func TestLoneHpyhen(t *testing.T) {
 	p := mustNew(t, &cli)
 
 	_, err := p.Parse([]string{"-"})
-	require.NoError(t, err)
-	require.Equal(t, "-", cli.Arg)
+	assert.NoError(t, err)
+	assert.Equal(t, "-", cli.Arg)
 
 	_, err = p.Parse([]string{"--flag", "-"})
-	require.NoError(t, err)
-	require.Equal(t, "-", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "-", cli.Flag)
 }
 
 func TestPlugins(t *testing.T) {
@@ -1190,10 +1189,10 @@ func TestPlugins(t *testing.T) {
 
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--base=base", "--one=one", "--two=two"})
-	require.NoError(t, err)
-	require.Equal(t, "base", cli.Base)
-	require.Equal(t, "one", pluginOne.One)
-	require.Equal(t, "two", pluginTwo.Two)
+	assert.NoError(t, err)
+	assert.Equal(t, "base", cli.Base)
+	assert.Equal(t, "one", pluginOne.One)
+	assert.Equal(t, "two", pluginTwo.Two)
 }
 
 type validateCmd struct{}
@@ -1214,7 +1213,7 @@ func TestValidateApp(t *testing.T) {
 	cli := validateCli{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{})
-	require.EqualError(t, err, "test: app error")
+	assert.EqualError(t, err, "test: app error")
 }
 
 func TestValidateCmd(t *testing.T) {
@@ -1223,7 +1222,7 @@ func TestValidateCmd(t *testing.T) {
 	}{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"cmd"})
-	require.EqualError(t, err, "cmd: cmd error")
+	assert.EqualError(t, err, "cmd: cmd error")
 }
 
 func TestValidateFlag(t *testing.T) {
@@ -1232,7 +1231,7 @@ func TestValidateFlag(t *testing.T) {
 	}{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--flag=one"})
-	require.EqualError(t, err, "--flag: flag error")
+	assert.EqualError(t, err, "--flag: flag error")
 }
 
 func TestValidateArg(t *testing.T) {
@@ -1241,7 +1240,7 @@ func TestValidateArg(t *testing.T) {
 	}{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"one"})
-	require.EqualError(t, err, "<arg>: flag error")
+	assert.EqualError(t, err, "<arg>: flag error")
 }
 
 func TestPointers(t *testing.T) {
@@ -1251,11 +1250,11 @@ func TestPointers(t *testing.T) {
 	}{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--mapped=mapped", "--json=\"foo\""})
-	require.NoError(t, err)
-	require.NotNil(t, cli.Mapped)
-	require.Equal(t, "mapped", cli.Mapped.decoded)
-	require.NotNil(t, cli.JSON)
-	require.Equal(t, "FOO", string(*cli.JSON))
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.Mapped)
+	assert.Equal(t, "mapped", cli.Mapped.decoded)
+	assert.NotZero(t, cli.JSON)
+	assert.Equal(t, "FOO", string(*cli.JSON))
 }
 
 type dynamicCommand struct {
@@ -1282,16 +1281,16 @@ func TestDynamicCommands(t *testing.T) {
 		kong.Writers(help, help),
 		kong.Exit(func(int) {}))
 	kctx, err := p.Parse([]string{"two", "--flag=flag"})
-	require.NoError(t, err)
-	require.Equal(t, "flag", two.Flag)
-	require.False(t, two.ran)
+	assert.NoError(t, err)
+	assert.Equal(t, "flag", two.Flag)
+	assert.False(t, two.ran)
 	err = kctx.Run()
-	require.NoError(t, err)
-	require.True(t, two.ran)
+	assert.NoError(t, err)
+	assert.True(t, two.ran)
 
 	_, err = p.Parse([]string{"--help"})
-	require.EqualError(t, err, `expected one of "one",  "two"`)
-	require.NotContains(t, help.String(), "three", help.String())
+	assert.EqualError(t, err, `expected one of "one",  "two"`)
+	assert.NotContains(t, help.String(), "three", help.String())
 }
 
 func TestDuplicateShortflags(t *testing.T) {
@@ -1300,7 +1299,7 @@ func TestDuplicateShortflags(t *testing.T) {
 		Flag2 bool `short:"t"`
 	}{}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
+	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
 
 func TestDuplicateNestedShortFlags(t *testing.T) {
@@ -1311,7 +1310,7 @@ func TestDuplicateNestedShortFlags(t *testing.T) {
 		} `cmd:""`
 	}{}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
+	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
 
 func TestHydratePointerCommandsAndEmbeds(t *testing.T) {
@@ -1330,9 +1329,9 @@ func TestHydratePointerCommandsAndEmbeds(t *testing.T) {
 
 	k := mustNew(t, &cli)
 	_, err := k.Parse([]string{"--embed", "cmd", "--flag"})
-	require.NoError(t, err)
-	require.Equal(t, &cmd{Flag: true}, cli.Cmd)
-	require.Equal(t, &embed{Embed: true}, cli.Embed)
+	assert.NoError(t, err)
+	assert.Equal(t, &cmd{Flag: true}, cli.Cmd)
+	assert.Equal(t, &embed{Embed: true}, cli.Embed)
 }
 
 // nolint
@@ -1353,21 +1352,21 @@ func TestIgnoreRegex(t *testing.T) {
 	cli := testIgnoreFields{}
 
 	k, err := kong.New(&cli, kong.IgnoreFields(`.*\.XXX_.+`))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = k.Parse([]string{"foo", "sub"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = k.Parse([]string{"foo", "sub", "--subflag1"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = k.Parse([]string{"foo", "sub", "--subflag2"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unknown flag --subflag2")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown flag --subflag2")
 
 	_, err = k.Parse([]string{"baz"})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unexpected argument baz")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected argument baz")
 }
 
 // Verify that passing a nil regex will work
@@ -1375,8 +1374,8 @@ func TestIgnoreRegexEmpty(t *testing.T) {
 	cli := testIgnoreFields{}
 
 	_, err := kong.New(&cli, kong.IgnoreFields(""))
-	require.Error(t, err)
-	require.Contains(t, "regex input cannot be empty", err.Error())
+	assert.Error(t, err)
+	assert.Contains(t, "regex input cannot be empty", err.Error())
 }
 
 type optionWithErr struct{}
@@ -1393,8 +1392,8 @@ func TestOptionReturnsErr(t *testing.T) {
 	optWithError := &optionWithErr{}
 
 	_, err := kong.New(cli, optWithError)
-	require.Error(t, err)
-	require.Equal(t, "option returned err", err.Error())
+	assert.Error(t, err)
+	assert.Equal(t, "option returned err", err.Error())
 }
 
 func TestEnumValidation(t *testing.T) {
@@ -1458,9 +1457,9 @@ func TestEnumValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := kong.New(test.cli)
 			if test.fail {
-				require.Error(t, err, repr.String(test.cli))
+				assert.Error(t, err, repr.String(test.cli))
 			} else {
-				require.NoError(t, err, repr.String(test.cli))
+				assert.NoError(t, err, repr.String(test.cli))
 			}
 		})
 	}
@@ -1515,9 +1514,9 @@ func TestPassthroughCmd(t *testing.T) {
 			}
 			p := mustNew(t, &cli)
 			_, err := p.Parse(test.args)
-			require.NoError(t, err)
-			require.Equal(t, test.flag, cli.Flag)
-			require.Equal(t, test.cmdArgs, cli.Command.Args)
+			assert.NoError(t, err)
+			assert.Equal(t, test.flag, cli.Flag)
+			assert.Equal(t, test.cmdArgs, cli.Command.Args)
 		})
 	}
 }
@@ -1530,7 +1529,7 @@ func TestPassthroughCmdOnlyArgs(t *testing.T) {
 		} `cmd:"" passthrough:""`
 	}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must not have subcommands or flags")
+	assert.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must not have subcommands or flags")
 }
 
 func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
@@ -1540,7 +1539,7 @@ func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
 		} `cmd:"" passthrough:""`
 	}
 	_, err := kong.New(&cli)
-	require.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must contain exactly one positional argument of []string type")
+	assert.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must contain exactly one positional argument of []string type")
 }
 
 func TestHelpShouldStillWork(t *testing.T) {
@@ -1557,11 +1556,11 @@ func TestHelpShouldStillWork(t *testing.T) {
 	_, err := k.Parse([]string{"--help"})
 	t.Log(w.String())
 	// checking return code validates the help hook was called
-	require.Zero(t, rc)
+	assert.Zero(t, rc)
 	// allow for error propagation from other validation (only for the
 	// sake of this test, due to the exit function not actually exiting the
 	// program; errors will not propagate in the real world).
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
@@ -1609,7 +1608,7 @@ func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			p := mustNew(t, test.cli)
 			_, err := p.Parse(test.args)
-			require.EqualError(t, err, test.err)
+			assert.EqualError(t, err, test.err)
 		})
 	}
 }
@@ -1659,7 +1658,7 @@ func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			p := mustNew(t, test.cli)
 			_, err := p.Parse(test.args)
-			require.EqualError(t, err, test.expected)
+			assert.EqualError(t, err, test.expected)
 		})
 	}
 }

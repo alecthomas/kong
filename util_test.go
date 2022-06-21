@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestConfigFlag(t *testing.T) {
@@ -18,15 +18,15 @@ func TestConfigFlag(t *testing.T) {
 	}
 
 	w, err := ioutil.TempFile("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.Remove(w.Name())
 	w.WriteString(`{"flag": "hello world"}`) // nolint: errcheck
 	w.Close()
 
 	p := Must(&cli, Configuration(JSON))
 	_, err = p.Parse([]string{"--config", w.Name()})
-	require.NoError(t, err)
-	require.Equal(t, "hello world", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "hello world", cli.Flag)
 }
 
 func TestVersionFlag(t *testing.T) {
@@ -40,20 +40,20 @@ func TestVersionFlag(t *testing.T) {
 	p.Exit = func(s int) { called = s }
 
 	_, err := p.Parse([]string{"--version"})
-	require.NoError(t, err)
-	require.Equal(t, "0.1.1", strings.TrimSpace(w.String()))
-	require.Equal(t, 0, called)
+	assert.NoError(t, err)
+	assert.Equal(t, "0.1.1", strings.TrimSpace(w.String()))
+	assert.Equal(t, 0, called)
 }
 
 func TestChangeDirFlag(t *testing.T) {
 	cwd, err := os.Getwd()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.Chdir(cwd) // nolint: errcheck
 
 	dir := t.TempDir()
 	file := filepath.Join(dir, "out.txt")
 	err = os.WriteFile(file, []byte("foobar"), 0o600)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	var cli struct {
 		ChangeDir ChangeDirFlag `short:"C"`
@@ -62,10 +62,10 @@ func TestChangeDirFlag(t *testing.T) {
 
 	p := Must(&cli)
 	_, err = p.Parse([]string{"-C", dir, "out.txt"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	if runtime.GOOS != "windows" {
 		file, err = filepath.EvalSymlinks(file) // Needed because OSX uses a symlinked tmp dir.
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}
-	require.Equal(t, file, cli.Path)
+	assert.Equal(t, file, cli.Path)
 }

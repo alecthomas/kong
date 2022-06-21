@@ -1,9 +1,10 @@
 module github.com/alecthomas/kong
 
 require (
-	github.com/alecthomas/repr v0.0.0-20210801044451-80ca428c5142
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/stretchr/testify v1.7.2
+	github.com/alecthomas/assert/v2 v2.1.0
+	github.com/alecthomas/repr v0.1.0
 )
 
-go 1.13
+require github.com/hexops/gotextdiff v1.0.3 // indirect
+
+go 1.18

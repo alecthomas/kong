@@ -6,8 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 )
 
@@ -26,8 +25,8 @@ func TestMultipleConfigLoading(t *testing.T) {
 
 	p := mustNew(t, &cli, kong.Configuration(kong.JSON, first, second))
 	_, err := p.Parse(nil)
-	require.NoError(t, err)
-	require.Equal(t, "first", cli.Flag)
+	assert.NoError(t, err)
+	assert.Equal(t, "first", cli.Flag)
 }
 
 func TestConfigValidation(t *testing.T) {
@@ -41,15 +40,15 @@ func TestConfigValidation(t *testing.T) {
 
 	p := mustNew(t, &cli, kong.Configuration(kong.JSON, conf))
 	_, err := p.Parse(nil)
-	require.Error(t, err)
+	assert.Error(t, err)
 }
 
 func makeConfig(t *testing.T, config interface{}) (path string, cleanup func()) {
 	t.Helper()
 	w, err := ioutil.TempFile("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer w.Close() // nolint: gosec
 	err = json.NewEncoder(w).Encode(config)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	return w.Name(), func() { os.Remove(w.Name()) }
 }
