@@ -158,6 +158,20 @@ MAIN:
 		}
 	}
 
+	// Validate if there are no duplicate names
+	seenNames := make(map[string]struct{})
+	for _, node := range node.Children {
+		if _, ok := seenNames[node.Name]; ok {
+			name := v.Type().Name()
+			if name == "" {
+				name = "<anonymous struct>"
+			}
+			return nil, fmt.Errorf("duplicate command name %q in command %q", node.Name, name)
+		}
+
+		seenNames[node.Name] = struct{}{}
+	}
+
 	// "Unsee" flags.
 	for _, flag := range node.Flags {
 		delete(seenFlags, "--"+flag.Name)

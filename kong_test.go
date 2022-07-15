@@ -1662,3 +1662,35 @@ func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 		})
 	}
 }
+
+func TestDuplicateName(t *testing.T) {
+	var cli struct {
+		DupA struct{} `cmd:"" name:"duplicate"`
+		DupB struct{} `cmd:"" name:"duplicate"`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
+
+func TestDuplicateChildName(t *testing.T) {
+	var cli struct {
+		A struct {
+			DupA struct{} `cmd:"" name:"duplicate"`
+			DupB struct{} `cmd:"" name:"duplicate"`
+		} `cmd:""`
+		B struct{} `cmd:""`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
+
+func TestChildNameCanBeDuplicated(t *testing.T) {
+	var cli struct {
+		A struct {
+			A struct{} `cmd:"" name:"duplicateA"`
+			B struct{} `cmd:"" name:"duplicateB"`
+		} `cmd:"" name:"duplicateA"`
+		B struct{} `cmd:"" name:"duplicateB"`
+	}
+	mustNew(t, &cli)
+}
