@@ -159,17 +159,8 @@ MAIN:
 	}
 
 	// Validate if there are no duplicate names
-	seenNames := make(map[string]struct{})
-	for _, node := range node.Children {
-		if _, ok := seenNames[node.Name]; ok {
-			name := v.Type().Name()
-			if name == "" {
-				name = "<anonymous struct>"
-			}
-			return nil, fmt.Errorf("duplicate command name %q in command %q", node.Name, name)
-		}
-
-		seenNames[node.Name] = struct{}{}
+	if err := checkDuplicateNames(node, v); err != nil {
+		return nil, err
 	}
 
 	// "Unsee" flags.
@@ -324,4 +315,21 @@ func buildGroupForKey(k *Kong, key string) *Group {
 		Key:   key,
 		Title: key,
 	}
+}
+
+func checkDuplicateNames(node *Node, v reflect.Value) error {
+	seenNames := make(map[string]struct{})
+	for _, node := range node.Children {
+		if _, ok := seenNames[node.Name]; ok {
+			name := v.Type().Name()
+			if name == "" {
+				name = "<anonymous struct>"
+			}
+			return fmt.Errorf("duplicate command name %q in command %q", node.Name, name)
+		}
+
+		seenNames[node.Name] = struct{}{}
+	}
+
+	return nil
 }
