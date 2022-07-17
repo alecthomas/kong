@@ -162,20 +162,6 @@ func TestTagAliases(t *testing.T) {
 	assert.Equal(t, "arg", cli.Cmd.Arg)
 }
 
-func TestTagAliasesConflict(t *testing.T) {
-	type Command struct {
-		Arg string `arg help:"Some arg"`
-	}
-	var cli struct {
-		Cmd      Command `cmd hidden aliases:"other-cmd"`
-		OtherCmd Command `cmd`
-	}
-	p := mustNew(t, &cli)
-	_, err := p.Parse([]string{"other-cmd", "arg"})
-	assert.NoError(t, err)
-	assert.Equal(t, "arg", cli.OtherCmd.Arg)
-}
-
 func TestTagAliasesSub(t *testing.T) {
 	type SubCommand struct {
 		Arg string `arg help:"Some arg"`

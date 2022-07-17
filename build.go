@@ -159,7 +159,7 @@ MAIN:
 	}
 
 	// Validate if there are no duplicate names
-	if err := checkDuplicateNames(node, v); err != nil {
+	if err := checkDuplicateNamesAndAliases(node, v); err != nil {
 		return nil, err
 	}
 
@@ -317,19 +317,31 @@ func buildGroupForKey(k *Kong, key string) *Group {
 	}
 }
 
-func checkDuplicateNames(node *Node, v reflect.Value) error {
+func checkDuplicateNamesAndAliases(node *Node, v reflect.Value) error {
 	seenNames := make(map[string]struct{})
 	for _, node := range node.Children {
 		if _, ok := seenNames[node.Name]; ok {
-			name := v.Type().Name()
-			if name == "" {
-				name = "<anonymous struct>"
-			}
-			return fmt.Errorf("duplicate command name %q in command %q", node.Name, name)
+			return fmt.Errorf("duplicate command name %q in command %q", node.Name, getStructName(v))
 		}
 
 		seenNames[node.Name] = struct{}{}
+
+		for _, alias := range node.Aliases {
+			if _, ok := seenNames[alias]; ok {
+				return fmt.Errorf("duplicate alias %q in command %q with parent %q", alias, node.Name, getStructName(v))
+			}
+
+			seenNames[alias] = struct{}{}
+		}
 	}
 
 	return nil
+}
+
+func getStructName(v reflect.Value) string {
+	name := v.Type().Name()
+	if name == "" {
+		name = "<anonymous struct>"
+	}
+	return name
 }

@@ -1694,3 +1694,43 @@ func TestChildNameCanBeDuplicated(t *testing.T) {
 	}
 	mustNew(t, &cli)
 }
+
+func TestDuplicateAliases(t *testing.T) {
+	var cli struct {
+		DupA struct{} `cmd:"" aliases:"alias"`
+		DupB struct{} `cmd:"" aliases:"alias"`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
+
+func TestDuplicateAliasesInCommand(t *testing.T) {
+	var cli struct {
+		DupA struct{} `cmd:"" aliases:"alias,alias"`
+		DupB struct{} `cmd:""`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
+
+func TestDuplicateChildAliases(t *testing.T) {
+	var cli struct {
+		A struct {
+			DupA struct{} `cmd:"" aliases:"alias"`
+			DupB struct{} `cmd:"" aliases:"alias"`
+		} `cmd:""`
+		B struct{} `cmd:""`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
+
+func TestChildAliasesCanBeDuplicated(t *testing.T) {
+	var cli struct {
+		A struct {
+			A struct{} `cmd:"" aliases:"alias"`
+		} `cmd:"" aliases:"alias"`
+		B struct{} `cmd:""`
+	}
+	mustNew(t, &cli)
+}
