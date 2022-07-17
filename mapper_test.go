@@ -453,6 +453,28 @@ func TestExistingFileMapperDefaultMissing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotZero(t, cli.File)
 	assert.Contains(t, cli.File, file)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
+}
+
+func TestExistingFileMapperDefaultMissingCmds(t *testing.T) {
+	type CLI struct {
+		CmdA struct {
+			FileA string `type:"existingfile" default:"testdata/aaa-missing.txt"`
+		} `cmd:""`
+		CmdB struct {
+			FileB string `type:"existingfile" default:"testdata/bbb-missing.txt"`
+		} `cmd:""`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	file := "testdata/file.txt"
+	_, err := p.Parse([]string{"cmd-a", "--file-a", file})
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.CmdA.FileA)
+	assert.Contains(t, cli.CmdA.FileA, file)
 }
 
 //nolint:dupl
@@ -486,6 +508,28 @@ func TestExistingDirMapperDefaultMissing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotZero(t, cli.Dir)
 	assert.Contains(t, cli.Dir, dir)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing-dir: no such file or directory")
+}
+
+func TestExistingDirMapperDefaultMissingCmds(t *testing.T) {
+	type CLI struct {
+		CmdA struct {
+			DirA string `type:"existingdir" default:"aaa-missing-dir"`
+		} `cmd:""`
+		CmdB struct {
+			DirB string `type:"existingdir" default:"bbb-missing-dir"`
+		} `cmd:""`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	dir := "testdata"
+	_, err := p.Parse([]string{"cmd-a", "--dir-a", dir})
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.CmdA.DirA)
+	assert.Contains(t, cli.CmdA.DirA, dir)
 }
 
 func TestMapperPlaceHolder(t *testing.T) {

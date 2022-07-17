@@ -54,6 +54,7 @@ type Node struct {
 	Tag         *Tag
 	Aliases     []string
 	Passthrough bool // Set to true to stop flag parsing when encountered.
+	Active      bool // Denotes the node is part of an active branch in the CLI.
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
@@ -98,6 +99,7 @@ func (n *Node) AllFlags(hide bool) (out [][]*Flag) {
 	group := []*Flag{}
 	for _, flag := range n.Flags {
 		if !hide || !flag.Hidden {
+			flag.Active = true
 			group = append(group, flag)
 		}
 	}
@@ -243,6 +245,7 @@ type Value struct {
 	Format       string // Formatting directive, if applicable.
 	Position     int    // Position (for positional arguments).
 	Passthrough  bool   // Set to true to stop flag parsing when encountered.
+	Active       bool   // Denotes the value is part of an active branch in the CLI.
 }
 
 // EnumMap returns a map of the enums in this value.
