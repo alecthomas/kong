@@ -463,18 +463,25 @@ func TestExistingFileMapperDefaultMissingCmds(t *testing.T) {
 	type CLI struct {
 		CmdA struct {
 			FileA string `type:"existingfile" default:"testdata/aaa-missing.txt"`
-		} `cmd:""`
-		CmdB struct {
 			FileB string `type:"existingfile" default:"testdata/bbb-missing.txt"`
+		} `cmd:""`
+		CmdC struct {
+			FileC string `type:"existingfile" default:"testdata/ccc-missing.txt"`
 		} `cmd:""`
 	}
 	var cli CLI
-	p := mustNew(t, &cli)
 	file := "testdata/file.txt"
-	_, err := p.Parse([]string{"cmd-a", "--file-a", file})
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd-a", "--file-a", file, "--file-b", file})
 	assert.NoError(t, err)
 	assert.NotZero(t, cli.CmdA.FileA)
 	assert.Contains(t, cli.CmdA.FileA, file)
+	assert.NotZero(t, cli.CmdA.FileB)
+	assert.Contains(t, cli.CmdA.FileB, file)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"cmd-a", "--file-a", file})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "bbb-missing.txt: no such file or directory")
 }
 
 //nolint:dupl
@@ -518,18 +525,25 @@ func TestExistingDirMapperDefaultMissingCmds(t *testing.T) {
 	type CLI struct {
 		CmdA struct {
 			DirA string `type:"existingdir" default:"aaa-missing-dir"`
-		} `cmd:""`
-		CmdB struct {
 			DirB string `type:"existingdir" default:"bbb-missing-dir"`
+		} `cmd:""`
+		CmdC struct {
+			DirC string `type:"existingdir" default:"ccc-missing-dir"`
 		} `cmd:""`
 	}
 	var cli CLI
-	p := mustNew(t, &cli)
 	dir := "testdata"
-	_, err := p.Parse([]string{"cmd-a", "--dir-a", dir})
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd-a", "--dir-a", dir, "--dir-b", dir})
 	assert.NoError(t, err)
 	assert.NotZero(t, cli.CmdA.DirA)
+	assert.NotZero(t, cli.CmdA.DirB)
 	assert.Contains(t, cli.CmdA.DirA, dir)
+	assert.Contains(t, cli.CmdA.DirB, dir)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"cmd-a", "--dir-a", dir})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "bbb-missing-dir: no such file or directory")
 }
 
 func TestMapperPlaceHolder(t *testing.T) {
