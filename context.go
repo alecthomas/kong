@@ -346,6 +346,7 @@ func (c *Context) endParsing() {
 
 func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
+	node.Active = true
 
 	flags := []*Flag{}
 	flagNode := node
@@ -438,6 +439,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 					c.endParsing()
 				}
 
+				arg.Active = true
 				err := arg.Parse(c.scan, c.getValue(arg))
 				if err != nil {
 					return err

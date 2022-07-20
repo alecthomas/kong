@@ -613,7 +613,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 			return err
 		}
 
-		if ctx.Value.Set {
+		if !ctx.Value.Active || ctx.Value.Set {
 			// early return to avoid checking extra files that may not exist;
 			// this hack only works because the value provided on the cli is
 			// checked before the default value is checked (if default is set).
@@ -649,7 +649,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return err
 		}
 
-		if ctx.Value.Set {
+		if !ctx.Value.Active || ctx.Value.Set {
 			// early return to avoid checking extra dirs that may not exist;
 			// this hack only works because the value provided on the cli is
 			// checked before the default value is checked (if default is set).
