@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -422,7 +421,7 @@ func (f *Flag) FormatPlaceHolder() string {
 	}
 	if f.HasDefault {
 		if f.Value.Target.Kind() == reflect.String {
-			return strconv.Quote(f.Default) + tail
+			return fmt.Sprintf(`"%s"%s`, f.Default, tail)
 		}
 		return f.Default + tail
 	}
