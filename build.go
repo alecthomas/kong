@@ -171,12 +171,20 @@ MAIN:
 		}
 	}
 
-	// Scan through argument positionals to ensure optional is never before a required.
 	var last *Value
 	for i, curr := range node.Positional {
-		if last != nil && !last.Required && curr.Required {
-			return nil, fmt.Errorf("%s: required %q can not come after optional %q", node.FullPath(), curr.Name, last.Name)
+		if last != nil {
+			// Scan through argument positionals to ensure optional is never before a required.
+			if !last.Required && curr.Required {
+				return nil, fmt.Errorf("%s: required %q cannot come after optional %q", node.FullPath(), curr.Name, last.Name)
+			}
+
+			// Cumulative argument needs to be last.
+			if last.IsCumulative() {
+				return nil, fmt.Errorf("%s: argument %q cannot come after cumulative %q", node.FullPath(), curr.Name, last.Name)
+			}
 		}
+
 		last = curr
 		curr.Position = i
 	}
