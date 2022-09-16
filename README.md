@@ -656,13 +656,14 @@ Example resolvers can be found in [resolver.go](https://github.com/alecthomas/ko
 Command-line arguments are mapped to Go values via the Mapper interface:
 
 ```go
-// A Mapper knows how to map command-line input to Go.
+// A Mapper represents how a field is mapped from command-line values to Go.
+//
+// Mappers can be associated with concrete fields via pointer, reflect.Type, reflect.Kind, or via a "type" tag.
+//
+// Additionally, if a type implements the MapperValue interface, it will be used.
 type Mapper interface {
-  // Decode scan into target.
-  //
-  // "ctx" contains context about the value being decoded that may be useful
-  // to some mappers.
-  Decode(ctx *MapperContext, scan *Scanner, target reflect.Value) error
+	// Decode ctx.Value with ctx.Scanner into target.
+	Decode(ctx *DecodeContext, target reflect.Value) error
 }
 ```
 
