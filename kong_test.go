@@ -1718,3 +1718,21 @@ func TestChildNameCanBeDuplicated(t *testing.T) {
 	}
 	mustNew(t, &cli)
 }
+
+func TestCumulativeArgumentLast(t *testing.T) {
+	var cli struct {
+		Arg1 string   `arg:""`
+		Arg2 []string `arg:""`
+	}
+	_, err := kong.New(&cli)
+	assert.NoError(t, err)
+}
+
+func TestCumulativeArgumentNotLast(t *testing.T) {
+	var cli struct {
+		Arg2 []string `arg:""`
+		Arg1 string   `arg:""`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
