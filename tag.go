@@ -169,9 +169,11 @@ func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	var typeName string
 	var isBool bool
+	var isBoolPtr bool
 	if typ != nil {
 		typeName = typ.Name()
 		isBool = typ.Kind() == reflect.Bool
+		isBoolPtr = typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Bool
 	}
 	var err error
 	t.Cmd = t.Has("cmd")
@@ -212,7 +214,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	t.EnvPrefix = t.Get("envprefix")
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
-	if negatable && !isBool {
+	if negatable && !isBool && !isBoolPtr {
 		return fmt.Errorf("negatable can only be set on booleans")
 	}
 	t.Negatable = negatable
@@ -230,7 +232,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	}
 	t.PlaceHolder = t.Get("placeholder")
 	t.Enum = t.Get("enum")
-	scalarType := (typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map))
+	scalarType := (typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map || typ.Kind() == reflect.Ptr))
 	if t.Enum != "" && !(t.Required || t.HasDefault) && scalarType {
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
 	}
