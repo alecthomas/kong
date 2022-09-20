@@ -1742,13 +1742,13 @@ func TestStringPointer(t *testing.T) {
 		Foo *string
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--foo", "wtf"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.Foo)
-	require.Equal(t, "wtf", *cli.Foo)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.Foo)
+	assert.Equal(t, "wtf", *cli.Foo)
 }
 
 func TestStringPointerNoValue(t *testing.T) {
@@ -1756,12 +1756,12 @@ func TestStringPointerNoValue(t *testing.T) {
 		Foo *string
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.Nil(t, cli.Foo)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.Foo)
 }
 
 func TestStringPointerDefault(t *testing.T) {
@@ -1769,13 +1769,13 @@ func TestStringPointerDefault(t *testing.T) {
 		Foo *string `default:"stuff"`
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.Foo)
-	require.Equal(t, "stuff", *cli.Foo)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.Foo)
+	assert.Equal(t, "stuff", *cli.Foo)
 }
 
 func TestStringPointerAliasNoValue(t *testing.T) {
@@ -1784,12 +1784,12 @@ func TestStringPointerAliasNoValue(t *testing.T) {
 		F *Foo
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.Nil(t, cli.F)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.F)
 }
 
 func TestStringPointerAlias(t *testing.T) {
@@ -1798,13 +1798,13 @@ func TestStringPointerAlias(t *testing.T) {
 		F *Foo
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--f=value"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.F)
-	require.Equal(t, Foo("value"), *cli.F)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.F)
+	assert.Equal(t, Foo("value"), *cli.F)
 }
 
 func TestStringPointerEmptyValue(t *testing.T) {
@@ -1813,15 +1813,15 @@ func TestStringPointerEmptyValue(t *testing.T) {
 		G *string
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--f", "", "--g="})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.F)
-	require.NotNil(t, cli.G)
-	require.Equal(t, "", *cli.F)
-	require.Equal(t, "", *cli.G)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.F)
+	assert.NotZero(t, cli.G)
+	assert.Equal(t, "", *cli.F)
+	assert.Equal(t, "", *cli.G)
 }
 
 func TestIntPtr(t *testing.T) {
@@ -1830,14 +1830,14 @@ func TestIntPtr(t *testing.T) {
 		G *int
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--f=6"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.F)
-	require.Nil(t, cli.G)
-	require.Equal(t, 6, *cli.F)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.F)
+	assert.Zero(t, cli.G)
+	assert.Equal(t, 6, *cli.F)
 }
 
 func TestBoolPtr(t *testing.T) {
@@ -1845,13 +1845,13 @@ func TestBoolPtr(t *testing.T) {
 		X *bool
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--x"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.X)
-	require.Equal(t, true, *cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, true, *cli.X)
 }
 
 func TestBoolPtrFalse(t *testing.T) {
@@ -1859,13 +1859,13 @@ func TestBoolPtrFalse(t *testing.T) {
 		X *bool
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--x=false"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.X)
-	require.Equal(t, false, *cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, false, *cli.X)
 }
 
 func TestBoolPtrNegated(t *testing.T) {
@@ -1873,13 +1873,13 @@ func TestBoolPtrNegated(t *testing.T) {
 		X *bool `negatable:""`
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--no-x"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.X)
-	require.Equal(t, false, *cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, false, *cli.X)
 }
 
 func TestNilNegatableBoolPtr(t *testing.T) {
@@ -1887,12 +1887,12 @@ func TestNilNegatableBoolPtr(t *testing.T) {
 		X *bool `negatable:""`
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.Nil(t, cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.X)
 }
 
 func TestBoolPtrNil(t *testing.T) {
@@ -1900,31 +1900,30 @@ func TestBoolPtrNil(t *testing.T) {
 		X *bool
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.Nil(t, cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.X)
 }
 
 func TestUnsupportedPtr(t *testing.T) {
-	//nolint:structcheck,unused
 	type Foo struct {
-		x int
-		y int
+		x int // nolint
+		y int // nolint
 	}
 
 	var cli struct {
 		F *Foo
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--f=whatever"})
-	require.Nil(t, ctx)
-	require.Error(t, err)
-	require.Equal(t, "--f: cannot find mapper for kong_test.Foo", err.Error())
+	assert.Zero(t, ctx)
+	assert.Error(t, err)
+	assert.Equal(t, "--f: cannot find mapper for kong_test.Foo", err.Error())
 }
 
 func TestEnumPtr(t *testing.T) {
@@ -1932,13 +1931,13 @@ func TestEnumPtr(t *testing.T) {
 		X *string `enum:"A,B,C" default:"C"`
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{"--x=A"})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.X)
-	require.Equal(t, "A", *cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, "A", *cli.X)
 }
 
 func TestEnumPtrOmitted(t *testing.T) {
@@ -1946,13 +1945,13 @@ func TestEnumPtrOmitted(t *testing.T) {
 		X *string `enum:"A,B,C" default:"C"`
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.NotNil(t, cli.X)
-	require.Equal(t, "C", *cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, "C", *cli.X)
 }
 
 func TestEnumPtrOmittedNoDefault(t *testing.T) {
@@ -1960,10 +1959,10 @@ func TestEnumPtrOmittedNoDefault(t *testing.T) {
 		X *string `enum:"A,B,C"`
 	}
 	k, err := kong.New(&cli)
-	require.NoError(t, err)
-	require.NotNil(t, k)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
 	ctx, err := k.Parse([]string{})
-	require.NoError(t, err)
-	require.NotNil(t, ctx)
-	require.Nil(t, cli.X)
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.X)
 }
