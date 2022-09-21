@@ -363,8 +363,11 @@ func intDecoder(bits int) MapperFunc { // nolint: dupl
 		case string:
 			sv = v
 
-		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 			sv = fmt.Sprintf("%v", v)
+
+		case float32, float64:
+			sv = fmt.Sprintf("%0.f", v)
 
 		default:
 			return fmt.Errorf("expected an int but got %q (%T)", t, t.Value)
