@@ -400,7 +400,8 @@ func TestNumbers(t *testing.T) {
 	})
 }
 
-func TestJsonBigNumber(t *testing.T) {
+func TestJSONLargeNumber(t *testing.T) {
+	// https://github.com/alecthomas/kong/pull/334/files
 	const n = 1000000
 	var cli struct {
 		N int64
