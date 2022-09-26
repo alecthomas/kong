@@ -377,7 +377,9 @@ Commands:
 //
 // MUST retain original behaviour by default (see "default" sub test)
 // MUST show optional subcommand flags when SubcommandsWithOptionalFlags
-//      is enabled (see "forced" sub test)
+//
+//	is enabled (see "forced" sub test)
+//
 // MUST show any _required_ parent flags on subcommands
 // MUST NOT show any optional parent flags on subcommands
 func TestSubcommandsWithOptionalFlags(t *testing.T) {
@@ -406,7 +408,7 @@ func TestSubcommandsWithOptionalFlags(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --mandatory=STRING --required=STRING\n    more sub help\n\n  sub another --mandatory=STRING\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
 		_, _ = app.Parse([]string{"--help"})
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 
 	w.Truncate(0)
@@ -424,7 +426,7 @@ func TestSubcommandsWithOptionalFlags(t *testing.T) {
 	t.Run("forced", func(t *testing.T) {
 		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --mandatory=STRING --required=STRING [--flag=STRING]\n    more sub help\n\n  sub another --mandatory=STRING\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
 		_, _ = app.Parse([]string{"--help"})
-		require.Equal(t, expected, w.String())
+		assert.Equal(t, expected, w.String())
 	})
 }
 
