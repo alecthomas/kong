@@ -153,7 +153,13 @@ func (n *Node) Depth() int {
 // be included. see HelpOptions.IncludeOptionalFlagsInSummary
 func (n *Node) SummaryWithOptions(includeOptionalFlags bool) string {
 	summary := n.Path()
-	if flags := n.FlagSummary(true, includeOptionalFlags); flags != "" {
+	var flags string
+	if includeOptionalFlags {
+		flags = n.FlagSummaryWithOptions(true)
+	} else {
+		flags = n.FlagSummary(true)
+	}
+	if flags != "" {
 		summary += " " + flags
 	}
 	args := []string{}
@@ -191,7 +197,23 @@ func (n *Node) Summary() string {
 }
 
 // FlagSummary for the node.
-func (n *Node) FlagSummary(hide bool, showOptional bool) string {
+func (n *Node) FlagSummary(hide bool) string {
+	required := []string{}
+	count := 0
+	for _, group := range n.AllFlags(hide) {
+		for _, flag := range group {
+			count++
+			if flag.Required {
+				required = append(required, flag.Summary())
+			}
+		}
+	}
+	return strings.Join(required, " ")
+}
+
+// FlagSummaryWithOptions is the same behaviour as FlagSummary but
+// also includes any optional flags associated with the Node
+func (n *Node) FlagSummaryWithOptions(hide bool) string {
 	required := []string{}
 	optional := []string{}
 	count := 0
@@ -201,7 +223,7 @@ func (n *Node) FlagSummary(hide bool, showOptional bool) string {
 			// Show required flags
 			if flag.Required {
 				required = append(required, flag.Summary())
-			} else if showOptional && (flag.Parent == n) {
+			} else if flag.Parent == n {
 				// Show optional flags _if they belong to us_
 				optional = append(optional, flag.Summary())
 			}
