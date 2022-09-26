@@ -171,17 +171,33 @@ MAIN:
 		}
 	}
 
-	// Scan through argument positionals to ensure optional is never before a required.
+	if err := validatePositionalArguments(node); err != nil {
+		return nil, err
+	}
+
+	return node, nil
+}
+
+func validatePositionalArguments(node *Node) error {
 	var last *Value
 	for i, curr := range node.Positional {
-		if last != nil && !last.Required && curr.Required {
-			return nil, fmt.Errorf("%s: required %q can not come after optional %q", node.FullPath(), curr.Name, last.Name)
+		if last != nil {
+			// Scan through argument positionals to ensure optional is never before a required.
+			if !last.Required && curr.Required {
+				return fmt.Errorf("%s: required %q cannot come after optional %q", node.FullPath(), curr.Name, last.Name)
+			}
+
+			// Cumulative argument needs to be last.
+			if last.IsCumulative() {
+				return fmt.Errorf("%s: argument %q cannot come after cumulative %q", node.FullPath(), curr.Name, last.Name)
+			}
 		}
+
 		last = curr
 		curr.Position = i
 	}
 
-	return node, nil
+	return nil
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {

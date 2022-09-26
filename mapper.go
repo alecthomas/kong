@@ -274,7 +274,8 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
-		RegisterName("counter", counterMapper())
+		RegisterName("counter", counterMapper()).
+		RegisterKind(reflect.Ptr, ptrMapper(r))
 }
 
 type boolMapper struct{}
@@ -362,8 +363,11 @@ func intDecoder(bits int) MapperFunc { // nolint: dupl
 		case string:
 			sv = v
 
-		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 			sv = fmt.Sprintf("%v", v)
+
+		case float32, float64:
+			sv = fmt.Sprintf("%0.f", v)
 
 		default:
 			return fmt.Errorf("expected an int but got %q (%T)", t, t.Value)
@@ -665,6 +669,22 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return fmt.Errorf("%q exists but is not a directory", path)
 		}
 		target.SetString(path)
+		return nil
+	}
+}
+
+func ptrMapper(r *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		elem := reflect.New(target.Type().Elem()).Elem()
+		nestedMapper := r.ForValue(elem)
+		if nestedMapper == nil {
+			return fmt.Errorf("cannot find mapper for %v", target.Type().Elem().String())
+		}
+		err := nestedMapper.Decode(ctx, elem)
+		if err != nil {
+			return err
+		}
+		target.Set(elem.Addr())
 		return nil
 	}
 }

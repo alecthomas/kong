@@ -400,6 +400,21 @@ func TestNumbers(t *testing.T) {
 	})
 }
 
+func TestJSONLargeNumber(t *testing.T) {
+	// https://github.com/alecthomas/kong/pull/334
+	const n = 1000000
+	var cli struct {
+		N int64
+	}
+	json := fmt.Sprintf(`{"n": %d}`, n)
+	r, err := kong.JSON(strings.NewReader(json))
+	assert.NoError(t, err)
+	parser := mustNew(t, &cli, kong.Resolvers(r))
+	_, err = parser.Parse([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, n, cli.N)
+}
+
 func TestFileMapper(t *testing.T) {
 	type CLI struct {
 		File *os.File `arg:""`

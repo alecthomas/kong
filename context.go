@@ -663,6 +663,22 @@ func (c *Context) Apply() (string, error) {
 	return strings.Join(path, " "), nil
 }
 
+func flipBoolValue(value reflect.Value) error {
+	if value.Kind() == reflect.Bool {
+		value.SetBool(!value.Bool())
+		return nil
+	}
+
+	if value.Kind() == reflect.Ptr {
+		if !value.IsNil() {
+			return flipBoolValue(value.Elem())
+		}
+		return nil
+	}
+
+	return fmt.Errorf("cannot negate a value of %s", value.Type().String())
+}
+
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	candidates := []string{}
 	for _, flag := range flags {
@@ -691,7 +707,10 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		}
 		if flag.Negated {
 			value := c.getValue(flag.Value)
-			value.SetBool(!value.Bool())
+			err := flipBoolValue(value)
+			if err != nil {
+				return err
+			}
 			flag.Value.Apply(value)
 		}
 		c.Path = append(c.Path, &Path{Flag: flag})
@@ -891,6 +910,11 @@ func checkEnum(value *Value, target reflect.Value) error {
 	case reflect.Map, reflect.Struct:
 		return errors.New("enum can only be applied to a slice or value")
 
+	case reflect.Ptr:
+		if target.IsNil() {
+			return nil
+		}
+		return checkEnum(value, target.Elem())
 	default:
 		enumSlice := value.EnumSlice()
 		v := fmt.Sprintf("%v", target)

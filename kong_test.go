@@ -1724,6 +1724,7 @@ func TestDuplicateAliases(t *testing.T) {
 		DupA struct{} `cmd:"" aliases:"alias"`
 		DupB struct{} `cmd:"" aliases:"alias"`
 	}
+
 	_, err := kong.New(&cli)
 	assert.Error(t, err)
 }
@@ -1757,4 +1758,252 @@ func TestChildAliasesCanBeDuplicated(t *testing.T) {
 		B struct{} `cmd:""`
 	}
 	mustNew(t, &cli)
+}
+
+func TestCumulativeArgumentLast(t *testing.T) {
+	var cli struct {
+		Arg1 string   `arg:""`
+		Arg2 []string `arg:""`
+	}
+	_, err := kong.New(&cli)
+	assert.NoError(t, err)
+}
+
+func TestCumulativeArgumentNotLast(t *testing.T) {
+	var cli struct {
+		Arg2 []string `arg:""`
+		Arg1 string   `arg:""`
+	}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+}
+
+func TestStringPointer(t *testing.T) {
+	var cli struct {
+		Foo *string
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--foo", "wtf"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.Foo)
+	assert.Equal(t, "wtf", *cli.Foo)
+}
+
+func TestStringPointerNoValue(t *testing.T) {
+	var cli struct {
+		Foo *string
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.Foo)
+}
+
+func TestStringPointerDefault(t *testing.T) {
+	var cli struct {
+		Foo *string `default:"stuff"`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.Foo)
+	assert.Equal(t, "stuff", *cli.Foo)
+}
+
+func TestStringPointerAliasNoValue(t *testing.T) {
+	type Foo string
+	var cli struct {
+		F *Foo
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.F)
+}
+
+func TestStringPointerAlias(t *testing.T) {
+	type Foo string
+	var cli struct {
+		F *Foo
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--f=value"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.F)
+	assert.Equal(t, Foo("value"), *cli.F)
+}
+
+func TestStringPointerEmptyValue(t *testing.T) {
+	var cli struct {
+		F *string
+		G *string
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--f", "", "--g="})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.F)
+	assert.NotZero(t, cli.G)
+	assert.Equal(t, "", *cli.F)
+	assert.Equal(t, "", *cli.G)
+}
+
+func TestIntPtr(t *testing.T) {
+	var cli struct {
+		F *int
+		G *int
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--f=6"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.F)
+	assert.Zero(t, cli.G)
+	assert.Equal(t, 6, *cli.F)
+}
+
+func TestBoolPtr(t *testing.T) {
+	var cli struct {
+		X *bool
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--x"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, true, *cli.X)
+}
+
+func TestBoolPtrFalse(t *testing.T) {
+	var cli struct {
+		X *bool
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--x=false"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, false, *cli.X)
+}
+
+func TestBoolPtrNegated(t *testing.T) {
+	var cli struct {
+		X *bool `negatable:""`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--no-x"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, false, *cli.X)
+}
+
+func TestNilNegatableBoolPtr(t *testing.T) {
+	var cli struct {
+		X *bool `negatable:""`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.X)
+}
+
+func TestBoolPtrNil(t *testing.T) {
+	var cli struct {
+		X *bool
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.X)
+}
+
+func TestUnsupportedPtr(t *testing.T) {
+	type Foo struct {
+		x int // nolint
+		y int // nolint
+	}
+
+	var cli struct {
+		F *Foo
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--f=whatever"})
+	assert.Zero(t, ctx)
+	assert.Error(t, err)
+	assert.Equal(t, "--f: cannot find mapper for kong_test.Foo", err.Error())
+}
+
+func TestEnumPtr(t *testing.T) {
+	var cli struct {
+		X *string `enum:"A,B,C" default:"C"`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{"--x=A"})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, "A", *cli.X)
+}
+
+func TestEnumPtrOmitted(t *testing.T) {
+	var cli struct {
+		X *string `enum:"A,B,C" default:"C"`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.NotZero(t, cli.X)
+	assert.Equal(t, "C", *cli.X)
+}
+
+func TestEnumPtrOmittedNoDefault(t *testing.T) {
+	var cli struct {
+		X *string `enum:"A,B,C"`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.NotZero(t, k)
+	ctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	assert.NotZero(t, ctx)
+	assert.Zero(t, cli.X)
 }
