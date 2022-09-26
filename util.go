@@ -29,8 +29,8 @@ func (c ConfigFlag) BeforeResolve(kong *Kong, ctx *Context, trace *Path) error {
 // VersionFlag is a flag type that can be used to display a version number, stored in the "version" variable.
 type VersionFlag bool
 
-// BeforeApply writes the version variable and terminates with a 0 exit status.
-func (v VersionFlag) BeforeApply(app *Kong, vars Vars) error {
+// BeforeReset writes the version variable and terminates with a 0 exit status.
+func (v VersionFlag) BeforeReset(app *Kong, vars Vars) error {
 	fmt.Fprintln(app.Stdout, vars["version"])
 	app.Exit(0)
 	return nil

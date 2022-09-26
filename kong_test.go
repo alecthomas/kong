@@ -1544,7 +1544,8 @@ func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
 
 func TestHelpShouldStillWork(t *testing.T) {
 	type CLI struct {
-		Dir string `type:"existingdir" default:"missing-dir"`
+		Dir  string `type:"existingdir" default:"missing-dir"`
+		File string `type:"existingfile" default:"testdata/missing.txt"`
 	}
 	var cli CLI
 	w := &strings.Builder{}
@@ -1554,6 +1555,29 @@ func TestHelpShouldStillWork(t *testing.T) {
 		rc = i
 	}
 	_, err := k.Parse([]string{"--help"})
+	t.Log(w.String())
+	// checking return code validates the help hook was called
+	assert.Zero(t, rc)
+	// allow for error propagation from other validation (only for the
+	// sake of this test, due to the exit function not actually exiting the
+	// program; errors will not propagate in the real world).
+	assert.Error(t, err)
+}
+
+func TestVersionFlagShouldStillWork(t *testing.T) {
+	type CLI struct {
+		Dir     string `type:"existingdir" default:"missing-dir"`
+		File    string `type:"existingfile" default:"testdata/missing.txt"`
+		Version kong.VersionFlag
+	}
+	var cli CLI
+	w := &strings.Builder{}
+	k := mustNew(t, &cli, kong.Writers(w, w))
+	rc := -1 // init nonzero to help assert help hook was called
+	k.Exit = func(i int) {
+		rc = i
+	}
+	_, err := k.Parse([]string{"--version"})
 	t.Log(w.String())
 	// checking return code validates the help hook was called
 	assert.Zero(t, rc)
