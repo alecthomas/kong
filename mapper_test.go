@@ -401,18 +401,51 @@ func TestNumbers(t *testing.T) {
 }
 
 func TestJSONLargeNumber(t *testing.T) {
-	// https://github.com/alecthomas/kong/pull/334
-	const n = 1000000
-	var cli struct {
-		N int64
+	// Make sure that large numbers are not internally converted to
+	// scientific notation when the mapper parses the values.
+	// (Scientific notation is e.g. `1e+06` instead of `1000000`.)
+
+	// Large signed integers:
+	{
+		var cli struct {
+			N int64
+		}
+		json := `{"n": 1000000}`
+		r, err := kong.JSON(strings.NewReader(json))
+		assert.NoError(t, err)
+		parser := mustNew(t, &cli, kong.Resolvers(r))
+		_, err = parser.Parse([]string{})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1000000), cli.N)
 	}
-	json := fmt.Sprintf(`{"n": %d}`, n)
-	r, err := kong.JSON(strings.NewReader(json))
-	assert.NoError(t, err)
-	parser := mustNew(t, &cli, kong.Resolvers(r))
-	_, err = parser.Parse([]string{})
-	assert.NoError(t, err)
-	assert.Equal(t, n, cli.N)
+
+	// Large unsigned integers:
+	{
+		var cli struct {
+			N uint64
+		}
+		json := `{"n": 1000000}`
+		r, err := kong.JSON(strings.NewReader(json))
+		assert.NoError(t, err)
+		parser := mustNew(t, &cli, kong.Resolvers(r))
+		_, err = parser.Parse([]string{})
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(1000000), cli.N)
+	}
+
+	// Large floats:
+	{
+		var cli struct {
+			N float64
+		}
+		json := `{"n": 1000000.1}`
+		r, err := kong.JSON(strings.NewReader(json))
+		assert.NoError(t, err)
+		parser := mustNew(t, &cli, kong.Resolvers(r))
+		_, err = parser.Parse([]string{})
+		assert.NoError(t, err)
+		assert.Equal(t, float64(1000000.1), cli.N)
+	}
 }
 
 func TestFileMapper(t *testing.T) {
