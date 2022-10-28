@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/bits"
 	"net/url"
 	"os"
@@ -223,8 +222,8 @@ func (r *Registry) RegisterKind(kind reflect.Kind, mapper Mapper) *Registry {
 //
 // eg.
 //
-// 		Mapper string `kong:"type='colour'`
-//   	registry.RegisterName("colour", ...)
+//			Mapper string `kong:"type='colour'`
+//	  	registry.RegisterName("colour", ...)
 func (r *Registry) RegisterName(name string, mapper Mapper) *Registry {
 	r.names[name] = mapper
 	return r
@@ -753,7 +752,7 @@ func urlMapper() MapperFunc {
 //
 // It differs from strings.Split() in that the separator can exist in a field by escaping it with a \. eg.
 //
-//     SplitEscaped(`hello\,there,bob`, ',') == []string{"hello,there", "bob"}
+//	SplitEscaped(`hello\,there,bob`, ',') == []string{"hello,there", "bob"}
 func SplitEscaped(s string, sep rune) (out []string) {
 	if sep == -1 {
 		return []string{s}
@@ -786,7 +785,7 @@ func SplitEscaped(s string, sep rune) (out []string) {
 
 // JoinEscaped joins a slice of strings on sep, but also escapes any instances of sep in the fields with \. eg.
 //
-//     JoinEscaped([]string{"hello,there", "bob"}, ',') == `hello\,there,bob`
+//	JoinEscaped([]string{"hello,there", "bob"}, ',') == `hello\,there,bob`
 func JoinEscaped(s []string, sep rune) string {
 	escaped := []string{}
 	for _, e := range s {
@@ -813,7 +812,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: rev
 		return nil
 	}
 	filename = ExpandPath(filename)
-	data, err := ioutil.ReadFile(filename) // nolint: gosec
+	data, err := os.ReadFile(filename) // nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
@@ -837,7 +836,7 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 		return nil
 	}
 	filename = ExpandPath(filename)
-	data, err := ioutil.ReadFile(filename) // nolint: gosec
+	data, err := os.ReadFile(filename) // nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
