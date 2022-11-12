@@ -206,7 +206,7 @@ func TestJSONBasic(t *testing.T) {
 		"string": "🍕",
 		"slice": [5, 8],
 		"bool": true,
-		"slice_with_commas": ["a,b", "c"],
+		"sliceWithCommas": ["a,b", "c"],
 		"one":{
 			"string": "one value"
 		},
