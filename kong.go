@@ -68,6 +68,7 @@ type Kong struct {
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
+	embedded         []embedded
 	dynamicCommands  []*dynamicCommand
 }
 
@@ -109,6 +110,25 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 	model.Name = filepath.Base(os.Args[0])
 	k.Model = model
 	k.Model.HelpFlag = k.helpFlag
+
+	// Embed any embedded structs.
+	for _, embed := range k.embedded {
+		tag, err := parseTagString(strings.Join(embed.tags, " ")) //nolint:govet
+		if err != nil {
+			return nil, err
+		}
+		tag.Embed = true
+		v := reflect.Indirect(reflect.ValueOf(embed.strct))
+		node, err := buildNode(k, v, CommandNode, tag, map[string]bool{})
+		if err != nil {
+			return nil, err
+		}
+		for _, child := range node.Children {
+			child.Parent = k.Model.Node
+			k.Model.Children = append(k.Model.Children, child)
+		}
+		k.Model.Flags = append(k.Model.Flags, node.Flags...)
+	}
 
 	// Synthesise command nodes.
 	for _, dcmd := range k.dynamicCommands {
@@ -186,6 +206,10 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	}
 	if varsContributor, ok := value.Mapper.(VarsContributor); ok {
 		vars = vars.CloneWith(varsContributor.Vars(value))
+	}
+
+	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
+		return fmt.Errorf("enum for %s: %s", value.Summary(), err)
 	}
 
 	updatedVars := map[string]string{
