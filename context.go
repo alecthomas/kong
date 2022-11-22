@@ -110,7 +110,7 @@ func (c *Context) Bind(args ...interface{}) {
 //
 // This will typically have to be called like so:
 //
-//    BindTo(impl, (*MyInterface)(nil))
+//	BindTo(impl, (*MyInterface)(nil))
 func (c *Context) BindTo(impl, iface interface{}) {
 	c.bindings.addTo(impl, iface)
 }
@@ -717,6 +717,13 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		return nil
 	}
 	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
+}
+
+// Call an arbitrary function filling arguments with bound values.
+func (c *Context) Call(fn any, binds ...interface{}) (out []interface{}, err error) {
+	fv := reflect.ValueOf(fn)
+	bindings := c.Kong.bindings.clone().add(binds...).add(c).merge(c.bindings) //nolint:govet
+	return callAnyFunction(fv, bindings)
 }
 
 // RunNode calls the Run() method on an arbitrary node.

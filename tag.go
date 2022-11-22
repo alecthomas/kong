@@ -44,6 +44,16 @@ type Tag struct {
 	items map[string][]string
 }
 
+func (t *Tag) String() string {
+	out := []string{}
+	for key, list := range t.items {
+		for _, value := range list {
+			out = append(out, fmt.Sprintf("%s:%q", key, value))
+		}
+	}
+	return strings.Join(out, " ")
+}
+
 type tagChars struct {
 	sep, quote, assign rune
 }

@@ -25,7 +25,7 @@ func build(k *Kong, ast interface{}) (app *Application, err error) {
 		seenFlags[flag.Name] = true
 	}
 
-	node, err := buildNode(k, iv, ApplicationNode, seenFlags)
+	node, err := buildNode(k, iv, ApplicationNode, newEmptyTag(), seenFlags)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ type flattenedField struct {
 	tag   *Tag
 }
 
-func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
+func flattenedFields(v reflect.Value, ptag *Tag) (out []flattenedField, err error) {
 	v = reflect.Indirect(v)
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
@@ -61,6 +61,15 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 		if tag.Ignored {
 			continue
 		}
+		// Assign group if it's not already set.
+		if tag.Group == "" {
+			tag.Group = ptag.Group
+		}
+		// Accumulate prefixes.
+		tag.Prefix = ptag.Prefix + tag.Prefix
+		tag.EnvPrefix = ptag.EnvPrefix + tag.EnvPrefix
+		// Combine parent vars.
+		tag.Vars = ptag.Vars.CloneWith(tag.Vars)
 		// Command and embedded structs can be pointers, so we hydrate them now.
 		if (tag.Cmd || tag.Embed) && ft.Type.Kind() == reflect.Ptr {
 			fv = reflect.New(ft.Type.Elem()).Elem()
@@ -68,7 +77,8 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 		}
 		if !ft.Anonymous && !tag.Embed {
 			if fv.CanSet() {
-				out = append(out, flattenedField{field: ft, value: fv, tag: tag})
+				field := flattenedField{field: ft, value: fv, tag: tag}
+				out = append(out, field)
 			}
 			continue
 		}
@@ -78,7 +88,7 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 			fv = fv.Elem()
 		} else if fv.Type() == reflect.TypeOf(Plugins{}) {
 			for i := 0; i < fv.Len(); i++ {
-				fields, ferr := flattenedFields(fv.Index(i).Elem())
+				fields, ferr := flattenedFields(fv.Index(i).Elem(), tag)
 				if ferr != nil {
 					return nil, ferr
 				}
@@ -86,20 +96,9 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 			}
 			continue
 		}
-		sub, err := flattenedFields(fv)
+		sub, err := flattenedFields(fv, tag)
 		if err != nil {
 			return nil, err
-		}
-		for _, subf := range sub {
-			// Assign parent if it's not already set.
-			if subf.tag.Group == "" {
-				subf.tag.Group = tag.Group
-			}
-			// Accumulate prefixes.
-			subf.tag.Prefix = tag.Prefix + subf.tag.Prefix
-			subf.tag.EnvPrefix = tag.EnvPrefix + subf.tag.EnvPrefix
-			// Combine parent vars.
-			subf.tag.Vars = tag.Vars.CloneWith(subf.tag.Vars)
 		}
 		out = append(out, sub...)
 	}
@@ -109,13 +108,13 @@ func flattenedFields(v reflect.Value) (out []flattenedField, err error) {
 // Build a Node in the Kong data model.
 //
 // "v" is the value to create the node from, "typ" is the output Node type.
-func buildNode(k *Kong, v reflect.Value, typ NodeType, seenFlags map[string]bool) (*Node, error) {
+func buildNode(k *Kong, v reflect.Value, typ NodeType, tag *Tag, seenFlags map[string]bool) (*Node, error) {
 	node := &Node{
 		Type:   typ,
 		Target: v,
-		Tag:    newEmptyTag(),
+		Tag:    tag,
 	}
-	fields, err := flattenedFields(v)
+	fields, err := flattenedFields(v, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +200,7 @@ func validatePositionalArguments(node *Node) error {
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {
-	child, err := buildNode(k, fv, typ, seenFlags)
+	child, err := buildNode(k, fv, typ, newEmptyTag(), seenFlags)
 	if err != nil {
 		return err
 	}
