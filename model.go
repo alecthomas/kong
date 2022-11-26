@@ -318,6 +318,9 @@ func (v *Value) IsMap() bool {
 
 // IsBool returns true if the underlying value is a boolean.
 func (v *Value) IsBool() bool {
+	if m, ok := v.Mapper.(BoolMapperExt); ok && m.IsBoolFromValue(v.Target) {
+		return true
+	}
 	if m, ok := v.Mapper.(BoolMapper); ok && m.IsBool() {
 		return true
 	}
