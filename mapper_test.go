@@ -469,6 +469,24 @@ func TestFileMapper(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, os.Stdin, cli.File)
 }
+func TestFileContentMapper(t *testing.T) {
+	type CLI struct {
+		File []byte `type:"filecontent"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--file", "testdata/file.txt"})
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(`Hello world.`), cli.File)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--file", "testdata/missing.txt"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--file", "testdata/"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "is a directory")
+}
 
 //nolint:dupl
 func TestExistingFileMapper(t *testing.T) {

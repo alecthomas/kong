@@ -283,6 +283,7 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
 		RegisterName("counter", counterMapper()).
+		RegisterName("filecontent", fileContentMapper(r)).
 		RegisterKind(reflect.Ptr, ptrMapper{r})
 }
 
@@ -680,6 +681,39 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return fmt.Errorf("%q exists but is not a directory", path)
 		}
 		target.SetString(path)
+		return nil
+	}
+}
+
+func fileContentMapper(r *Registry) MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		if target.Kind() != reflect.Slice && target.Elem().Kind() != reflect.Uint8 {
+			return fmt.Errorf("\"filecontent\" must be applied to []byte not %s", target.Type())
+		}
+		var path string
+		err := ctx.Scan.PopValueInto("file", &path)
+		if err != nil {
+			return err
+		}
+
+		if !ctx.Value.Active || ctx.Value.Set {
+			// early return to avoid checking extra dirs that may not exist;
+			// this hack only works because the value provided on the cli is
+			// checked before the default value is checked (if default is set).
+			return nil
+		}
+
+		var data []byte
+		if path != "-" {
+			path = ExpandPath(path)
+			data, err = ioutil.ReadFile(path) //nolint:gosec
+		} else {
+			data, err = ioutil.ReadAll(os.Stdin)
+		}
+		if err != nil {
+			return err
+		}
+		target.SetBytes(data)
 		return nil
 	}
 }
