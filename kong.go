@@ -65,6 +65,7 @@ type Kong struct {
 	helpFlag      *Flag
 	groups        []Group
 	vars          Vars
+	flagNamer     func(string) string
 
 	// Set temporarily by Options. These are applied after build().
 	postBuildOptions []Option
@@ -85,6 +86,9 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		bindings:      bindings{},
 		helpFormatter: DefaultHelpValueFormatter,
 		ignoreFields:  make([]*regexp.Regexp, 0),
+		flagNamer: func(s string) string {
+			return strings.ToLower(dashedString(s))
+		},
 	}
 
 	options = append(options, Bind(k))

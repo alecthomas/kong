@@ -483,3 +483,11 @@ func DefaultEnvars(prefix string) Option {
 		return nil
 	})
 }
+
+// FlagNamer allows you to override the default kebab-case automated flag name generation.
+func FlagNamer(namer func(fieldName string) string) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.flagNamer = namer
+		return nil
+	})
+}

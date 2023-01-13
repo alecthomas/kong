@@ -2,6 +2,7 @@ package kong
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -111,4 +112,13 @@ func TestBindToProvider(t *testing.T) {
 	err = ctx.Run()
 	assert.NoError(t, err)
 	assert.True(t, cli.Called)
+}
+
+func TestFlagNamer(t *testing.T) {
+	var cli struct {
+		SomeFlag string
+	}
+	app, err := New(&cli, FlagNamer(strings.ToUpper))
+	assert.NoError(t, err)
+	assert.Equal(t, "SOMEFLAG", app.Model.Flags[1].Name)
 }

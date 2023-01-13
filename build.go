@@ -133,7 +133,7 @@ MAIN:
 		tag := field.tag
 		name := tag.Name
 		if name == "" {
-			name = tag.Prefix + strings.ToLower(dashedString(ft.Name))
+			name = tag.Prefix + k.flagNamer(ft.Name)
 		} else {
 			name = tag.Prefix + name
 		}

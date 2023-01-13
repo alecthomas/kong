@@ -642,17 +642,17 @@ func TestRun(t *testing.T) {
 
 func TestInterpolationIntoModel(t *testing.T) {
 	var cli struct {
-		Flag    string `default:"${default}" help:"Help, I need ${somebody}" enum:"${enum}"`
+		Flag    string `default:"${default_value}" help:"Help, I need ${somebody}" enum:"${enum}"`
 		EnumRef string `enum:"a,b" required:"" help:"One of ${enum}"`
 		EnvRef  string `env:"${env}" help:"God ${env}"`
 	}
 	_, err := kong.New(&cli)
 	assert.Error(t, err)
 	p, err := kong.New(&cli, kong.Vars{
-		"default":  "Some default value.",
-		"somebody": "chickens!",
-		"enum":     "a,b,c,d",
-		"env":      "SAVE_THE_QUEEN",
+		"default_value": "Some default value.",
+		"somebody":      "chickens!",
+		"enum":          "a,b,c,d",
+		"env":           "SAVE_THE_QUEEN",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(p.Model.Flags))
