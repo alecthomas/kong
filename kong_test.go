@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/kong"
 	"github.com/alecthomas/repr"
+
+	"github.com/alecthomas/kong"
 )
 
 func mustNew(t *testing.T, cli interface{}, options ...kong.Option) *kong.Kong {
