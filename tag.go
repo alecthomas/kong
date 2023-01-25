@@ -56,11 +56,13 @@ func (t *Tag) String() string {
 
 type tagChars struct {
 	sep, quote, assign rune
+	needsUnquote       bool
 }
 
-var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
-var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
+var kongChars = tagChars{sep: ',', quote: '\'', assign: '=', needsUnquote: false}
+var bareChars = tagChars{sep: ' ', quote: '"', assign: ':', needsUnquote: true}
 
+// nolint:gocyclo
 func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) {
 	d := map[string][]string{}
 	key := []rune{}
@@ -68,11 +70,25 @@ func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) 
 	quotes := false
 	inKey := true
 
-	add := func() {
-		d[string(key)] = append(d[string(key)], string(value))
+	add := func() error {
+		// Bare tags are quoted, therefore we need to unquote them in the same fashion reflect.Lookup() (implicitly)
+		// unquotes "kong tags".
+		s := string(value)
+
+		if chr.needsUnquote && s != "" {
+			if unquoted, err := strconv.Unquote(fmt.Sprintf(`"%s"`, s)); err == nil {
+				s = unquoted
+			} else {
+				return fmt.Errorf("unquoting tag value `%s`: %w", s, err)
+			}
+		}
+
+		d[string(key)] = append(d[string(key)], s)
 		key = []rune{}
 		value = []rune{}
 		inKey = true
+
+		return nil
 	}
 
 	runes := []rune(tagString)
@@ -86,7 +102,10 @@ func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) 
 			eof = true
 		}
 		if !quotes && r == chr.sep {
-			add()
+			if err := add(); err != nil {
+				return nil, err
+			}
+
 			continue
 		}
 		if r == chr.assign && inKey {
@@ -96,6 +115,12 @@ func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) 
 		if r == '\\' {
 			if next == chr.quote {
 				idx++
+
+				// We need to keep the backslashes, otherwise subsequent unquoting cannot work
+				if chr.needsUnquote {
+					value = append(value, r)
+				}
+
 				r = chr.quote
 			}
 		} else if r == chr.quote {
@@ -119,7 +144,9 @@ func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) 
 		return nil, fmt.Errorf("%v is not quoted properly", tagString)
 	}
 
-	add()
+	if err := add(); err != nil {
+		return nil, err
+	}
 
 	return d, nil
 }
@@ -242,7 +269,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	}
 	t.PlaceHolder = t.Get("placeholder")
 	t.Enum = t.Get("enum")
-	scalarType := (typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map || typ.Kind() == reflect.Ptr))
+	scalarType := typ == nil || !(typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map || typ.Kind() == reflect.Ptr)
 	if t.Enum != "" && !(t.Required || t.HasDefault) && scalarType {
 		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
 	}
