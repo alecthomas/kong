@@ -58,6 +58,26 @@ func TestEnvarsFlagBasic(t *testing.T) {
 	assert.Equal(t, "foo", cli.Interp)
 }
 
+func TestEnvarsFlagMultiple(t *testing.T) {
+	var cli struct {
+		FirstENVPresent  string `env:"KONG_TEST1_1,KONG_TEST1_2"`
+		SecondENVPresent string `env:"KONG_TEST2_1,KONG_TEST2_2"`
+	}
+	parser, unsetEnvs := newEnvParser(t, &cli,
+		envMap{
+			"KONG_TEST1_1": "value1.1",
+			"KONG_TEST1_2": "value1.2",
+			"KONG_TEST2_2": "value2.2",
+		},
+	)
+	defer unsetEnvs()
+
+	_, err := parser.Parse([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, "value1.1", cli.FirstENVPresent)
+	assert.Equal(t, "value2.2", cli.SecondENVPresent)
+}
+
 func TestEnvarsFlagOverride(t *testing.T) {
 	var cli struct {
 		Flag string `env:"KONG_FLAG"`
@@ -95,6 +115,23 @@ func TestEnvarsEnvPrefix(t *testing.T) {
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
 	assert.Equal(t, []int{1, 2, 3}, cli.Slice)
+}
+
+func TestEnvarsEnvPrefixMultiple(t *testing.T) {
+	type Anonymous struct {
+		Slice1 []int `env:"NUMBERS1_1,NUMBERS1_2"`
+		Slice2 []int `env:"NUMBERS2_1,NUMBERS2_2"`
+	}
+	var cli struct {
+		Anonymous `envprefix:"KONG_"`
+	}
+	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_NUMBERS1_1": "1,2,3", "KONG_NUMBERS2_2": "5,6,7"})
+	defer restoreEnv()
+
+	_, err := parser.Parse([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 3}, cli.Slice1)
+	assert.Equal(t, []int{5, 6, 7}, cli.Slice2)
 }
 
 func TestEnvarsNestedEnvPrefix(t *testing.T) {

@@ -451,21 +451,21 @@ func siftStrings(ss []string, filter func(s string) bool) []string {
 //	--some.value -> PREFIX_SOME_VALUE
 func DefaultEnvars(prefix string) Option {
 	processFlag := func(flag *Flag) {
-		switch env := flag.Env; {
+		switch env := flag.Envs; {
 		case flag.Name == "help":
 			return
-		case env == "-":
-			flag.Env = ""
+		case len(env) == 1 && env[0] == "-":
+			flag.Envs = nil
 			return
-		case env != "":
+		case len(env) > 0:
 			return
 		}
 		replacer := strings.NewReplacer("-", "_", ".", "_")
 		names := append([]string{prefix}, camelCase(replacer.Replace(flag.Name))...)
 		names = siftStrings(names, func(s string) bool { return !(s == "_" || strings.TrimSpace(s) == "") })
 		name := strings.ToUpper(strings.Join(names, "_"))
-		flag.Env = name
-		flag.Value.Tag.Env = name
+		flag.Envs = append(flag.Envs, name)
+		flag.Value.Tag.Envs = append(flag.Value.Tag.Envs, name)
 	}
 
 	var processNode func(node *Node)

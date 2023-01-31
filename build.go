@@ -138,8 +138,10 @@ MAIN:
 			name = tag.Prefix + name
 		}
 
-		if tag.Env != "" {
-			tag.Env = tag.EnvPrefix + tag.Env
+		if len(tag.Envs) != 0 {
+			for i := range tag.Envs {
+				tag.Envs[i] = tag.EnvPrefix + tag.Envs[i]
+			}
 		}
 
 		// Nested structs are either commands or args, unless they implement the Mapper interface.
@@ -304,7 +306,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			Value:       value,
 			Short:       tag.Short,
 			PlaceHolder: tag.PlaceHolder,
-			Env:         tag.Env,
+			Envs:        tag.Envs,
 			Group:       buildGroupForKey(k, tag.Group),
 			Xor:         tag.Xor,
 			Hidden:      tag.Hidden,

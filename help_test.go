@@ -472,6 +472,18 @@ func TestEnvarAutoHelp(t *testing.T) {
 	assert.Contains(t, w.String(), "A flag ($FLAG).")
 }
 
+func TestMultipleEnvarAutoHelp(t *testing.T) {
+	var cli struct {
+		Flag string `env:"FLAG1,FLAG2" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag ($FLAG1, $FLAG2).")
+}
+
+//nolint:dupl // false positive
 func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	type Anonymous struct {
 		Flag  string `env:"FLAG" help:"A flag."`
@@ -488,9 +500,45 @@ func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	assert.Contains(t, w.String(), "A different flag.")
 }
 
+//nolint:dupl // false positive
+func TestMultipleEnvarAutoHelpWithEnvPrefix(t *testing.T) {
+	type Anonymous struct {
+		Flag  string `env:"FLAG1,FLAG2" help:"A flag."`
+		Other string `help:"A different flag."`
+	}
+	var cli struct {
+		Anonymous `envprefix:"ANON_"`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag ($ANON_FLAG1, $ANON_FLAG2).")
+	assert.Contains(t, w.String(), "A different flag.")
+}
+
+//nolint:dupl // false positive
 func TestCustomValueFormatter(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+		kong.ValueFormatter(func(value *kong.Value) string {
+			return value.Help
+		}),
+	)
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag.")
+}
+
+//nolint:dupl // false positive
+func TestMultipleCustomValueFormatter(t *testing.T) {
+	var cli struct {
+		Flag string `env:"FLAG1,FLAG2" help:"A flag."`
 	}
 	w := &strings.Builder{}
 	p := mustNew(t, &cli,

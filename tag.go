@@ -24,7 +24,7 @@ type Tag struct {
 	Default     string
 	Format      string
 	PlaceHolder string
-	Env         string
+	Envs        []string
 	Short       rune
 	Hidden      bool
 	Sep         rune
@@ -234,7 +234,9 @@ func hydrateTag(t *Tag, typ reflect.Type) error { // nolint: gocyclo
 	t.Help = t.Get("help")
 	t.Type = t.Get("type")
 	t.TypeName = typeName
-	t.Env = t.Get("env")
+	for _, env := range t.GetAll("env") {
+		t.Envs = append(t.Envs, strings.FieldsFunc(env, tagSplitFn)...)
+	}
 	t.Short, err = t.GetRune("short")
 	if err != nil && t.Get("short") != "" {
 		return fmt.Errorf("invalid short flag name %q: %s", t.Get("short"), err)
