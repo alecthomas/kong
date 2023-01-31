@@ -665,7 +665,7 @@ func TestInterpolationIntoModel(t *testing.T) {
 	assert.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
 	assert.Equal(t, []string{"a", "b", "c", "d"}, flag.EnumSlice())
 	assert.Equal(t, "One of a,b", flag2.Help)
-	assert.Equal(t, "SAVE_THE_QUEEN", flag3.Env)
+	assert.Equal(t, []string{"SAVE_THE_QUEEN"}, flag3.Envs)
 	assert.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
 

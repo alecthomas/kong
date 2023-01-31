@@ -227,11 +227,16 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
 	if value.Flag != nil {
-		if value.Flag.Env, err = interpolate(value.Flag.Env, vars, nil); err != nil {
-			return fmt.Errorf("env value for %s: %s", value.Summary(), err)
+		for i, env := range value.Flag.Envs {
+			if value.Flag.Envs[i], err = interpolate(env, vars, nil); err != nil {
+				return fmt.Errorf("env value for %s: %s", value.Summary(), err)
+			}
 		}
-		value.Tag.Env = value.Flag.Env
-		updatedVars["env"] = value.Flag.Env
+		value.Tag.Envs = value.Flag.Envs
+		updatedVars["env"] = ""
+		if len(value.Flag.Envs) != 0 {
+			updatedVars["env"] = value.Flag.Envs[0]
+		}
 	}
 	value.Help, err = interpolate(value.Help, vars, updatedVars)
 	if err != nil {
