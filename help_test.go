@@ -483,6 +483,7 @@ func TestMultipleEnvarAutoHelp(t *testing.T) {
 	assert.Contains(t, w.String(), "A flag ($FLAG1, $FLAG2).")
 }
 
+//nolint:dupl // false positive
 func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	type Anonymous struct {
 		Flag  string `env:"FLAG" help:"A flag."`
@@ -499,6 +500,7 @@ func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	assert.Contains(t, w.String(), "A different flag.")
 }
 
+//nolint:dupl // false positive
 func TestMultipleEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	type Anonymous struct {
 		Flag  string `env:"FLAG1,FLAG2" help:"A flag."`
@@ -515,6 +517,7 @@ func TestMultipleEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	assert.Contains(t, w.String(), "A different flag.")
 }
 
+//nolint:dupl // false positive
 func TestCustomValueFormatter(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG" help:"A flag."`
@@ -532,6 +535,7 @@ func TestCustomValueFormatter(t *testing.T) {
 	assert.Contains(t, w.String(), "A flag.")
 }
 
+//nolint:dupl // false positive
 func TestMultipleCustomValueFormatter(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG1,FLAG2" help:"A flag."`
