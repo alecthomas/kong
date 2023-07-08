@@ -246,6 +246,7 @@ type Value struct {
 	Position     int    // Position (for positional arguments).
 	Passthrough  bool   // Set to true to stop flag parsing when encountered.
 	Active       bool   // Denotes the value is part of an active branch in the CLI.
+	SetToDefault bool   // Set to true when this value is set to default value.
 }
 
 // EnumMap returns a map of the enums in this value.
@@ -380,6 +381,9 @@ func (v *Value) Reset() error {
 		}
 	}
 	if v.HasDefault {
+		if !v.Set {
+			v.SetToDefault = true
+		}
 		return v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
 	}
 	return nil
