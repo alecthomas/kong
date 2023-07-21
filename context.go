@@ -201,7 +201,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 
 		case *Application:
 			value = node.Target
-			desc = node.Name
+			desc = ""
 
 		case *Node:
 			value = node.Target
@@ -209,7 +209,10 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		}
 		if validate := isValidatable(value); validate != nil {
 			if err := validate.Validate(); err != nil {
-				return fmt.Errorf("%s: %w", desc, err)
+				if desc != "" {
+					return fmt.Errorf("%s: %w", desc, err)
+				}
+				return err
 			}
 		}
 	}
