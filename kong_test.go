@@ -1214,7 +1214,7 @@ func TestValidateApp(t *testing.T) {
 	cli := validateCli{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{})
-	assert.EqualError(t, err, "test: app error")
+	assert.EqualError(t, err, "app error")
 }
 
 func TestValidateCmd(t *testing.T) {
