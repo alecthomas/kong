@@ -303,10 +303,8 @@ func main() {
 
 ## Hooks: BeforeReset(), BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option
 
-If a node in the grammar has a `BeforeReset(...)`, `BeforeResolve
-(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those
-methods will be called before values are reset, before validation/assignment,
-and after validation/assignment, respectively.
+If a node in the grammar has a `BeforeReset(...)`, `BeforeResolve(...)`, `BeforeApply(...) error`, `AfterApply(...) error`, and/or `BeforeValidate(...) error` method, 
+those methods will be called before values are reset, before validation/assignment, and after validation/assignment, respectively.
 
 The `--help` flag is implemented with a `BeforeReset` hook.
 

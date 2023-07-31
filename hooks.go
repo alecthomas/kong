@@ -12,6 +12,12 @@ type BeforeApply interface {
 	BeforeApply(args ...interface{}) error
 }
 
+// BeforeValidate is a documentation-only interface describing hooks that run before validation is applied.
+type BeforeValidate interface {
+	// This is not the correct signature - see README for details.
+	BeforeValidate(args ...interface{}) error
+}
+
 // AfterApply is a documentation-only interface describing hooks that run after values are set.
 type AfterApply interface {
 	// This is not the correct signature - see README for details.

@@ -368,8 +368,8 @@ func TestResolverTriggersHooks(t *testing.T) {
 	_, err := mustNew(t, &cli, kong.Bind(ctx), kong.Resolvers(first)).Parse(nil)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "one", string(cli.Flag))
-	assert.Equal(t, []string{"before:", "after:one"}, ctx.values)
+	assert.Equal(t, "ONE", string(cli.Flag))
+	assert.Equal(t, []string{"before:", "beforeValidate:ONE", "after:ONE"}, ctx.values)
 }
 
 type validatingResolver struct {

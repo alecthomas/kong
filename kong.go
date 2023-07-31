@@ -302,6 +302,9 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if _, err = ctx.Apply(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
+	if err = k.applyHook(ctx, "BeforeValidate"); err != nil {
+		return nil, &ParseError{error: err, Context: ctx}
+	}
 	if err = ctx.Validate(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}

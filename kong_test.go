@@ -455,6 +455,12 @@ func (h *hookValue) BeforeApply(ctx *hookContext) error {
 	return nil
 }
 
+func (h *hookValue) BeforeValidate(ctx *hookContext) error {
+	*h = hookValue(strings.ToUpper(string(*h)))
+	ctx.values = append(ctx.values, "beforeValidate:"+string(*h))
+	return nil
+}
+
 func (h *hookValue) AfterApply(ctx *hookContext) error {
 	ctx.values = append(ctx.values, "after:"+string(*h))
 	return nil
@@ -482,9 +488,9 @@ func TestHooks(t *testing.T) {
 		values hookContext
 	}{
 		{"Command", "one", hookContext{true, nil}},
-		{"Arg", "one two", hookContext{true, []string{"before:", "after:two"}}},
-		{"Flag", "one --three=THREE", hookContext{true, []string{"before:", "after:THREE"}}},
-		{"ArgAndFlag", "one two --three=THREE", hookContext{true, []string{"before:", "before:", "after:two", "after:THREE"}}},
+		{"Arg", "one two", hookContext{true, []string{"before:", "beforeValidate:TWO", "after:TWO"}}},
+		{"Flag", "one --three=THREE", hookContext{true, []string{"before:", "beforeValidate:THREE", "after:THREE"}}},
+		{"ArgAndFlag", "one two --three=THREE", hookContext{true, []string{"before:", "before:", "beforeValidate:TWO", "beforeValidate:THREE", "after:TWO", "after:THREE"}}},
 	}
 
 	var cli struct {
@@ -776,8 +782,8 @@ func TestHooksCalledForDefault(t *testing.T) {
 	ctx := &hookContext{}
 	_, err := mustNew(t, &cli, kong.Bind(ctx)).Parse(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "default", string(cli.Flag))
-	assert.Equal(t, []string{"before:default", "after:default"}, ctx.values)
+	assert.Equal(t, "DEFAULT", string(cli.Flag))
+	assert.Equal(t, []string{"before:default", "beforeValidate:DEFAULT", "after:DEFAULT"}, ctx.values)
 }
 
 func TestEnum(t *testing.T) {
