@@ -29,24 +29,6 @@ func TestConfigFlag(t *testing.T) {
 	assert.Equal(t, "hello world", cli.Flag)
 }
 
-func TestEnvFlag(t *testing.T) {
-	var cli struct {
-		EnvFile EnvFlag
-		Flag    string `env:"FLAG"`
-	}
-
-	w, err := ioutil.TempFile("", "")
-	assert.NoError(t, err)
-	defer os.Remove(w.Name())
-	w.WriteString(`FLAG=hello world`) // nolint: errcheck
-	w.Close()
-
-	p := Must(&cli)
-	_, err = p.Parse([]string{"--env-file", w.Name()})
-	assert.NoError(t, err)
-	assert.Equal(t, "hello world", cli.Flag)
-}
-
 func TestVersionFlag(t *testing.T) {
 	var cli struct {
 		Version VersionFlag

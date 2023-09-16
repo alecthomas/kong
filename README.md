@@ -2,45 +2,48 @@
 <p align="center"><img width="90%" src="kong.png" /></p>
 
 # Kong is a command-line parser for Go
+
 [![](https://godoc.org/github.com/alecthomas/kong?status.svg)](http://godoc.org/github.com/alecthomas/kong) [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong) [![Go Report Card](https://goreportcard.com/badge/github.com/alecthomas/kong)](https://goreportcard.com/report/github.com/alecthomas/kong) [![Slack chat](https://img.shields.io/static/v1?logo=slack&style=flat&label=slack&color=green&message=gophers)](https://gophers.slack.com/messages/CN9DS8YF3)
 
 <!-- https://github.com/naokazuterada/MarkdownTOC -->
 
 <!-- MarkdownTOC autolink="true" style="ordered" indent="    " -->
 
-1. [Introduction](#introduction)
-1. [Help](#help)
-    1. [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
-    1. [Defining help in Kong](#defining-help-in-kong)
-        1. [Showing the _command_'s detailed help](#showing-the-_command_s-detailed-help)
-        1. [Showing an _argument_'s detailed help](#showing-an-_argument_s-detailed-help)
-1. [Command handling](#command-handling)
-    1. [Switch on the command string](#switch-on-the-command-string)
-    1. [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
-1. [Hooks: BeforeReset\(\), BeforeResolve\(\), BeforeApply\(\), AfterApply\(\) and the Bind\(\) option](#hooks-beforereset-beforeresolve-beforeapply-afterapply-and-the-bind-option)
-1. [Flags](#flags)
-1. [Commands and sub-commands](#commands-and-sub-commands)
-1. [Branching positional arguments](#branching-positional-arguments)
-1. [Positional arguments](#positional-arguments)
-1. [Slices](#slices)
-1. [Maps](#maps)
-1. [Nested data structure](#nested-data-structure)
-1. [Custom named decoders](#custom-named-decoders)
-1. [Supported field types](#supported-field-types)
-1. [Custom decoders \(mappers\)](#custom-decoders-mappers)
-1. [Supported tags](#supported-tags)
-1. [Plugins](#plugins)
-1. [Dynamic Commands](#dynamic-commands)
-1. [Variable interpolation](#variable-interpolation)
-1. [Validation](#validation)
-1. [Modifying Kong's behaviour](#modifying-kongs-behaviour)
-    1. [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
-    1. [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
-    1. [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
-    1. [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
-    1. [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
-    1. [`Bind(...)` - bind values for callback hooks and Run\(\) methods](#bind---bind-values-for-callback-hooks-and-run-methods)
-    1. [Other options](#other-options)
+- [Kong is a command-line parser for Go](#kong-is-a-command-line-parser-for-go)
+  - [Introduction](#introduction)
+  - [Help](#help)
+    - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
+    - [Defining help in Kong](#defining-help-in-kong)
+      - [Showing the _command_'s detailed help](#showing-the-commands-detailed-help)
+      - [Showing an _argument_'s detailed help](#showing-an-arguments-detailed-help)
+  - [Command handling](#command-handling)
+    - [Switch on the command string](#switch-on-the-command-string)
+    - [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
+  - [Hooks: BeforeReset(), BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option](#hooks-beforereset-beforeresolve-beforeapply-afterapply-and-the-bind-option)
+  - [Flags](#flags)
+  - [Commands and sub-commands](#commands-and-sub-commands)
+  - [Branching positional arguments](#branching-positional-arguments)
+  - [Positional arguments](#positional-arguments)
+  - [Slices](#slices)
+  - [Maps](#maps)
+  - [Pointers](#pointers)
+  - [Nested data structure](#nested-data-structure)
+  - [Custom named decoders](#custom-named-decoders)
+  - [Supported field types](#supported-field-types)
+  - [Custom decoders (mappers)](#custom-decoders-mappers)
+  - [Supported tags](#supported-tags)
+  - [Plugins](#plugins)
+  - [Dynamic Commands](#dynamic-commands)
+  - [Variable interpolation](#variable-interpolation)
+  - [Validation](#validation)
+  - [Modifying Kong's behaviour](#modifying-kongs-behaviour)
+    - [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
+    - [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
+    - [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+    - [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
+    - [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
+    - [`Bind(...)` - bind values for callback hooks and Run() methods](#bind---bind-values-for-callback-hooks-and-run-methods)
+    - [Other options](#other-options)
 
 <!-- /MarkdownTOC -->
 
@@ -137,13 +140,14 @@ also be interpolated into the help string.
 Finally, any command, or argument type implementing the interface
 `Help() string` will have this function called to retrieve more detail to
 augment the help tag. This allows for much more descriptive text than can
-fit in Go tags.  [See _examples/shell/help](./_examples/shell/help)
+fit in Go tags. [See \_examples/shell/help](./_examples/shell/help)
 
 #### Showing the _command_'s detailed help
 
 A command's additional help text is _not_ shown from top-level help, but can be displayed within contextual help:
 
 **Top level help**
+
 ```bash
  $ go run ./_examples/shell/help --help
 Usage: help <command>
@@ -159,6 +163,7 @@ Commands:
 ```
 
 **Contextual**
+
 ```bash
  $ go run ./_examples/shell/help echo --help
 Usage: help echo <msg>
@@ -180,6 +185,7 @@ Flags:
 Custom help will only be shown for _positional arguments with named fields_ ([see the README section on positional arguments for more details on what that means](../../../README.md#branching-positional-arguments))
 
 **Contextual argument help**
+
 ```bash
  $ go run ./_examples/shell/help msg --help
 Usage: help echo <msg>
@@ -337,9 +343,29 @@ func main() {
 }
 ```
 
+Another example of using hooks is load the env-file:
+
+```go
+import (
+	"github.com/joho/godotenv"
+)
+
+type EnvFlag string
+
+// BeforeResolve loads env file.
+func (c EnvFlag) BeforeReset(ctx *Context, trace *Path) error {
+	path := string(ctx.FlagValue(trace.Flag).(EnvFlag)) // nolint
+	path = ExpandPath(path)
+	if err := godotenv.Load(path); err != nil {
+		return err
+	}
+	return nil
+}
+```
+
 ## Flags
 
-Any [mapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) field in the command structure *not* tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
+Any [mapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) field in the command structure _not_ tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
 
 eg. The command-line `app [--flag="foo"]` can be represented by the following.
 
@@ -479,14 +505,13 @@ Kong includes a number of builtin custom type mappers. These can be used by
 specifying the tag `type:"<type>"`. They are registered with the option
 function `NamedMapper(name, mapper)`.
 
-| Name           | Description                                                                                        |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| `path`         | A path. ~ expansion is applied. `-` is accepted for stdout, and will be passed unaltered.          |
-| `existingfile` | An existing file. ~ expansion is applied. `-` is accepted for stdin, and will be passed unaltered. |
-| `existingdir`  | An existing directory. ~ expansion is applied.                                                     |
-| `counter`      | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.             |
+| Name           | Description                                                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `path`         | A path. ~ expansion is applied. `-` is accepted for stdout, and will be passed unaltered.                              |
+| `existingfile` | An existing file. ~ expansion is applied. `-` is accepted for stdin, and will be passed unaltered.                     |
+| `existingdir`  | An existing directory. ~ expansion is applied.                                                                         |
+| `counter`      | Increment a numeric field. Useful for `-vvv`. Can accept `-s`, `--long` or `--long=N`.                                 |
 | `filecontent`  | Read the file at path into the field. ~ expansion is applied. `-` is accepted for stdin, and will be passed unaltered. |
-
 
 Slices and maps treat type tags specially. For slices, the `type:""` tag
 specifies the element type. For maps, the tag has the format
@@ -494,9 +519,7 @@ specifies the element type. For maps, the tag has the format
 
 ## Supported field types
 
-
 ## Custom decoders (mappers)
-
 
 Any field implementing `encoding.TextUnmarshaler` or `json.Unmarshaler` will use those interfaces
 for decoding values. Kong also includes builtin support for many common Go types:
@@ -522,7 +545,7 @@ Tags can be in two forms:
 Both can coexist with standard Tag parsing.
 
 | Tag                  | Description                                                                                                                                                                                                                                                                                                                    |
-|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `cmd:""`             | If present, struct is a command.                                                                                                                                                                                                                                                                                               |
 | `arg:""`             | If present, field is an argument. Required by default.                                                                                                                                                                                                                                                                         |
 | `env:"X,Y,..."`      | Specify envars to use for default value. The envs are resolved in the declared order. The first value found is used.                                                                                                                                                                                                           |
@@ -629,7 +652,7 @@ interface:
 type Validatable interface {
     Validate() error
  }
- ```
+```
 
 If one of these nodes is in the active command-line it will be called during
 normal validation.
