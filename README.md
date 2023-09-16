@@ -337,6 +337,40 @@ func main() {
 }
 ```
 
+Another example of using hooks is load the env-file:
+
+```go
+package main
+
+import (
+  "fmt"
+  "github.com/alecthomas/kong"
+  "github.com/joho/godotenv"
+)
+
+type EnvFlag string
+
+// BeforeResolve loads env file.
+func (c EnvFlag) BeforeReset(ctx *kong.Context, trace *kong.Path) error {
+  path := string(ctx.FlagValue(trace.Flag).(EnvFlag)) // nolint
+  path = kong.ExpandPath(path)
+  if err := godotenv.Load(path); err != nil {
+    return err
+  }
+  return nil
+}
+
+var CLI struct {
+  EnvFile EnvFlag
+  Flag `env:"FLAG"`
+}
+
+func main() {
+  _ = kong.Parse(&CLI)
+  fmt.Println(CLI.Flag)
+}
+```
+
 ## Flags
 
 Any [mapped](#mapper---customising-how-the-command-line-is-mapped-to-go-values) field in the command structure *not* tagged with `cmd` or `arg` will be a flag. Flags are optional by default.
