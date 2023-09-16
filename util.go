@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+
+	"github.com/joho/godotenv"
 )
 
 // ConfigFlag uses the configured (via kong.Configuration(loader)) configuration loader to load configuration
@@ -23,6 +25,21 @@ func (c ConfigFlag) BeforeResolve(kong *Kong, ctx *Context, trace *Path) error {
 		return err
 	}
 	ctx.AddResolver(resolver)
+	return nil
+}
+
+// EnvFlag loads environment variables from a file specified by a flag.
+//
+// Use this as a flag value to support loading of environment variables from a file.
+type EnvFlag string
+
+// BeforeResolve loads env file.
+func (c EnvFlag) BeforeReset(ctx *Context, trace *Path) error {
+	path := string(ctx.FlagValue(trace.Flag).(EnvFlag)) // nolint
+	path = ExpandPath(path)
+	if err := godotenv.Load(path); err != nil {
+		return err
+	}
 	return nil
 }
 
