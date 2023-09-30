@@ -17,7 +17,7 @@ import (
 
 var (
 	mapperValueType       = reflect.TypeOf((*MapperValue)(nil)).Elem()
-	boolMapperType        = reflect.TypeOf((*BoolMapper)(nil)).Elem()
+	boolMapperValueType   = reflect.TypeOf((*BoolMapperValue)(nil)).Elem()
 	jsonUnmarshalerType   = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 	textUnmarshalerType   = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 	binaryUnmarshalerType = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
@@ -45,6 +45,12 @@ func (r *DecodeContext) WithScanner(scan *Scanner) *DecodeContext {
 // Mappers may additionally implement PlaceHolderProvider to provide custom placeholder text.
 type MapperValue interface {
 	Decode(ctx *DecodeContext) error
+}
+
+// BoolMapperValue may be implemented by fields in order to provide custom mappings for boolean values.
+type BoolMapperValue interface {
+	MapperValue
+	IsBool() bool
 }
 
 type mapperValueAdapter struct {
@@ -194,7 +200,7 @@ func (r *Registry) ForType(typ reflect.Type) Mapper {
 	for _, impl := range []reflect.Type{typ, reflect.PtrTo(typ)} {
 		if impl.Implements(mapperValueType) {
 			// FIXME: This should pass in the bool mapper.
-			return &mapperValueAdapter{impl.Implements(boolMapperType)}
+			return &mapperValueAdapter{impl.Implements(boolMapperValueType)}
 		}
 	}
 	// Next, try explicitly registered types.
