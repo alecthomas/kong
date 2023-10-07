@@ -127,11 +127,3 @@ func callAnyFunction(f reflect.Value, bindings bindings) (out []any, err error) 
 	}
 	return out, nil
 }
-
-func callMethod(name string, v, f reflect.Value, bindings bindings) error {
-	err := callFunction(f, bindings)
-	if err != nil {
-		return fmt.Errorf("%s.%s(): %w", v.Type(), name, err)
-	}
-	return nil
-}

@@ -641,6 +641,23 @@ func TestRun(t *testing.T) {
 	assert.Equal(t, "argping", cli.Three.SubCommand.Arg)
 }
 
+type failCmd struct{}
+
+func (f failCmd) Run() error {
+	return errors.New("this command failed")
+}
+
+func TestPassesThroughOriginalCommandError(t *testing.T) {
+	var cli struct {
+		Fail failCmd `kong:"cmd"`
+	}
+	p := mustNew(t, &cli)
+	ctx, _ := p.Parse([]string{"fail"})
+	err := ctx.Run()
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "this command failed")
+}
+
 func TestInterpolationIntoModel(t *testing.T) {
 	var cli struct {
 		Flag    string `default:"${default_value}" help:"Help, I need ${somebody}" enum:"${enum}"`

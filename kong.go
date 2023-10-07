@@ -336,7 +336,7 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		binds.add(ctx, trace)
 		binds.add(trace.Node().Vars().CloneWith(k.vars))
 		binds.merge(ctx.bindings)
-		if err := callMethod(name, value, method, binds); err != nil {
+		if err := callFunction(method, binds); err != nil {
 			return err
 		}
 	}
@@ -364,7 +364,7 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 				continue
 			}
 			path := &Path{Flag: flag}
-			if err := callMethod(name, flag.Target, method, binds.clone().add(path)); err != nil {
+			if err := callFunction(method, binds.clone().add(path)); err != nil {
 				return next(err)
 			}
 		}
