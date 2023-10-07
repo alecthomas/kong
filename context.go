@@ -762,7 +762,7 @@ func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 	}
 
 	for _, method := range methods {
-		if err = callMethod("Run", method.node.Target, method.method, method.binds); err != nil {
+		if err = callFunction(method.method, method.binds); err != nil {
 			return err
 		}
 	}
