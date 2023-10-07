@@ -59,7 +59,7 @@ func TestInvalidCallback(t *testing.T) {
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
 	err = callFunction(reflect.ValueOf(method), p.bindings)
-	assert.EqualError(t, err, `kong.impl.method(): return value of func(kong.iface) string must implement "error"`)
+	assert.EqualError(t, err, `return value of func(kong.iface) string must implement "error"`)
 }
 
 type zrror struct{}
