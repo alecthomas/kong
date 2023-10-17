@@ -373,7 +373,7 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 }
 
 func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...interface{}) {
-	lines := strings.Split(fmt.Sprintf(format, args...), "\n")
+	lines := strings.Split(strings.TrimRight(fmt.Sprintf(format, args...), "\n"), "\n")
 	leader := ""
 	for _, l := range leaders {
 		if l == "" {
