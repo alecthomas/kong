@@ -520,7 +520,24 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 			return fmt.Errorf("unexpected token %s", token)
 		}
 	}
+	if err := c.traceDefaults(); err != nil {
+		return fmt.Errorf("error tracing defaults: %w", err)
+	}
 	return c.maybeSelectDefault(flags, node)
+}
+
+func (c *Context) traceDefaults() error {
+	tail := c.Path[len(c.Path)-1]
+	for _, positional := range tail.Node().Positional {
+		if positional.DefaultValue.IsValid() {
+			positional.Active = true
+			c.Path = append(c.Path, &Path{
+				Parent:     tail.Node(),
+				Positional: positional,
+			})
+		}
+	}
+	return nil
 }
 
 // End of the line, check for a default command, but only if we're not displaying help,
@@ -532,6 +549,7 @@ func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 		}
 	}
 	if node.DefaultCmd != nil {
+		node.Active = true
 		c.Path = append(c.Path, &Path{
 			Parent:  node.DefaultCmd,
 			Command: node.DefaultCmd,
