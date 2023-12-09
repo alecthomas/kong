@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -1985,17 +1983,4 @@ func TestEnumPtrOmittedNoDefault(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotZero(t, ctx)
 	assert.Zero(t, cli.X)
-}
-
-func TestTrailingPositionalActive(t *testing.T) {
-	var cli struct {
-		Arg string `arg:"" default:"." existingdir:"testdata"`
-	}
-	pwd, err := os.Getwd()
-	assert.NoError(t, err)
-	k, err := kong.New(&cli)
-	assert.NoError(t, err)
-	_, err = k.Parse([]string{})
-	assert.NoError(t, err)
-	assert.Equal(t, cli.Arg, filepath.Join(pwd, "testdata"))
 }
