@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/alecthomas/colour v0.1.0
 	github.com/alecthomas/kong v0.8.1
-	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
+	github.com/chzyer/readline v1.5.1
 	github.com/chzyer/test v1.0.0 // indirect
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
 	github.com/gliderlabs/ssh v0.3.5
