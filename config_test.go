@@ -47,7 +47,7 @@ func makeConfig(t *testing.T, config interface{}) (path string, cleanup func()) 
 	t.Helper()
 	w, err := ioutil.TempFile("", "")
 	assert.NoError(t, err)
-	defer w.Close() // nolint: gosec
+	defer w.Close()
 	err = json.NewEncoder(w).Encode(config)
 	assert.NoError(t, err)
 	return w.Name(), func() { os.Remove(w.Name()) }

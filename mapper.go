@@ -59,9 +59,9 @@ type mapperValueAdapter struct {
 
 func (m *mapperValueAdapter) Decode(ctx *DecodeContext, target reflect.Value) error {
 	if target.Type().Implements(mapperValueType) {
-		return target.Interface().(MapperValue).Decode(ctx) // nolint
+		return target.Interface().(MapperValue).Decode(ctx) //nolint
 	}
-	return target.Addr().Interface().(MapperValue).Decode(ctx) // nolint
+	return target.Addr().Interface().(MapperValue).Decode(ctx) //nolint
 }
 
 func (m *mapperValueAdapter) IsBool() bool {
@@ -77,9 +77,9 @@ func (m *textUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value
 		return err
 	}
 	if target.Type().Implements(textUnmarshalerType) {
-		return target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)) // nolint
+		return target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)) //nolint
 	}
-	return target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)) // nolint
+	return target.Addr().Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(value)) //nolint
 }
 
 type binaryUnmarshalerAdapter struct{}
@@ -91,9 +91,9 @@ func (m *binaryUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Val
 		return err
 	}
 	if target.Type().Implements(binaryUnmarshalerType) {
-		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value)) // nolint
+		return target.Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value)) //nolint
 	}
-	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value)) // nolint
+	return target.Addr().Interface().(encoding.BinaryUnmarshaler).UnmarshalBinary([]byte(value)) //nolint
 }
 
 type jsonUnmarshalerAdapter struct{}
@@ -105,9 +105,9 @@ func (j *jsonUnmarshalerAdapter) Decode(ctx *DecodeContext, target reflect.Value
 		return err
 	}
 	if target.Type().Implements(jsonUnmarshalerType) {
-		return target.Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value)) // nolint
+		return target.Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value)) //nolint
 	}
-	return target.Addr().Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value)) // nolint
+	return target.Addr().Interface().(json.Unmarshaler).UnmarshalJSON([]byte(value)) //nolint
 }
 
 // A Mapper represents how a field is mapped from command-line values to Go.
@@ -142,7 +142,7 @@ type BoolMapperExt interface {
 // A MapperFunc is a single function that complies with the Mapper interface.
 type MapperFunc func(ctx *DecodeContext, target reflect.Value) error
 
-func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { // nolint: revive
+func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { //nolint: revive
 	return m(ctx, target)
 }
 
@@ -339,7 +339,7 @@ func durationDecoder() MapperFunc {
 				return fmt.Errorf("expected duration but got %q: %v", v, err)
 			}
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-			d = reflect.ValueOf(v).Convert(reflect.TypeOf(time.Duration(0))).Interface().(time.Duration) // nolint: forcetypeassert
+			d = reflect.ValueOf(v).Convert(reflect.TypeOf(time.Duration(0))).Interface().(time.Duration) //nolint: forcetypeassert
 		default:
 			return fmt.Errorf("expected duration but got %q", v)
 		}
@@ -367,7 +367,7 @@ func timeDecoder() MapperFunc {
 	}
 }
 
-func intDecoder(bits int) MapperFunc { // nolint: dupl
+func intDecoder(bits int) MapperFunc { //nolint: dupl
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		t, err := ctx.Scan.PopValue("int")
 		if err != nil {
@@ -396,7 +396,7 @@ func intDecoder(bits int) MapperFunc { // nolint: dupl
 	}
 }
 
-func uintDecoder(bits int) MapperFunc { // nolint: dupl
+func uintDecoder(bits int) MapperFunc { //nolint: dupl
 	return func(ctx *DecodeContext, target reflect.Value) error {
 		t, err := ctx.Scan.PopValue("uint")
 		if err != nil {
@@ -611,7 +611,7 @@ func fileMapper(r *Registry) MapperFunc {
 			file = os.Stdin
 		} else {
 			path = ExpandPath(path)
-			file, err = os.Open(path) // nolint: gosec
+			file, err = os.Open(path) //nolint: gosec
 			if err != nil {
 				return err
 			}
@@ -872,7 +872,7 @@ type NamedFileContentFlag struct {
 	Contents []byte
 }
 
-func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
+func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { //nolint: revive
 	var filename string
 	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {
@@ -884,7 +884,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: rev
 		return nil
 	}
 	filename = ExpandPath(filename)
-	data, err := ioutil.ReadFile(filename) // nolint: gosec
+	data, err := ioutil.ReadFile(filename) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
@@ -896,7 +896,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: rev
 // FileContentFlag is a flag value that loads a file's contents into its value.
 type FileContentFlag []byte
 
-func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
+func (f *FileContentFlag) Decode(ctx *DecodeContext) error { //nolint: revive
 	var filename string
 	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {
@@ -908,7 +908,7 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 		return nil
 	}
 	filename = ExpandPath(filename)
-	data, err := ioutil.ReadFile(filename) // nolint: gosec
+	data, err := ioutil.ReadFile(filename) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}

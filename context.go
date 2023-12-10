@@ -161,7 +161,7 @@ func (c *Context) Empty() bool {
 }
 
 // Validate the current context.
-func (c *Context) Validate() error { // nolint: gocyclo
+func (c *Context) Validate() error { //nolint: gocyclo
 	err := Visit(c.Model, func(node Visitable, next Next) error {
 		switch node := node.(type) {
 		case *Value:
@@ -347,7 +347,7 @@ func (c *Context) endParsing() {
 	}
 }
 
-func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
+func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 	positional := 0
 	node.Active = true
 
@@ -377,7 +377,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				switch {
 				case v == "-":
 					fallthrough
-				default: // nolint
+				default: //nolint
 					c.scan.Pop()
 					c.scan.PushTyped(token.Value, PositionalArgumentToken)
 
