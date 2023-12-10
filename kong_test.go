@@ -495,6 +495,7 @@ func TestHooks(t *testing.T) {
 	p := mustNew(t, &cli, kong.Bind(ctx))
 
 	for _, test := range tests {
+		test := test
 		*ctx = hookContext{}
 		cli.One = hookCmd{}
 		t.Run(test.name, func(t *testing.T) {
@@ -753,7 +754,7 @@ func TestEmbedInterface(t *testing.T) {
 	_, err := p.Parse([]string{"--some-flag=foo", "--flag=yes"})
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", cli.SomeFlag)
-	assert.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag) // nolint
+	assert.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag) //nolint
 }
 
 func TestExcludedField(t *testing.T) {
@@ -1352,16 +1353,16 @@ func TestHydratePointerCommandsAndEmbeds(t *testing.T) {
 	assert.Equal(t, &embed{Embed: true}, cli.Embed)
 }
 
-// nolint
+//nolint:revive
 type testIgnoreFields struct {
 	Foo struct {
 		Bar bool
 		Sub struct {
 			SubFlag1     bool `kong:"name=subflag1"`
-			XXX_SubFlag2 bool `kong:"name=subflag2"`
+			XXX_SubFlag2 bool `kong:"name=subflag2"` //nolint:stylecheck
 		} `kong:"cmd"`
 	} `kong:"cmd"`
-	XXX_Baz struct {
+	XXX_Baz struct { //nolint:stylecheck
 		Boo bool
 	} `kong:"cmd,name=baz"`
 }
@@ -1928,8 +1929,8 @@ func TestBoolPtrNil(t *testing.T) {
 
 func TestUnsupportedPtr(t *testing.T) {
 	type Foo struct {
-		x int // nolint
-		y int // nolint
+		x int //nolint
+		y int //nolint
 	}
 
 	var cli struct {

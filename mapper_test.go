@@ -356,14 +356,14 @@ func TestNumbers(t *testing.T) {
 		_, err := p.Parse([]string{
 			"--f-32", fmt.Sprintf("%v", math.MaxFloat32),
 			"--f-64", fmt.Sprintf("%v", math.MaxFloat64),
-			"--i-8", fmt.Sprintf("%v", int8(math.MaxInt8)),
-			"--i-16", fmt.Sprintf("%v", int16(math.MaxInt16)),
-			"--i-32", fmt.Sprintf("%v", int32(math.MaxInt32)),
-			"--i-64", fmt.Sprintf("%v", int64(math.MaxInt64)),
-			"--u-8", fmt.Sprintf("%v", uint8(math.MaxUint8)),
-			"--u-16", fmt.Sprintf("%v", uint16(math.MaxUint16)),
-			"--u-32", fmt.Sprintf("%v", uint32(math.MaxUint32)),
-			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)),
+			"--i-8", fmt.Sprintf("%v", int8(math.MaxInt8)), //nolint:perfsprint // want int8
+			"--i-16", fmt.Sprintf("%v", int16(math.MaxInt16)), //nolint:perfsprint // want int16
+			"--i-32", fmt.Sprintf("%v", int32(math.MaxInt32)), //nolint:perfsprint // want int32
+			"--i-64", fmt.Sprintf("%v", int64(math.MaxInt64)), //nolint:perfsprint // want int64
+			"--u-8", fmt.Sprintf("%v", uint8(math.MaxUint8)), //nolint:perfsprint // want uint8
+			"--u-16", fmt.Sprintf("%v", uint16(math.MaxUint16)), //nolint:perfsprint // want uint16
+			"--u-32", fmt.Sprintf("%v", uint32(math.MaxUint32)), //nolint:perfsprint // want uint32
+			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)), //nolint:perfsprint // want uint64
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, CLI{

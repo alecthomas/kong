@@ -30,7 +30,7 @@ func TestBindTo(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) error {
-		saw = string(i.(impl)) // nolint
+		saw = string(i.(impl)) //nolint
 		return nil
 	}
 
@@ -50,7 +50,7 @@ func TestInvalidCallback(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) string {
-		saw = string(i.(impl)) // nolint
+		saw = string(i.(impl)) //nolint
 		return saw
 	}
 
@@ -75,7 +75,7 @@ func TestCallbackCustomError(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) *zrror {
-		saw = string(i.(impl)) // nolint
+		saw = string(i.(impl)) //nolint
 		return nil
 	}
 

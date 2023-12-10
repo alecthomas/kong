@@ -20,7 +20,7 @@ func TestConfigFlag(t *testing.T) {
 	w, err := ioutil.TempFile("", "")
 	assert.NoError(t, err)
 	defer os.Remove(w.Name())
-	w.WriteString(`{"flag": "hello world"}`) // nolint: errcheck
+	w.WriteString(`{"flag": "hello world"}`) //nolint: errcheck
 	w.Close()
 
 	p := Must(&cli, Configuration(JSON))
@@ -48,7 +48,7 @@ func TestVersionFlag(t *testing.T) {
 func TestChangeDirFlag(t *testing.T) {
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
-	defer os.Chdir(cwd) // nolint: errcheck
+	defer os.Chdir(cwd) //nolint: errcheck
 
 	dir := t.TempDir()
 	file := filepath.Join(dir, "out.txt")
