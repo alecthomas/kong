@@ -330,7 +330,7 @@ var cli struct {
 
 func main() {
   // Debug logger going to discard.
-  logger := log.New(ioutil.Discard, "", log.LstdFlags)
+  logger := log.New(io.Discard, "", log.LstdFlags)
 
   ctx := kong.Parse(&cli, kong.Bind(logger))
 
