@@ -1,7 +1,6 @@
 package kong
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,7 +16,7 @@ func TestConfigFlag(t *testing.T) {
 		Flag   string
 	}
 
-	w, err := ioutil.TempFile("", "")
+	w, err := os.CreateTemp("", "")
 	assert.NoError(t, err)
 	defer os.Remove(w.Name())
 	w.WriteString(`{"flag": "hello world"}`) //nolint: errcheck

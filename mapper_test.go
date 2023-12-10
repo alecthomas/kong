@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"net/url"
 	"os"
@@ -269,7 +268,7 @@ func TestFileContentFlag(t *testing.T) {
 	var cli struct {
 		File kong.FileContentFlag
 	}
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
@@ -283,7 +282,7 @@ func TestNamedFileContentFlag(t *testing.T) {
 	var cli struct {
 		File kong.NamedFileContentFlag
 	}
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")

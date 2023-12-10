@@ -76,7 +76,6 @@ issues:
     - 'bad syntax for struct tag key'
     - 'bad syntax for struct tag pair'
     - 'result .* \(error\) is always nil'
-    - 'package io/ioutil is deprecated'
 
   exclude-rules:
     # Don't warn on unused parameters.

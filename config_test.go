@@ -2,7 +2,6 @@ package kong_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -45,7 +44,7 @@ func TestConfigValidation(t *testing.T) {
 
 func makeConfig(t *testing.T, config interface{}) (path string, cleanup func()) {
 	t.Helper()
-	w, err := ioutil.TempFile("", "")
+	w, err := os.CreateTemp("", "")
 	assert.NoError(t, err)
 	defer w.Close()
 	err = json.NewEncoder(w).Encode(config)

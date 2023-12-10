@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/bits"
 	"net/url"
 	"os"
@@ -712,9 +712,9 @@ func fileContentMapper(r *Registry) MapperFunc {
 		var data []byte
 		if path != "-" {
 			path = ExpandPath(path)
-			data, err = ioutil.ReadFile(path) //nolint:gosec
+			data, err = os.ReadFile(path) //nolint:gosec
 		} else {
-			data, err = ioutil.ReadAll(os.Stdin)
+			data, err = io.ReadAll(os.Stdin)
 		}
 		if err != nil {
 			if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
@@ -884,7 +884,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { //nolint: revi
 		return nil
 	}
 	filename = ExpandPath(filename)
-	data, err := ioutil.ReadFile(filename) //nolint: gosec
+	data, err := os.ReadFile(filename) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
@@ -908,7 +908,7 @@ func (f *FileContentFlag) Decode(ctx *DecodeContext) error { //nolint: revive
 		return nil
 	}
 	filename = ExpandPath(filename)
-	data, err := ioutil.ReadFile(filename) //nolint: gosec
+	data, err := os.ReadFile(filename) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to open %q: %v", filename, err)
 	}
