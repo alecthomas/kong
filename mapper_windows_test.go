@@ -33,7 +33,7 @@ func TestWindowsFileMapper(t *testing.T) {
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"testdata\\file.txt"})
 	assert.NoError(t, err)
-	assert.True(t, cli.File != nil, "File should not be nil")
+	assert.NotZero(t, cli.File, "File should not be nil")
 	_ = cli.File.Close()
 	_, err = p.Parse([]string{"testdata\\missing.txt"})
 	assert.Error(t, err)
