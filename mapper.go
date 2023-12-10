@@ -717,6 +717,9 @@ func fileContentMapper(r *Registry) MapperFunc {
 			data, err = ioutil.ReadAll(os.Stdin)
 		}
 		if err != nil {
+			if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
+				return fmt.Errorf("%q exists but is a directory: %w", path, err)
+			}
 			return err
 		}
 		target.SetBytes(data)
