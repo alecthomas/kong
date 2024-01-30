@@ -518,6 +518,17 @@ func TestShort(t *testing.T) {
 	assert.Equal(t, "hello", cli.String)
 }
 
+func TestAlias(t *testing.T) {
+	var cli struct {
+		String string `aliases:"str"`
+	}
+	app := mustNew(t, &cli)
+	_, err := app.Parse([]string{"--str", "hello"})
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", cli.String)
+
+}
+
 func TestDuplicateFlagChoosesLast(t *testing.T) {
 	var cli struct {
 		Flag int
@@ -1319,6 +1330,26 @@ func TestDuplicateShortflags(t *testing.T) {
 	}{}
 	_, err := kong.New(&cli)
 	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
+}
+
+func TestDuplicateAliases(t *testing.T) {
+	cli1 := struct {
+		Flag1 string `aliases:"flag"`
+		Flag2 string `aliases:"flag"`
+	}{}
+	_, err := kong.New(&cli1)
+	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
+
+}
+
+func TestDuplicateAliasLong(t *testing.T) {
+	cli2 := struct {
+		Flag  string ``
+		Flag2 string `aliases:"flag"` // duplicates Flag
+	}{}
+	_, err := kong.New(&cli2)
+	fmt.Println(err)
+	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
 }
 
 func TestDuplicateNestedShortFlags(t *testing.T) {

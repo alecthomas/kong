@@ -397,6 +397,7 @@ type Flag struct {
 	Xor         []string
 	PlaceHolder string
 	Envs        []string
+	Aliases     []string
 	Short       rune
 	Hidden      bool
 	Negated     bool

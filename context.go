@@ -684,15 +684,23 @@ func flipBoolValue(value reflect.Value) error {
 
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	candidates := []string{}
+
+	newCandidate := func(s string) bool {
+		candidates = append(candidates, s)
+		return s == match
+	}
+
 	for _, flag := range flags {
-		long := "--" + flag.Name
-		short := "-" + string(flag.Short)
-		neg := "--no-" + flag.Name
-		candidates = append(candidates, long)
+		matched := newCandidate("--" + flag.Name)
 		if flag.Short != 0 {
-			candidates = append(candidates, short)
+			matched = matched || newCandidate("-"+string(flag.Short))
 		}
-		if short != match && long != match && !(match == neg && flag.Tag.Negatable) {
+		for _, alias := range flag.Aliases {
+			matched = matched || newCandidate("--"+alias)
+		}
+
+		neg := "--no-" + flag.Name
+		if !matched && !(match == neg && flag.Tag.Negatable) {
 			continue
 		}
 		// Found a matching flag.
