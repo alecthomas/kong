@@ -1348,7 +1348,6 @@ func TestDuplicateAliasLong(t *testing.T) {
 		Flag2 string `aliases:"flag"` // duplicates Flag
 	}{}
 	_, err := kong.New(&cli2)
-	fmt.Println(err)
 	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
 }
 
