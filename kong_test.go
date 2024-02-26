@@ -526,7 +526,6 @@ func TestAlias(t *testing.T) {
 	_, err := app.Parse([]string{"--str", "hello"})
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", cli.String)
-
 }
 
 func TestDuplicateFlagChoosesLast(t *testing.T) {
@@ -1339,7 +1338,6 @@ func TestDuplicateAliases(t *testing.T) {
 	}{}
 	_, err := kong.New(&cli1)
 	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
-
 }
 
 func TestDuplicateAliasLong(t *testing.T) {
