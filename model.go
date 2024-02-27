@@ -162,6 +162,16 @@ func (n *Node) Summary() string {
 	} else if len(n.Children) > 0 {
 		summary += " <command>"
 	}
+	allFlags := n.Flags
+	if n.Parent != nil {
+		allFlags = append(allFlags, n.Parent.Flags...)
+	}
+	for _, flag := range allFlags {
+		if !flag.Required {
+			summary += " [optional flags]"
+			break
+		}
+	}
 	return summary
 }
 

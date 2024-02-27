@@ -32,7 +32,7 @@ func TestCustomWrap(t *testing.T) {
 
 	_, err := app.Parse([]string{"--help"})
 	assert.NoError(t, err)
-	expected := `Usage: test-app
+	expected := `Usage: test-app [optional flags]
 
 A test app.
 
