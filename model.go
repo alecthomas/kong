@@ -168,7 +168,7 @@ func (n *Node) Summary() string {
 	}
 	for _, flag := range allFlags {
 		if !flag.Required {
-			summary += " [optional flags]"
+			summary += " [flags]"
 			break
 		}
 	}

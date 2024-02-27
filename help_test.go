@@ -51,7 +51,7 @@ func TestHelpOptionalArgs(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	assert.True(t, exited)
-	expected := `Usage: test-app [<one> [<two>]] [optional flags]
+	expected := `Usage: test-app [<one> [<two>]] [flags]
 
 Arguments:
   [<one>]    One optional arg.
@@ -105,7 +105,7 @@ func TestHelp(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app --required <command> [optional flags]
+		expected := `Usage: test-app --required <command> [flags]
 
 A test app.
 
@@ -120,13 +120,13 @@ Flags:
   -s, --[no-]sort            Is sortable or not.
 
 Commands:
-  one --required [optional flags]
+  one --required [flags]
     A subcommand.
 
-  two <three> --required --required-two --required-three [optional flags]
+  two <three> --required --required-two --required-three [flags]
     Sub-sub-arg.
 
-  two four --required --required-two [optional flags]
+  two four --required --required-two [flags]
     Sub-sub-command.
 
 Run "test-app <command> --help" for more information on a command.
@@ -144,7 +144,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app two <three> --required --required-two --required-three [optional flags]
+		expected := `Usage: test-app two <three> --required --required-two --required-three [flags]
 
 Sub-sub-arg.
 
@@ -215,18 +215,18 @@ func TestFlagsLast(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app --required <command> [optional flags]
+		expected := `Usage: test-app --required <command> [flags]
 
 A test app.
 
 Commands:
-  one --required [optional flags]
+  one --required [flags]
     A subcommand.
 
-  two <three> --required --required-two --required-three [optional flags]
+  two <three> --required --required-two --required-three [flags]
     Sub-sub-arg.
 
-  two four --required --required-two [optional flags]
+  two four --required --required-two [flags]
     Sub-sub-command.
 
 Flags:
@@ -253,7 +253,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app two <three> --required --required-two --required-three [optional flags]
+		expected := `Usage: test-app two <three> --required --required-two --required-three [flags]
 
 Sub-sub-arg.
 
@@ -320,7 +320,7 @@ func TestHelpTree(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app <command> [optional flags]
+		expected := `Usage: test-app <command> [flags]
 
 A test app.
 
@@ -353,7 +353,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app one (un,uno) <command> [optional flags]
+		expected := `Usage: test-app one (un,uno) <command> [flags]
 
 subcommand one
 
@@ -414,7 +414,7 @@ func TestHelpCompactNoExpand(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app <command> [optional flags]
+		expected := `Usage: test-app <command> [flags]
 
 A test app.
 
@@ -443,7 +443,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app one (un,uno) <command> [optional flags]
+		expected := `Usage: test-app one (un,uno) <command> [flags]
 
 subcommand one
 
@@ -607,7 +607,7 @@ func TestAutoGroup(t *testing.T) {
 		}),
 	)
 	_, _ = app.Parse([]string{"--help", "two"})
-	assert.Equal(t, `Usage: test two [optional flags]
+	assert.Equal(t, `Usage: test two [flags]
 
 A non grouped subcommand.
 
@@ -691,7 +691,7 @@ func TestHelpGrouping(t *testing.T) {
 			assert.True(t, exited)
 			assert.NoError(t, err)
 		})
-		expected := `Usage: test-app <command> [optional flags]
+		expected := `Usage: test-app <command> [flags]
 
 A test app.
 
@@ -710,26 +710,26 @@ Group B
   --grouped-b-string=STRING    A string flag grouped in B.
 
 Commands:
-  two [optional flags]
+  two [flags]
     A non grouped subcommand.
 
 Group title taken from the kong.ExplicitGroups option
   A group header
 
-  one thing <arg> [optional flags]
+  one thing <arg> [flags]
     subcommand thing
 
-  one <other> [optional flags]
+  one <other> [flags]
     subcommand other
 
-  three [optional flags]
+  three [flags]
     Another subcommand grouped in A.
 
 Group B
-  one <stuff> [optional flags]
+  one <stuff> [flags]
     subcommand stuff
 
-  four [optional flags]
+  four [flags]
     Another subcommand grouped in B.
 
 Run "test-app <command> --help" for more information on a command.
@@ -747,7 +747,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 			assert.True(t, exited)
 		})
-		expected := `Usage: test-app two [optional flags]
+		expected := `Usage: test-app two [flags]
 
 A non grouped subcommand.
 
@@ -796,7 +796,7 @@ func TestUsageOnError(t *testing.T) {
 	_, err := p.Parse([]string{})
 	p.FatalIfErrorf(err)
 
-	expected := `Usage: test --flag=STRING [optional flags]
+	expected := `Usage: test --flag=STRING [flags]
 
 Some description.
 
@@ -824,7 +824,7 @@ func TestShortUsageOnError(t *testing.T) {
 	assert.Error(t, err)
 	p.FatalIfErrorf(err)
 
-	expected := `Usage: test --flag=STRING [optional flags]
+	expected := `Usage: test --flag=STRING [flags]
 Run "test --help" for more information.
 
 test: error: missing flags: --flag=STRING
