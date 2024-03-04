@@ -8,4 +8,11 @@
     "group:allNonMajor",
     "schedule:earlyMondays", // Run once a week.
   ],
+  packageRules: [
+    {
+      "matchPackageNames": ["golangci-lint"],
+      "matchManagers": ["hermit"],
+      "enabled": false
+    },
+  ]
 }
