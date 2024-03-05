@@ -580,6 +580,12 @@ func pathMapper(r *Registry) MapperFunc {
 		if target.Kind() == reflect.Slice {
 			return sliceDecoder(r)(ctx, target)
 		}
+		if target.Kind() == reflect.Ptr && target.Elem().Kind() == reflect.String {
+			if target.IsNil() {
+				return nil
+			}
+			target = target.Elem()
+		}
 		if target.Kind() != reflect.String {
 			return fmt.Errorf("\"path\" type must be applied to a string not %s", target.Type())
 		}

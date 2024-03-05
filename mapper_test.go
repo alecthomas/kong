@@ -487,6 +487,49 @@ func TestFileContentMapper(t *testing.T) {
 	assert.Contains(t, err.Error(), "is a directory")
 }
 
+func TestPathMapperUsingStringPointer(t *testing.T) {
+	type CLI struct {
+		Path *string `type:"path"`
+	}
+	var cli CLI
+
+	t.Run("With value", func(t *testing.T) {
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--path", "/foo/bar"})
+		assert.NoError(t, err)
+		assert.NotZero(t, cli.Path)
+		assert.Equal(t, "/foo/bar", *cli.Path)
+	})
+
+	t.Run("Zero value", func(t *testing.T) {
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--path", ""})
+		assert.NoError(t, err)
+		assert.NotZero(t, cli.Path)
+		wd, err := os.Getwd()
+		assert.NoError(t, err)
+		assert.Equal(t, wd, *cli.Path)
+	})
+
+	t.Run("Without value", func(t *testing.T) {
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--"})
+		assert.NoError(t, err)
+		assert.Equal(t, nil, cli.Path)
+	})
+
+	t.Run("Non-string pointer", func(t *testing.T) {
+		type CLI struct {
+			Path *any `type:"path"`
+		}
+		var cli CLI
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--path", ""})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), `"path" type must be applied to a string`)
+	})
+}
+
 //nolint:dupl
 func TestExistingFileMapper(t *testing.T) {
 	type CLI struct {
