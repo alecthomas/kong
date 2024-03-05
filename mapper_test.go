@@ -494,11 +494,13 @@ func TestPathMapperUsingStringPointer(t *testing.T) {
 	var cli CLI
 
 	t.Run("With value", func(t *testing.T) {
+		pwd, err := os.Getwd()
+		assert.NoError(t, err)
 		p := mustNew(t, &cli)
-		_, err := p.Parse([]string{"--path", "/foo/bar"})
+		_, err = p.Parse([]string{"--path", "."})
 		assert.NoError(t, err)
 		assert.NotZero(t, cli.Path)
-		assert.Equal(t, "/foo/bar", *cli.Path)
+		assert.Equal(t, pwd, *cli.Path)
 	})
 
 	t.Run("Zero value", func(t *testing.T) {
