@@ -86,10 +86,10 @@ type HelpValueFormatter func(value *Value) string
 
 // DefaultHelpValueFormatter is the default HelpValueFormatter.
 func DefaultHelpValueFormatter(value *Value) string {
-	if value.Tag.Env == "" || HasInterpolatedVar(value.OrigHelp, "env") {
+	if len(value.Tag.Envs) == 0 || HasInterpolatedVar(value.OrigHelp, "env") {
 		return value.Help
 	}
-	suffix := "($" + value.Tag.Env + ")"
+	suffix := "(" + formatEnvs(value.Tag.Envs) + ")"
 	switch {
 	case strings.HasSuffix(value.Help, "."):
 		return value.Help[:len(value.Help)-1] + " " + suffix + "."
@@ -490,6 +490,7 @@ func formatFlag(haveShort bool, flag *Flag) string {
 	flagString := ""
 	name := flag.Name
 	isBool := flag.IsBool()
+	isCounter := flag.IsCounter()
 	if flag.Short != 0 {
 		if isBool && flag.Tag.Negatable {
 			flagString += fmt.Sprintf("-%c, --[no-]%s", flag.Short, name)
@@ -511,7 +512,7 @@ func formatFlag(haveShort bool, flag *Flag) string {
 			}
 		}
 	}
-	if !isBool {
+	if !isBool && !isCounter {
 		flagString += fmt.Sprintf("=%s", flag.FormatPlaceHolder())
 	}
 	return flagString
@@ -566,4 +567,13 @@ func TreeIndenter(prefix string) string {
 		return "|- "
 	}
 	return "|" + strings.Repeat(" ", defaultIndent) + prefix
+}
+
+func formatEnvs(envs []string) string {
+	formatted := make([]string, len(envs))
+	for i := range envs {
+		formatted[i] = "$" + envs[i]
+	}
+
+	return strings.Join(formatted, ", ")
 }

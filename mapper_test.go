@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -269,7 +268,7 @@ func TestFileContentFlag(t *testing.T) {
 	var cli struct {
 		File kong.FileContentFlag
 	}
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
@@ -283,7 +282,7 @@ func TestNamedFileContentFlag(t *testing.T) {
 	var cli struct {
 		File kong.NamedFileContentFlag
 	}
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
@@ -356,14 +355,14 @@ func TestNumbers(t *testing.T) {
 		_, err := p.Parse([]string{
 			"--f-32", fmt.Sprintf("%v", math.MaxFloat32),
 			"--f-64", fmt.Sprintf("%v", math.MaxFloat64),
-			"--i-8", fmt.Sprintf("%v", int8(math.MaxInt8)),
-			"--i-16", fmt.Sprintf("%v", int16(math.MaxInt16)),
-			"--i-32", fmt.Sprintf("%v", int32(math.MaxInt32)),
-			"--i-64", fmt.Sprintf("%v", int64(math.MaxInt64)),
-			"--u-8", fmt.Sprintf("%v", uint8(math.MaxUint8)),
-			"--u-16", fmt.Sprintf("%v", uint16(math.MaxUint16)),
-			"--u-32", fmt.Sprintf("%v", uint32(math.MaxUint32)),
-			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)),
+			"--i-8", fmt.Sprintf("%v", int8(math.MaxInt8)), //nolint:perfsprint // want int8
+			"--i-16", fmt.Sprintf("%v", int16(math.MaxInt16)), //nolint:perfsprint // want int16
+			"--i-32", fmt.Sprintf("%v", int32(math.MaxInt32)), //nolint:perfsprint // want int32
+			"--i-64", fmt.Sprintf("%v", int64(math.MaxInt64)), //nolint:perfsprint // want int64
+			"--u-8", fmt.Sprintf("%v", uint8(math.MaxUint8)), //nolint:perfsprint // want uint8
+			"--u-16", fmt.Sprintf("%v", uint16(math.MaxUint16)), //nolint:perfsprint // want uint16
+			"--u-32", fmt.Sprintf("%v", uint32(math.MaxUint32)), //nolint:perfsprint // want uint32
+			"--u-64", fmt.Sprintf("%v", uint64(math.MaxUint64)), //nolint:perfsprint // want uint64
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, CLI{
@@ -401,18 +400,51 @@ func TestNumbers(t *testing.T) {
 }
 
 func TestJSONLargeNumber(t *testing.T) {
-	// https://github.com/alecthomas/kong/pull/334
-	const n = 1000000
-	var cli struct {
-		N int64
+	// Make sure that large numbers are not internally converted to
+	// scientific notation when the mapper parses the values.
+	// (Scientific notation is e.g. `1e+06` instead of `1000000`.)
+
+	// Large signed integers:
+	{
+		var cli struct {
+			N int64
+		}
+		json := `{"n": 1000000}`
+		r, err := kong.JSON(strings.NewReader(json))
+		assert.NoError(t, err)
+		parser := mustNew(t, &cli, kong.Resolvers(r))
+		_, err = parser.Parse([]string{})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1000000), cli.N)
 	}
-	json := fmt.Sprintf(`{"n": %d}`, n)
-	r, err := kong.JSON(strings.NewReader(json))
-	assert.NoError(t, err)
-	parser := mustNew(t, &cli, kong.Resolvers(r))
-	_, err = parser.Parse([]string{})
-	assert.NoError(t, err)
-	assert.Equal(t, n, cli.N)
+
+	// Large unsigned integers:
+	{
+		var cli struct {
+			N uint64
+		}
+		json := `{"n": 1000000}`
+		r, err := kong.JSON(strings.NewReader(json))
+		assert.NoError(t, err)
+		parser := mustNew(t, &cli, kong.Resolvers(r))
+		_, err = parser.Parse([]string{})
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(1000000), cli.N)
+	}
+
+	// Large floats:
+	{
+		var cli struct {
+			N float64
+		}
+		json := `{"n": 1000000.1}`
+		r, err := kong.JSON(strings.NewReader(json))
+		assert.NoError(t, err)
+		parser := mustNew(t, &cli, kong.Resolvers(r))
+		_, err = parser.Parse([]string{})
+		assert.NoError(t, err)
+		assert.Equal(t, float64(1000000.1), cli.N)
+	}
 }
 
 func TestFileMapper(t *testing.T) {
@@ -427,14 +459,77 @@ func TestFileMapper(t *testing.T) {
 	_ = cli.File.Close()
 	_, err = p.Parse([]string{"testdata/missing.txt"})
 	assert.Error(t, err)
-	if runtime.GOOS == "windows" {
-		assert.Contains(t, err.Error(), "missing.txt: The system cannot find the file specified.")
-	} else {
-		assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
-	}
+	assert.Contains(t, err.Error(), "missing.txt:")
+	assert.IsError(t, err, os.ErrNotExist)
 	_, err = p.Parse([]string{"-"})
 	assert.NoError(t, err)
 	assert.Equal(t, os.Stdin, cli.File)
+}
+
+func TestFileContentMapper(t *testing.T) {
+	type CLI struct {
+		File []byte `type:"filecontent"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--file", "testdata/file.txt"})
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(`Hello world.`), cli.File)
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--file", "testdata/missing.txt"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing.txt:")
+	assert.IsError(t, err, os.ErrNotExist)
+	p = mustNew(t, &cli)
+
+	_, err = p.Parse([]string{"--file", "testdata"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "is a directory")
+}
+
+func TestPathMapperUsingStringPointer(t *testing.T) {
+	type CLI struct {
+		Path *string `type:"path"`
+	}
+	var cli CLI
+
+	t.Run("With value", func(t *testing.T) {
+		pwd, err := os.Getwd()
+		assert.NoError(t, err)
+		p := mustNew(t, &cli)
+		_, err = p.Parse([]string{"--path", "."})
+		assert.NoError(t, err)
+		assert.NotZero(t, cli.Path)
+		assert.Equal(t, pwd, *cli.Path)
+	})
+
+	t.Run("Zero value", func(t *testing.T) {
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--path", ""})
+		assert.NoError(t, err)
+		assert.NotZero(t, cli.Path)
+		wd, err := os.Getwd()
+		assert.NoError(t, err)
+		assert.Equal(t, wd, *cli.Path)
+	})
+
+	t.Run("Without value", func(t *testing.T) {
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--"})
+		assert.NoError(t, err)
+		assert.Equal(t, nil, cli.Path)
+	})
+
+	t.Run("Non-string pointer", func(t *testing.T) {
+		type CLI struct {
+			Path *any `type:"path"`
+		}
+		var cli CLI
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--path", ""})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), `"path" type must be applied to a string`)
+	})
 }
 
 //nolint:dupl
@@ -450,7 +545,8 @@ func TestExistingFileMapper(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--file", "testdata/missing.txt"})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	assert.Contains(t, err.Error(), "missing.txt:")
+	assert.IsError(t, err, os.ErrNotExist)
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--file", "testdata/"})
 	assert.Error(t, err)
@@ -463,7 +559,7 @@ func TestExistingFileMapperDefaultMissing(t *testing.T) {
 	}
 	var cli CLI
 	p := mustNew(t, &cli)
-	file := "testdata/file.txt"
+	file := filepath.Join("testdata", "file.txt")
 	_, err := p.Parse([]string{"--file", file})
 	assert.NoError(t, err)
 	assert.NotZero(t, cli.File)
@@ -471,7 +567,8 @@ func TestExistingFileMapperDefaultMissing(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing.txt: no such file or directory")
+	assert.Contains(t, err.Error(), "missing.txt:")
+	assert.IsError(t, err, os.ErrNotExist)
 }
 
 func TestExistingFileMapperDefaultMissingCmds(t *testing.T) {
@@ -485,7 +582,7 @@ func TestExistingFileMapperDefaultMissingCmds(t *testing.T) {
 		} `cmd:""`
 	}
 	var cli CLI
-	file := "testdata/file.txt"
+	file := filepath.Join("testdata", "file.txt")
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"cmd-a", "--file-a", file, "--file-b", file})
 	assert.NoError(t, err)
@@ -496,7 +593,8 @@ func TestExistingFileMapperDefaultMissingCmds(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"cmd-a", "--file-a", file})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "bbb-missing.txt: no such file or directory")
+	assert.Contains(t, err.Error(), "bbb-missing.txt:")
+	assert.IsError(t, err, os.ErrNotExist)
 }
 
 //nolint:dupl
@@ -512,7 +610,8 @@ func TestExistingDirMapper(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--dir", "missingdata/"})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missingdata: no such file or directory")
+	assert.Contains(t, err.Error(), "missingdata:")
+	assert.IsError(t, err, os.ErrNotExist)
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--dir", "testdata/file.txt"})
 	assert.Error(t, err)
@@ -533,7 +632,8 @@ func TestExistingDirMapperDefaultMissing(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing-dir: no such file or directory")
+	assert.Contains(t, err.Error(), "missing-dir:")
+	assert.IsError(t, err, os.ErrNotExist)
 }
 
 func TestExistingDirMapperDefaultMissingCmds(t *testing.T) {
@@ -558,7 +658,8 @@ func TestExistingDirMapperDefaultMissingCmds(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"cmd-a", "--dir-a", dir})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "bbb-missing-dir: no such file or directory")
+	assert.Contains(t, err.Error(), "bbb-missing-dir:")
+	assert.IsError(t, err, os.ErrNotExist)
 }
 
 func TestMapperPlaceHolder(t *testing.T) {
@@ -581,8 +682,7 @@ func TestMapperPlaceHolder(t *testing.T) {
 	assert.Contains(t, b.String(), "--flag=/a/b/c")
 }
 
-type testMapperWithPlaceHolder struct {
-}
+type testMapperWithPlaceHolder struct{}
 
 func (t testMapperWithPlaceHolder) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
 	target.SetString("hi")

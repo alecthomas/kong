@@ -4,24 +4,55 @@ on:
       - master
   pull_request:
 name: CI
+
 jobs:
   test:
-    name: Test
+    name: Test / Go ${{ matrix.go }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # These are the release channels.
+        # Hermit will handle installing the right patch.
+        go: ["1.20", "1.21"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        run: ./bin/hermit env -r >> "$GITHUB_ENV"
+      - name: Install Go ${{ matrix.go }}
+        run: |
+          hermit install go@"${GO_VERSION}"
+          go version
+        env:
+          GO_VERSION: ${{ matrix.go }}
       - name: Test
         run: go test ./...
+
+  test-windows:
+    name: Test / Windows / Go ${{ matrix.go }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        # These are versions for GitHub's setup-go.
+        # '.x' will pick the latest patch release.
+        go: ["1.20.x", "1.21.x"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Test
+        run: go test ./...
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        run: ./bin/hermit env -r >> "$GITHUB_ENV"
       - name: golangci-lint
         run: golangci-lint run

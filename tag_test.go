@@ -5,17 +5,18 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
 	"github.com/alecthomas/kong"
 )
 
 func TestDefaultValueForOptionalArg(t *testing.T) {
 	var cli struct {
-		Arg string `kong:"arg,optional,default='👌'"`
+		Arg string `kong:"arg,optional,default='\"\\'👌\\'\"'"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "👌", cli.Arg)
+	assert.Equal(t, "\"'👌'\"", cli.Arg)
 }
 
 func TestNoValueInTag(t *testing.T) {
@@ -64,6 +65,18 @@ func TestEscapedQuote(t *testing.T) {
 	_, err := p.Parse(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "i don't know", cli.DoYouKnow)
+}
+
+func TestEscapingInQuotedTags(t *testing.T) {
+	var cli struct {
+		Regex1 string `kong:"default='\\d+\n'"`
+		Regex2 string `default:"\\d+\n"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "\\d+\n", cli.Regex1)
+	assert.Equal(t, "\\d+\n", cli.Regex2)
 }
 
 func TestBareTags(t *testing.T) {

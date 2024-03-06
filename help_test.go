@@ -51,7 +51,7 @@ func TestHelpOptionalArgs(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	assert.True(t, exited)
-	expected := `Usage: test-app [<one> [<two>]]
+	expected := `Usage: test-app [<one> [<two>]] [flags]
 
 Arguments:
   [<one>]    One optional arg.
@@ -105,7 +105,7 @@ func TestHelp(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app --required <command>
+		expected := `Usage: test-app --required <command> [flags]
 
 A test app.
 
@@ -120,13 +120,13 @@ Flags:
   -s, --[no-]sort            Is sortable or not.
 
 Commands:
-  one --required
+  one --required [flags]
     A subcommand.
 
-  two <three> --required --required-two --required-three
+  two <three> --required --required-two --required-three [flags]
     Sub-sub-arg.
 
-  two four --required --required-two
+  two four --required --required-two [flags]
     Sub-sub-command.
 
 Run "test-app <command> --help" for more information on a command.
@@ -144,7 +144,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app two <three> --required --required-two --required-three
+		expected := `Usage: test-app two <three> --required --required-two --required-three [flags]
 
 Sub-sub-arg.
 
@@ -215,18 +215,18 @@ func TestFlagsLast(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app --required <command>
+		expected := `Usage: test-app --required <command> [flags]
 
 A test app.
 
 Commands:
-  one --required
+  one --required [flags]
     A subcommand.
 
-  two <three> --required --required-two --required-three
+  two <three> --required --required-two --required-three [flags]
     Sub-sub-arg.
 
-  two four --required --required-two
+  two four --required --required-two [flags]
     Sub-sub-command.
 
 Flags:
@@ -253,7 +253,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app two <three> --required --required-two --required-three
+		expected := `Usage: test-app two <three> --required --required-two --required-three [flags]
 
 Sub-sub-arg.
 
@@ -320,7 +320,7 @@ func TestHelpTree(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app <command>
+		expected := `Usage: test-app <command> [flags]
 
 A test app.
 
@@ -353,7 +353,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app one (un,uno) <command>
+		expected := `Usage: test-app one (un,uno) <command> [flags]
 
 subcommand one
 
@@ -414,7 +414,7 @@ func TestHelpCompactNoExpand(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app <command>
+		expected := `Usage: test-app <command> [flags]
 
 A test app.
 
@@ -443,7 +443,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app one (un,uno) <command>
+		expected := `Usage: test-app one (un,uno) <command> [flags]
 
 subcommand one
 
@@ -472,6 +472,18 @@ func TestEnvarAutoHelp(t *testing.T) {
 	assert.Contains(t, w.String(), "A flag ($FLAG).")
 }
 
+func TestMultipleEnvarAutoHelp(t *testing.T) {
+	var cli struct {
+		Flag string `env:"FLAG1,FLAG2" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag ($FLAG1, $FLAG2).")
+}
+
+//nolint:dupl // false positive
 func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	type Anonymous struct {
 		Flag  string `env:"FLAG" help:"A flag."`
@@ -488,9 +500,45 @@ func TestEnvarAutoHelpWithEnvPrefix(t *testing.T) {
 	assert.Contains(t, w.String(), "A different flag.")
 }
 
+//nolint:dupl // false positive
+func TestMultipleEnvarAutoHelpWithEnvPrefix(t *testing.T) {
+	type Anonymous struct {
+		Flag  string `env:"FLAG1,FLAG2" help:"A flag."`
+		Other string `help:"A different flag."`
+	}
+	var cli struct {
+		Anonymous `envprefix:"ANON_"`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag ($ANON_FLAG1, $ANON_FLAG2).")
+	assert.Contains(t, w.String(), "A different flag.")
+}
+
+//nolint:dupl // false positive
 func TestCustomValueFormatter(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli,
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+		kong.ValueFormatter(func(value *kong.Value) string {
+			return value.Help
+		}),
+	)
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag.")
+}
+
+//nolint:dupl // false positive
+func TestMultipleCustomValueFormatter(t *testing.T) {
+	var cli struct {
+		Flag string `env:"FLAG1,FLAG2" help:"A flag."`
 	}
 	w := &strings.Builder{}
 	p := mustNew(t, &cli,
@@ -552,14 +600,14 @@ func TestAutoGroup(t *testing.T) {
 			if node, ok := parent.(*kong.Node); ok {
 				return &kong.Group{
 					Key:   node.Name,
-					Title: strings.Title(node.Name) + " flags:", // nolint
+					Title: strings.Title(node.Name) + " flags:", //nolint
 				}
 			}
 			return nil
 		}),
 	)
 	_, _ = app.Parse([]string{"--help", "two"})
-	assert.Equal(t, `Usage: test two
+	assert.Equal(t, `Usage: test two [flags]
 
 A non grouped subcommand.
 
@@ -643,7 +691,7 @@ func TestHelpGrouping(t *testing.T) {
 			assert.True(t, exited)
 			assert.NoError(t, err)
 		})
-		expected := `Usage: test-app <command>
+		expected := `Usage: test-app <command> [flags]
 
 A test app.
 
@@ -662,26 +710,26 @@ Group B
   --grouped-b-string=STRING    A string flag grouped in B.
 
 Commands:
-  two
+  two [flags]
     A non grouped subcommand.
 
 Group title taken from the kong.ExplicitGroups option
   A group header
 
-  one thing <arg>
+  one thing <arg> [flags]
     subcommand thing
 
-  one <other>
+  one <other> [flags]
     subcommand other
 
-  three
+  three [flags]
     Another subcommand grouped in A.
 
 Group B
-  one <stuff>
+  one <stuff> [flags]
     subcommand stuff
 
-  four
+  four [flags]
     Another subcommand grouped in B.
 
 Run "test-app <command> --help" for more information on a command.
@@ -699,7 +747,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 			assert.True(t, exited)
 		})
-		expected := `Usage: test-app two
+		expected := `Usage: test-app two [flags]
 
 A non grouped subcommand.
 
@@ -748,7 +796,7 @@ func TestUsageOnError(t *testing.T) {
 	_, err := p.Parse([]string{})
 	p.FatalIfErrorf(err)
 
-	expected := `Usage: test --flag=STRING
+	expected := `Usage: test --flag=STRING [flags]
 
 Some description.
 
@@ -776,7 +824,7 @@ func TestShortUsageOnError(t *testing.T) {
 	assert.Error(t, err)
 	p.FatalIfErrorf(err)
 
-	expected := `Usage: test --flag=STRING
+	expected := `Usage: test --flag=STRING [flags]
 Run "test --help" for more information.
 
 test: error: missing flags: --flag=STRING

@@ -110,7 +110,7 @@ func (c *Context) Bind(args ...interface{}) {
 //
 // This will typically have to be called like so:
 //
-//    BindTo(impl, (*MyInterface)(nil))
+//	BindTo(impl, (*MyInterface)(nil))
 func (c *Context) BindTo(impl, iface interface{}) {
 	c.bindings.addTo(impl, iface)
 }
@@ -161,20 +161,20 @@ func (c *Context) Empty() bool {
 }
 
 // Validate the current context.
-func (c *Context) Validate() error { // nolint: gocyclo
+func (c *Context) Validate() error { //nolint: gocyclo
 	err := Visit(c.Model, func(node Visitable, next Next) error {
 		switch node := node.(type) {
 		case *Value:
-			_, ok := os.LookupEnv(node.Tag.Env)
-			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
+			ok := atLeastOneEnvSet(node.Tag.Envs)
+			if node.Enum != "" && (!node.Required || node.HasDefault || (len(node.Tag.Envs) != 0 && ok)) {
 				if err := checkEnum(node, node.Target); err != nil {
 					return err
 				}
 			}
 
 		case *Flag:
-			_, ok := os.LookupEnv(node.Tag.Env)
-			if node.Enum != "" && (!node.Required || node.HasDefault || (node.Tag.Env != "" && ok)) {
+			ok := atLeastOneEnvSet(node.Tag.Envs)
+			if node.Enum != "" && (!node.Required || node.HasDefault || (len(node.Tag.Envs) != 0 && ok)) {
 				if err := checkEnum(node.Value, node.Target); err != nil {
 					return err
 				}
@@ -201,7 +201,7 @@ func (c *Context) Validate() error { // nolint: gocyclo
 
 		case *Application:
 			value = node.Target
-			desc = node.Name
+			desc = ""
 
 		case *Node:
 			value = node.Target
@@ -209,7 +209,10 @@ func (c *Context) Validate() error { // nolint: gocyclo
 		}
 		if validate := isValidatable(value); validate != nil {
 			if err := validate.Validate(); err != nil {
-				return fmt.Errorf("%s: %w", desc, err)
+				if desc != "" {
+					return fmt.Errorf("%s: %w", desc, err)
+				}
+				return err
 			}
 		}
 	}
@@ -344,7 +347,7 @@ func (c *Context) endParsing() {
 	}
 }
 
-func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
+func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 	positional := 0
 	node.Active = true
 
@@ -374,7 +377,7 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				switch {
 				case v == "-":
 					fallthrough
-				default: // nolint
+				default: //nolint
 					c.scan.Pop()
 					c.scan.PushTyped(token.Value, PositionalArgumentToken)
 
@@ -681,15 +684,24 @@ func flipBoolValue(value reflect.Value) error {
 
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	candidates := []string{}
+
 	for _, flag := range flags {
 		long := "--" + flag.Name
-		short := "-" + string(flag.Short)
-		neg := "--no-" + flag.Name
+		matched := long == match
 		candidates = append(candidates, long)
 		if flag.Short != 0 {
+			short := "-" + string(flag.Short)
+			matched = matched || (short == match)
 			candidates = append(candidates, short)
 		}
-		if short != match && long != match && !(match == neg && flag.Tag.Negatable) {
+		for _, alias := range flag.Aliases {
+			alias = "--" + alias
+			matched = matched || (alias == match)
+			candidates = append(candidates, alias)
+		}
+
+		neg := "--no-" + flag.Name
+		if !matched && !(match == neg && flag.Tag.Negatable) {
 			continue
 		}
 		// Found a matching flag.
@@ -717,6 +729,13 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		return nil
 	}
 	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
+}
+
+// Call an arbitrary function filling arguments with bound values.
+func (c *Context) Call(fn any, binds ...interface{}) (out []interface{}, err error) {
+	fv := reflect.ValueOf(fn)
+	bindings := c.Kong.bindings.clone().add(binds...).add(c).merge(c.bindings) //nolint:govet
+	return callAnyFunction(fv, bindings)
 }
 
 // RunNode calls the Run() method on an arbitrary node.
@@ -752,7 +771,7 @@ func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 	}
 
 	for _, method := range methods {
-		if err = callMethod("Run", method.node.Target, method.method, method.binds); err != nil {
+		if err = callFunction(method.method, method.binds); err != nil {
 			return err
 		}
 	}
@@ -883,9 +902,8 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	for ; positional < len(values); positional++ {
 		arg := values[positional]
 		// TODO(aat): Fix hardcoding of these env checks all over the place :\
-		if arg.Tag.Env != "" {
-			_, ok := os.LookupEnv(arg.Tag.Env)
-			if ok {
+		if len(arg.Tag.Envs) != 0 {
+			if atLeastOneEnvSet(arg.Tag.Envs) {
 				continue
 			}
 		}
@@ -989,4 +1007,13 @@ func isValidatable(v reflect.Value) validatable {
 		return isValidatable(v.Addr())
 	}
 	return nil
+}
+
+func atLeastOneEnvSet(envs []string) bool {
+	for _, env := range envs {
+		if _, ok := os.LookupEnv(env); ok {
+			return true
+		}
+	}
+	return false
 }

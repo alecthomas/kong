@@ -2,6 +2,7 @@ package kong
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -29,7 +30,7 @@ func TestBindTo(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) error {
-		saw = string(i.(impl)) // nolint
+		saw = string(i.(impl)) //nolint
 		return nil
 	}
 
@@ -37,7 +38,7 @@ func TestBindTo(t *testing.T) {
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
-	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
+	err = callFunction(reflect.ValueOf(method), p.bindings)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", saw)
 }
@@ -49,7 +50,7 @@ func TestInvalidCallback(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) string {
-		saw = string(i.(impl)) // nolint
+		saw = string(i.(impl)) //nolint
 		return saw
 	}
 
@@ -57,8 +58,8 @@ func TestInvalidCallback(t *testing.T) {
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
-	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
-	assert.EqualError(t, err, `return value of *reflect.rtype.method() must implement "error"`)
+	err = callFunction(reflect.ValueOf(method), p.bindings)
+	assert.EqualError(t, err, `return value of func(kong.iface) string must implement "error"`)
 }
 
 type zrror struct{}
@@ -74,7 +75,7 @@ func TestCallbackCustomError(t *testing.T) {
 
 	saw := ""
 	method := func(i iface) *zrror {
-		saw = string(i.(impl)) // nolint
+		saw = string(i.(impl)) //nolint
 		return nil
 	}
 
@@ -82,7 +83,7 @@ func TestCallbackCustomError(t *testing.T) {
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
-	err = callMethod("method", reflect.ValueOf(impl("??")), reflect.ValueOf(method), p.bindings)
+	err = callFunction(reflect.ValueOf(method), p.bindings)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", saw)
 }
@@ -111,4 +112,13 @@ func TestBindToProvider(t *testing.T) {
 	err = ctx.Run()
 	assert.NoError(t, err)
 	assert.True(t, cli.Called)
+}
+
+func TestFlagNamer(t *testing.T) {
+	var cli struct {
+		SomeFlag string
+	}
+	app, err := New(&cli, FlagNamer(strings.ToUpper))
+	assert.NoError(t, err)
+	assert.Equal(t, "SOMEFLAG", app.Model.Flags[1].Name)
 }

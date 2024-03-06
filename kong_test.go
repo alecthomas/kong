@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/kong"
 	"github.com/alecthomas/repr"
+
+	"github.com/alecthomas/kong"
 )
 
 func mustNew(t *testing.T, cli interface{}, options ...kong.Option) *kong.Kong {
@@ -494,6 +495,7 @@ func TestHooks(t *testing.T) {
 	p := mustNew(t, &cli, kong.Bind(ctx))
 
 	for _, test := range tests {
+		test := test
 		*ctx = hookContext{}
 		cli.One = hookCmd{}
 		t.Run(test.name, func(t *testing.T) {
@@ -513,6 +515,16 @@ func TestShort(t *testing.T) {
 	_, err := app.Parse([]string{"-b", "-shello"})
 	assert.NoError(t, err)
 	assert.True(t, cli.Bool)
+	assert.Equal(t, "hello", cli.String)
+}
+
+func TestAlias(t *testing.T) {
+	var cli struct {
+		String string `aliases:"str"`
+	}
+	app := mustNew(t, &cli)
+	_, err := app.Parse([]string{"--str", "hello"})
+	assert.NoError(t, err)
 	assert.Equal(t, "hello", cli.String)
 }
 
@@ -640,19 +652,36 @@ func TestRun(t *testing.T) {
 	assert.Equal(t, "argping", cli.Three.SubCommand.Arg)
 }
 
+type failCmd struct{}
+
+func (f failCmd) Run() error {
+	return errors.New("this command failed")
+}
+
+func TestPassesThroughOriginalCommandError(t *testing.T) {
+	var cli struct {
+		Fail failCmd `kong:"cmd"`
+	}
+	p := mustNew(t, &cli)
+	ctx, _ := p.Parse([]string{"fail"})
+	err := ctx.Run()
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), "this command failed")
+}
+
 func TestInterpolationIntoModel(t *testing.T) {
 	var cli struct {
-		Flag    string `default:"${default}" help:"Help, I need ${somebody}" enum:"${enum}"`
+		Flag    string `default:"${default_value}" help:"Help, I need ${somebody}" enum:"${enum}"`
 		EnumRef string `enum:"a,b" required:"" help:"One of ${enum}"`
 		EnvRef  string `env:"${env}" help:"God ${env}"`
 	}
 	_, err := kong.New(&cli)
 	assert.Error(t, err)
 	p, err := kong.New(&cli, kong.Vars{
-		"default":  "Some default value.",
-		"somebody": "chickens!",
-		"enum":     "a,b,c,d",
-		"env":      "SAVE_THE_QUEEN",
+		"default_value": "Some default value.",
+		"somebody":      "chickens!",
+		"enum":          "a,b,c,d",
+		"env":           "SAVE_THE_QUEEN",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(p.Model.Flags))
@@ -664,7 +693,7 @@ func TestInterpolationIntoModel(t *testing.T) {
 	assert.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
 	assert.Equal(t, []string{"a", "b", "c", "d"}, flag.EnumSlice())
 	assert.Equal(t, "One of a,b", flag2.Help)
-	assert.Equal(t, "SAVE_THE_QUEEN", flag3.Env)
+	assert.Equal(t, []string{"SAVE_THE_QUEEN"}, flag3.Envs)
 	assert.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
 
@@ -735,7 +764,7 @@ func TestEmbedInterface(t *testing.T) {
 	_, err := p.Parse([]string{"--some-flag=foo", "--flag=yes"})
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", cli.SomeFlag)
-	assert.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag) // nolint
+	assert.Equal(t, "yes", cli.TestInterface.(*TestImpl).Flag) //nolint
 }
 
 func TestExcludedField(t *testing.T) {
@@ -1213,7 +1242,7 @@ func TestValidateApp(t *testing.T) {
 	cli := validateCli{}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{})
-	assert.EqualError(t, err, "test: app error")
+	assert.EqualError(t, err, "app error")
 }
 
 func TestValidateCmd(t *testing.T) {
@@ -1302,6 +1331,24 @@ func TestDuplicateShortflags(t *testing.T) {
 	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate short flag -t")
 }
 
+func TestDuplicateAliases(t *testing.T) {
+	cli1 := struct {
+		Flag1 string `aliases:"flag"`
+		Flag2 string `aliases:"flag"`
+	}{}
+	_, err := kong.New(&cli1)
+	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
+}
+
+func TestDuplicateAliasLong(t *testing.T) {
+	cli2 := struct {
+		Flag  string ``
+		Flag2 string `aliases:"flag"` // duplicates Flag
+	}{}
+	_, err := kong.New(&cli2)
+	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
+}
+
 func TestDuplicateNestedShortFlags(t *testing.T) {
 	cli := struct {
 		Flag1 bool `short:"t"`
@@ -1334,16 +1381,16 @@ func TestHydratePointerCommandsAndEmbeds(t *testing.T) {
 	assert.Equal(t, &embed{Embed: true}, cli.Embed)
 }
 
-// nolint
+//nolint:revive
 type testIgnoreFields struct {
 	Foo struct {
 		Bar bool
 		Sub struct {
 			SubFlag1     bool `kong:"name=subflag1"`
-			XXX_SubFlag2 bool `kong:"name=subflag2"`
+			XXX_SubFlag2 bool `kong:"name=subflag2"` //nolint:stylecheck
 		} `kong:"cmd"`
 	} `kong:"cmd"`
-	XXX_Baz struct {
+	XXX_Baz struct { //nolint:stylecheck
 		Boo bool
 	} `kong:"cmd,name=baz"`
 }
@@ -1529,7 +1576,7 @@ func TestPassthroughCmdOnlyArgs(t *testing.T) {
 		} `cmd:"" passthrough:""`
 	}
 	_, err := kong.New(&cli)
-	assert.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] must not have subcommands or flags")
+	assert.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] [flags] must not have subcommands or flags")
 }
 
 func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
@@ -1951,8 +1998,8 @@ func TestBoolPtrNil(t *testing.T) {
 
 func TestUnsupportedPtr(t *testing.T) {
 	type Foo struct {
-		x int // nolint
-		y int // nolint
+		x int //nolint
+		y int //nolint
 	}
 
 	var cli struct {
