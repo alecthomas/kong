@@ -540,7 +540,7 @@ func sliceDecoder(r *Registry) MapperFunc {
 		var childScanner *Scanner
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
-			// If decoding a flag, we need an value.
+			// If decoding a flag, we need a value.
 			if t.IsEOL() {
 				return fmt.Errorf("missing value, expecting \"<arg>%c...\"", sep)
 			}
@@ -641,7 +641,7 @@ func existingFileMapper(r *Registry) MapperFunc {
 			return err
 		}
 
-		if !ctx.Value.Active || ctx.Value.Set {
+		if !ctx.Value.Active || (ctx.Value.Set && ctx.Value.Target.Type() == target.Type()) {
 			// early return to avoid checking extra files that may not exist;
 			// this hack only works because the value provided on the cli is
 			// checked before the default value is checked (if default is set).
@@ -677,7 +677,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 			return err
 		}
 
-		if !ctx.Value.Active || ctx.Value.Set {
+		if !ctx.Value.Active || (ctx.Value.Set && ctx.Value.Target.Type() == target.Type()) {
 			// early return to avoid checking extra dirs that may not exist;
 			// this hack only works because the value provided on the cli is
 			// checked before the default value is checked (if default is set).

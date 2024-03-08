@@ -553,6 +553,20 @@ func TestExistingFileMapper(t *testing.T) {
 	assert.Contains(t, err.Error(), "exists but is a directory")
 }
 
+func TestExistingFileMapperSlice(t *testing.T) {
+	type CLI struct {
+		Files []string `type:"existingfile"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--files", "testdata/file.txt", "--files", "testdata/file.txt"})
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.Files)
+	pwd, err := os.Getwd()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{filepath.Join(pwd, "testdata", "file.txt"), filepath.Join(pwd, "testdata", "file.txt")}, cli.Files)
+}
+
 func TestExistingFileMapperDefaultMissing(t *testing.T) {
 	type CLI struct {
 		File string `type:"existingfile" default:"testdata/missing.txt"`
