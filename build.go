@@ -170,6 +170,9 @@ MAIN:
 		if flag.Short != 0 {
 			delete(seenFlags, "-"+string(flag.Short))
 		}
+		for _, aflag := range flag.Aliases {
+			delete(seenFlags, "--"+aflag)
+		}
 	}
 
 	if err := validatePositionalArguments(node); err != nil {
