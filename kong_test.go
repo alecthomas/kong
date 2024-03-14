@@ -1340,6 +1340,20 @@ func TestDuplicateAliases(t *testing.T) {
 	assert.EqualError(t, err, "<anonymous struct>.Flag2: duplicate flag --flag")
 }
 
+func TestSubCommandAliases(t *testing.T) {
+	type SubC struct {
+		Flag1 string `aliases:"flag"`
+	}
+
+	cli1 := struct {
+		Sub1 SubC `cmd:"sub1"`
+		Sub2 SubC `cmd:"sub2"`
+	}{}
+
+	_, err := kong.New(&cli1)
+	assert.NoError(t, err, "dupe aliases shouldn't error if they're in separate sub commands")
+}
+
 func TestDuplicateAliasLong(t *testing.T) {
 	cli2 := struct {
 		Flag  string ``
