@@ -593,11 +593,24 @@ func TestSliceWithDisabledSeparator(t *testing.T) {
 }
 
 func TestMultilineMessage(t *testing.T) {
-	w := &bytes.Buffer{}
-	var cli struct{}
-	p := mustNew(t, &cli, kong.Writers(w, w))
-	p.Printf("hello\nworld")
-	assert.Equal(t, "test: hello\n      world\n", w.String())
+	tests := []struct {
+		name string
+		text string
+		want string
+	}{
+		{"Simple", "hello\nworld", "test: hello\n      world\n"},
+		{"WithNewline", "hello\nworld\n", "test: hello\n      world\n"},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			w := &bytes.Buffer{}
+			var cli struct{}
+			p := mustNew(t, &cli, kong.Writers(w, w))
+			p.Printf(test.text)
+			assert.Equal(t, test.want, w.String())
+		})
+	}
 }
 
 type cmdWithRun struct {
