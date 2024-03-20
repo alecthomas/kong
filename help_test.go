@@ -373,6 +373,63 @@ Commands:
 	})
 }
 
+// Tests HelpOptions.SubcommandsWithOptionalFlags
+//
+// MUST retain original behaviour by default (see "default" sub test)
+// MUST show optional subcommand flags when SubcommandsWithOptionalFlags
+//
+//	is enabled (see "forced" sub test)
+//
+// MUST show any _required_ parent flags on subcommands
+// MUST NOT show any optional parent flags on subcommands
+func TestSubcommandsWithOptionalFlags(t *testing.T) {
+	var cli struct {
+		Sub struct {
+			ParentFlag string `help:"I should only appear on parent"`
+			Mandatory  string `required:"" help:"I should appear on all sub commands"`
+			MoreSub    struct {
+				Flag     string `help:"A flag."`
+				Required string `required:"" help:"A required flag."`
+			} `cmd help:"more sub help"`
+			Another struct {
+			} `cmd help:"another help"`
+		} `cmd help:"sub help"`
+	}
+	w := bytes.NewBuffer(nil)
+
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+	)
+
+	// Default: don't show flags on nested items unless they are `required`
+	t.Run("default", func(t *testing.T) {
+		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --mandatory=STRING --required=STRING\n    more sub help\n\n  sub another --mandatory=STRING\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
+		_, _ = app.Parse([]string{"--help"})
+		assert.Equal(t, expected, w.String())
+	})
+
+	w.Truncate(0)
+	app = mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.HelpOptions{
+			SubcommandsWithOptionalFlags: true,
+		},
+		kong.Exit(func(int) {}),
+	)
+
+	// Force flag display: don't show flags on nested items unless they are `required`
+	t.Run("forced", func(t *testing.T) {
+		expected := "Usage: test-app <command>\n\nA test app.\n\nFlags:\n  -h, --help    Show context-sensitive help.\n\nCommands:\n  sub more-sub --mandatory=STRING --required=STRING [--flag=STRING]\n    more sub help\n\n  sub another --mandatory=STRING\n    another help\n\nRun \"test-app <command> --help\" for more information on a command.\n"
+		_, _ = app.Parse([]string{"--help"})
+		assert.Equal(t, expected, w.String())
+	})
+}
+
 func TestHelpCompactNoExpand(t *testing.T) {
 	var cli struct {
 		One struct {

@@ -141,10 +141,25 @@ func (n *Node) Depth() int {
 	return depth
 }
 
-// Summary help string for the node (not including application name).
-func (n *Node) Summary() string {
+// SummaryWithOptions help string for the node (not including application name)
+//
+// Used both by help writing as well as other parts of the application
+//
+// Most cases just use Summary() (default settings)
+//
+// The help printer uses this optional version to pass options along.
+//
+// if includeOptionalFlags is true, all flags for a command will
+// be included. see HelpOptions.IncludeOptionalFlagsInSummary
+func (n *Node) SummaryWithOptions(includeOptionalFlags bool) string {
 	summary := n.Path()
-	if flags := n.FlagSummary(true); flags != "" {
+	var flags string
+	if includeOptionalFlags {
+		flags = n.FlagSummaryWithOptions(true)
+	} else {
+		flags = n.FlagSummary(true)
+	}
+	if flags != "" {
 		summary += " " + flags
 	}
 	args := []string{}
@@ -175,6 +190,12 @@ func (n *Node) Summary() string {
 	return summary
 }
 
+// Summary help string for the node (not including application name).
+// Default behaviour used throughout the application
+func (n *Node) Summary() string {
+	return n.SummaryWithOptions(false)
+}
+
 // FlagSummary for the node.
 func (n *Node) FlagSummary(hide bool) string {
 	required := []string{}
@@ -186,6 +207,31 @@ func (n *Node) FlagSummary(hide bool) string {
 				required = append(required, flag.Summary())
 			}
 		}
+	}
+	return strings.Join(required, " ")
+}
+
+// FlagSummaryWithOptions is the same behaviour as FlagSummary but
+// also includes any optional flags associated with the Node
+func (n *Node) FlagSummaryWithOptions(hide bool) string {
+	required := []string{}
+	optional := []string{}
+	count := 0
+	for _, group := range n.AllFlags(hide) {
+		for _, flag := range group {
+			count++
+			// Show required flags
+			if flag.Required {
+				required = append(required, flag.Summary())
+			} else if flag.Parent == n {
+				// Show optional flags _if they belong to us_
+				optional = append(optional, flag.Summary())
+			}
+		}
+	}
+	if len(optional) > 0 {
+		// Group optional flags together and surround with brackets
+		required = append(required, fmt.Sprintf("[%s]", strings.Join(optional, " ")))
 	}
 	return strings.Join(required, " ")
 }
@@ -250,6 +296,7 @@ type Value struct {
 	Mapper       Mapper
 	Tag          *Tag
 	Target       reflect.Value
+	Parent       *Node
 	Required     bool
 	Set          bool   // Set to true when this value is set through some mechanism.
 	Format       string // Formatting directive, if applicable.
