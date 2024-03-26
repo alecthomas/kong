@@ -703,7 +703,9 @@ kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json
 
 Resolvers are Kong's extension point for providing default values from external sources. As an example, support for environment variables via the `env` tag is provided by a resolver. There's also a builtin resolver for JSON configuration files.
 
-Example resolvers can be found in [resolver.go](https://github.com/alecthomas/kong/blob/master/resolver.go).
+Example resolvers can be found in
+- [resolver.go](https://github.com/alecthomas/kong/blob/master/resolver.go)
+- [custom-tag-resolver][https://github.com/alecthomas/kong/blob/master/_examples/custom-tag-resolver/main.go]
 
 ### `*Mapper(...)` - customising how the command-line is mapped to Go values
 
