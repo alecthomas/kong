@@ -1,7 +1,7 @@
 module github.com/alecthomas/kong
 
 require (
-	github.com/alecthomas/assert/v2 v2.6.0
+	github.com/alecthomas/assert/v2 v2.8.1
 	github.com/alecthomas/repr v0.4.0
 )
 
