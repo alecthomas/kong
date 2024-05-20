@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"io"
 	"math/bits"
+	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -285,6 +288,11 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
 		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
 		RegisterType(reflect.TypeOf(&os.File{}), fileMapper(r)).
+		RegisterType(reflect.TypeOf(&regexp.Regexp{}), regexMapper()).
+		RegisterType(reflect.TypeOf(&net.IP{}), netIPMapper()).
+		RegisterType(reflect.TypeOf(&net.IPNet{}), netIPNetMapper()).
+		RegisterType(reflect.TypeOf(netip.Addr{}), netipAddrMapper()).
+		RegisterType(reflect.TypeOf(netip.Prefix{}), netipPrefixMapper()).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
@@ -729,6 +737,102 @@ func fileContentMapper(r *Registry) MapperFunc {
 			return err
 		}
 		target.SetBytes(data)
+		return nil
+	}
+}
+
+func regexMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		t, err := ctx.Scan.PopValue("regex")
+		if err != nil {
+			return err
+		}
+
+		var f *regexp.Regexp
+		switch v := t.Value.(type) {
+		case string:
+			f, err = regexp.Compile(v)
+			if err != nil {
+				return fmt.Errorf("expected regular expression but got %q: %w", v, err)
+			}
+		default:
+			return fmt.Errorf("expected string but got %q", v)
+		}
+
+		target.Set(reflect.ValueOf(f))
+
+		return nil
+	}
+}
+
+func netIPMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		var value string
+		if err := ctx.Scan.PopValueInto("ip", &value); err != nil {
+			return err
+		}
+
+		ip := net.ParseIP(value)
+		if ip == nil {
+			return fmt.Errorf("expected ip addresss but got %q", value)
+		}
+
+		target.Set(reflect.ValueOf(ip))
+
+		return nil
+	}
+}
+
+func netIPNetMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		var value string
+		if err := ctx.Scan.PopValueInto("cidr", &value); err != nil {
+			return err
+		}
+
+		_, ipnet, err := net.ParseCIDR(value)
+		if err != nil {
+			return fmt.Errorf("expected cidr but got %q: %w", value, err)
+		}
+
+		target.Set(reflect.ValueOf(ipnet))
+
+		return nil
+	}
+}
+
+func netipAddrMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		var value string
+		if err := ctx.Scan.PopValueInto("ip", &value); err != nil {
+			return err
+		}
+
+		ip, err := netip.ParseAddr(value)
+		if err != nil {
+			return fmt.Errorf("expected ip addresss but got %q: %w", value, err)
+		}
+
+		target.Set(reflect.ValueOf(ip))
+
+		return nil
+	}
+}
+
+func netipPrefixMapper() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		var value string
+		if err := ctx.Scan.PopValueInto("cidr", &value); err != nil {
+			return err
+		}
+
+		prefix, err := netip.ParsePrefix(value)
+		if err != nil {
+			return fmt.Errorf("expected ipnet but got %q: %w", value, err)
+		}
+
+		target.Set(reflect.ValueOf(prefix))
+
 		return nil
 	}
 }
