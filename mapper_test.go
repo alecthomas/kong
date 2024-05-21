@@ -141,136 +141,164 @@ func TestDurationMapperJSONResolver(t *testing.T) {
 	assert.Equal(t, time.Second*5, cli.Flag)
 }
 
-func TestNetIP(t *testing.T) {
-	var cli struct {
-		Flag net.IP
+func TestIPAddress(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"127.0.0.1", "127.0.0.1"},
+		{"2001:db8:abcd:0012::1", "2001:db8:abcd:12::1"},
 	}
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{"--flag", "127.0.0.1"})
-	assert.NoError(t, err)
-	assert.Equal(t, "127.0.0.1", cli.Flag.String())
 
-	_, err = k.Parse([]string{"--flag", "2001:db8:abcd:0012::1"})
-	assert.NoError(t, err)
-	assert.Equal(t, "2001:db8:abcd:12::1", cli.Flag.String())
-}
+	t.Run("TestNetPackage", func(t *testing.T) {
+		var cli1 struct {
+			Flag net.IP
+		}
+		k1 := mustNew(t, &cli1)
 
-func TestNetIPSplice(t *testing.T) {
-	var cli struct {
-		Flag []net.IP
-	}
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{
-		"--flag", "127.0.0.1",
-		"--flag", "192.168.0.1",
-		"--flag", "2001:db8:abcd:0012::1",
+		for _, tt := range tests {
+			_, err := k1.Parse([]string{"--flag", tt.input})
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, cli1.Flag.String())
+		}
 	})
-	assert.NoError(t, err)
 
-	assert.Equal(t, 3, len(cli.Flag))
-	assert.Equal(t, "127.0.0.1", cli.Flag[0].String())
-	assert.Equal(t, "192.168.0.1", cli.Flag[1].String())
-	assert.Equal(t, "2001:db8:abcd:12::1", cli.Flag[2].String())
-}
+	t.Run("TestNetipPackage", func(t *testing.T) {
+		var cli1 struct {
+			Flag netip.Addr
+		}
+		k1 := mustNew(t, &cli1)
 
-func TestIPNet(t *testing.T) {
-	var cli struct {
-		Flag *net.IPNet
-	}
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{"--flag", "127.0.0.0/24"})
-	assert.NoError(t, err)
-	assert.Equal(t, "127.0.0.0/24", cli.Flag.String())
-
-	_, err = k.Parse([]string{"--flag", "2001:db8:abcd:0012::0/64"})
-	assert.NoError(t, err)
-	assert.Equal(t, "2001:db8:abcd:12::/64", cli.Flag.String())
-}
-
-func TestIPNetSlice(t *testing.T) {
-	var cli struct {
-		Test []*net.IPNet
-	}
-
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{
-		"--test", "127.0.0.0/24",
-		"--test", "123.0.0.0/23",
-		"--test", "2001:db8:abcd:0012::0/64",
+		for _, tt := range tests {
+			_, err := k1.Parse([]string{"--flag", tt.input})
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, cli1.Flag.String())
+		}
 	})
-	assert.NoError(t, err)
-
-	assert.Equal(t, 3, len(cli.Test))
-	assert.Equal(t, "127.0.0.0/24", cli.Test[0].String())
-	assert.Equal(t, "123.0.0.0/23", cli.Test[1].String())
-	assert.Equal(t, "2001:db8:abcd:12::/64", cli.Test[2].String())
 }
 
-func TestNetipAddr(t *testing.T) {
-	var cli struct {
-		Flag netip.Addr
+func TestIPAddressSlice(t *testing.T) {
+	tests := []struct {
+		input    []string
+		expected []string
+	}{
+		{input: []string{"127.0.0.1", "192.168.0.1"}, expected: []string{"127.0.0.1", "192.168.0.1"}},
+		{input: []string{"2001:db8:abcd:0012::1", "::1"}, expected: []string{"2001:db8:abcd:12::1", "::1"}},
 	}
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{"--flag", "127.0.0.1"})
-	assert.NoError(t, err)
-	assert.Equal(t, "127.0.0.1", cli.Flag.String())
 
-	_, err = k.Parse([]string{"--flag", "2001:db8:abcd:0012::1"})
-	assert.NoError(t, err)
-	assert.Equal(t, "2001:db8:abcd:12::1", cli.Flag.String())
-}
+	t.Run("TestNetPackage", func(t *testing.T) {
+		var cli struct {
+			Flag []net.IP
+		}
+		k := mustNew(t, &cli)
 
-func TestNetipAddrSplice(t *testing.T) {
-	var cli struct {
-		Flag []net.IP
-	}
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{
-		"--flag", "127.0.0.1",
-		"--flag", "192.168.0.1",
-		"--flag", "2001:db8:abcd:0012::1",
+		for _, tt := range tests {
+			_, err := k.Parse([]string{"--flag", strings.Join(tt.input, ",")})
+			assert.NoError(t, err)
+			assert.Equal(t, len(tt.input), len(cli.Flag))
+		}
 	})
-	assert.NoError(t, err)
 
-	assert.Equal(t, 3, len(cli.Flag))
-	assert.Equal(t, "127.0.0.1", cli.Flag[0].String())
-	assert.Equal(t, "192.168.0.1", cli.Flag[1].String())
-	assert.Equal(t, "2001:db8:abcd:12::1", cli.Flag[2].String())
-}
+	t.Run("TestNetipPackage", func(t *testing.T) {
+		var cli struct {
+			Flag []netip.Addr
+		}
+		k := mustNew(t, &cli)
 
-func TestNetipPrefix(t *testing.T) {
-	var cli struct {
-		Flag netip.Prefix
-	}
-	k := mustNew(t, &cli)
-
-	_, err := k.Parse([]string{"--flag", "127.0.0.0/24"})
-	assert.NoError(t, err)
-	assert.Equal(t, "127.0.0.0/24", cli.Flag.String())
-	assert.Equal(t, 24, cli.Flag.Bits())
-
-	_, err = k.Parse([]string{"--flag", "2001:db8:abcd:0012::0/64"})
-	assert.NoError(t, err)
-	assert.Equal(t, "2001:db8:abcd:12::/64", cli.Flag.String())
-}
-
-func TestNetipPrefixSlice(t *testing.T) {
-	var cli struct {
-		Test []*net.IPNet `kong:"sep=','"`
-	}
-
-	k := mustNew(t, &cli)
-	_, err := k.Parse([]string{
-		"--test", "127.0.0.0/24",
-		"--test", "123.0.0.0/23",
-		"--test", "2001:db8:abcd:0012::0/64",
+		for _, tt := range tests {
+			_, err := k.Parse([]string{"--flag", strings.Join(tt.input, ",")})
+			assert.NoError(t, err)
+			assert.Equal(t, len(tt.input), len(cli.Flag))
+		}
 	})
-	assert.NoError(t, err)
+}
 
-	assert.Equal(t, 3, len(cli.Test))
-	assert.Equal(t, "127.0.0.0/24", cli.Test[0].String())
-	assert.Equal(t, "123.0.0.0/23", cli.Test[1].String())
-	assert.Equal(t, "2001:db8:abcd:12::/64", cli.Test[2].String())
+func TestCIDR(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedNet   string
+		expectedNetip string
+	}{
+		{"127.0.0.1/16", "127.0.0.0/16", "127.0.0.1/16"},
+		{"2001:db8:abcd:0012::0/64", "2001:db8:abcd:12::/64", "2001:db8:abcd:12::/64"},
+	}
+
+	t.Run("TestNetPackage", func(t *testing.T) {
+		var cli1 struct {
+			Flag *net.IPNet
+		}
+		k1 := mustNew(t, &cli1)
+
+		for _, tt := range tests {
+			_, err := k1.Parse([]string{"--flag", tt.input})
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedNet, cli1.Flag.String())
+		}
+	})
+
+	t.Run("TestNetipPackage", func(t *testing.T) {
+		var cli1 struct {
+			Flag netip.Prefix
+		}
+		k1 := mustNew(t, &cli1)
+
+		for _, tt := range tests {
+			_, err := k1.Parse([]string{"--flag", tt.input})
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedNetip, cli1.Flag.String())
+		}
+	})
+}
+
+func TestCIDRSlice(t *testing.T) {
+	tests := []struct {
+		input         []string
+		expectedNet   []string
+		expectedNetip []string
+	}{
+		{
+			[]string{"127.0.0.1/16", "192.168.1.0/20"},
+			[]string{"127.0.0.0/16", "192.168.0.0/20"},
+			[]string{"127.0.0.1/16", "192.168.1.0/20"},
+		},
+		{
+			[]string{"2001:db8:abcd:0012::0/64", "2001:db8:abcd:0012::0/128"},
+			[]string{"2001:db8:abcd:12::/64", "2001:db8:abcd:12::/128"},
+			[]string{"2001:db8:abcd:12::/64", "2001:db8:abcd:12::/128"},
+		},
+	}
+
+	t.Run("TestNetPackage", func(t *testing.T) {
+		var cli struct {
+			Flag []*net.IPNet
+		}
+		k := mustNew(t, &cli)
+
+		for _, tt := range tests {
+			_, err := k.Parse([]string{"--flag", strings.Join(tt.input, ",")})
+			assert.NoError(t, err)
+			assert.Equal(t, len(tt.input), len(cli.Flag))
+			for i := 0; i < len(cli.Flag); i++ {
+				assert.Equal(t, tt.expectedNet[i], cli.Flag[i].String())
+			}
+		}
+	})
+
+	t.Run("TestNetipPackage", func(t *testing.T) {
+		var cli struct {
+			Flag []netip.Prefix
+		}
+		k := mustNew(t, &cli)
+
+		for _, tt := range tests {
+			_, err := k.Parse([]string{"--flag", strings.Join(tt.input, ",")})
+			assert.NoError(t, err)
+			assert.Equal(t, len(tt.input), len(cli.Flag))
+			for i := 0; i < len(cli.Flag); i++ {
+				assert.Equal(t, tt.expectedNetip[i], cli.Flag[i].String())
+			}
+		}
+	})
 }
 
 func TestRegex(t *testing.T) {
@@ -299,7 +327,6 @@ func TestRegexSlice(t *testing.T) {
 	assert.Equal(t, 2, len(cli.Test))
 	assert.Equal(t, "foo.+[b-r]{2,4}", cli.Test[0].String())
 	assert.Equal(t, "foo=bar", cli.Test[1].String())
-
 }
 
 func TestSplitEscaped(t *testing.T) {
