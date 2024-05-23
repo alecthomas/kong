@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math/bits"
-	"net"
 	"net/url"
 	"os"
 	"reflect"
@@ -288,8 +287,6 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
 		RegisterType(reflect.TypeOf(&os.File{}), fileMapper(r)).
 		RegisterType(reflect.TypeOf(&regexp.Regexp{}), regexMapper()).
-		RegisterType(reflect.TypeOf(&net.IP{}), netIPMapper()).
-		RegisterType(reflect.TypeOf(&net.IPNet{}), netIPNetMapper()).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
@@ -757,42 +754,6 @@ func regexMapper() MapperFunc {
 		}
 
 		target.Set(reflect.ValueOf(f))
-
-		return nil
-	}
-}
-
-func netIPMapper() MapperFunc {
-	return func(ctx *DecodeContext, target reflect.Value) error {
-		var value string
-		if err := ctx.Scan.PopValueInto("ip", &value); err != nil {
-			return err
-		}
-
-		ip := net.ParseIP(value)
-		if ip == nil {
-			return fmt.Errorf("expected ip addresss but got %q", value)
-		}
-
-		target.Set(reflect.ValueOf(ip))
-
-		return nil
-	}
-}
-
-func netIPNetMapper() MapperFunc {
-	return func(ctx *DecodeContext, target reflect.Value) error {
-		var value string
-		if err := ctx.Scan.PopValueInto("cidr", &value); err != nil {
-			return err
-		}
-
-		_, ipnet, err := net.ParseCIDR(value)
-		if err != nil {
-			return fmt.Errorf("expected cidr but got %q: %w", value, err)
-		}
-
-		target.Set(reflect.ValueOf(ipnet))
 
 		return nil
 	}
