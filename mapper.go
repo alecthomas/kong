@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -286,7 +285,6 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
 		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
 		RegisterType(reflect.TypeOf(&os.File{}), fileMapper(r)).
-		RegisterType(reflect.TypeOf(&regexp.Regexp{}), regexMapper()).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
@@ -731,30 +729,6 @@ func fileContentMapper(r *Registry) MapperFunc {
 			return err
 		}
 		target.SetBytes(data)
-		return nil
-	}
-}
-
-func regexMapper() MapperFunc {
-	return func(ctx *DecodeContext, target reflect.Value) error {
-		t, err := ctx.Scan.PopValue("regex")
-		if err != nil {
-			return err
-		}
-
-		var f *regexp.Regexp
-		switch v := t.Value.(type) {
-		case string:
-			f, err = regexp.Compile(v)
-			if err != nil {
-				return fmt.Errorf("expected regular expression but got %q: %w", v, err)
-			}
-		default:
-			return fmt.Errorf("expected string but got %q", v)
-		}
-
-		target.Set(reflect.ValueOf(f))
-
 		return nil
 	}
 }

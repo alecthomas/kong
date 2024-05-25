@@ -266,6 +266,17 @@ func TestCIDRSlice(t *testing.T) {
 
 func TestRegex(t *testing.T) {
 	var cli struct {
+		Test regexp.Regexp
+	}
+
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--test", "a.+[a-b]{2,4}"})
+	assert.NoError(t, err)
+	assert.Equal(t, "a.+[a-b]{2,4}", cli.Test.String())
+}
+
+func TestRegexPointer(t *testing.T) {
+	var cli struct {
 		Test *regexp.Regexp
 	}
 
@@ -276,6 +287,23 @@ func TestRegex(t *testing.T) {
 }
 
 func TestRegexSlice(t *testing.T) {
+	var cli struct {
+		Test []regexp.Regexp `kong:"sep='none'"`
+	}
+
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{
+		"--test", "foo.+[b-r]{2,4}",
+		"--test", "foo=bar",
+	})
+	assert.NoError(t, err)
+
+	assert.Equal(t, 2, len(cli.Test))
+	assert.Equal(t, "foo.+[b-r]{2,4}", cli.Test[0].String())
+	assert.Equal(t, "foo=bar", cli.Test[1].String())
+}
+
+func TestRegexPointerSlice(t *testing.T) {
 	var cli struct {
 		Test []*regexp.Regexp `kong:"sep='none'"`
 	}
