@@ -13,6 +13,7 @@ var cli struct {
 
 type flagWithHelp bool
 
+// See https://github.com/alecthomas/kong?tab=readme-ov-file#variable-interpolation
 var vars = kong.Vars{
 	"flag_help": "Extended flag help that might be too long for directly " +
 		"including in the struct tag field",
