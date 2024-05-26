@@ -7,14 +7,15 @@ import (
 )
 
 var cli struct {
-	Flag flagWithHelp    `help:"Regular flag help"`
+	Flag flagWithHelp    `help:"${flag_help}"`
 	Echo commandWithHelp `cmd:"" help:"Regular command help"`
 }
 
 type flagWithHelp bool
 
-func (f *flagWithHelp) Help() string {
-	return "🏁 additional flag help"
+var vars = kong.Vars{
+	"flag_help": "Extended flag help that might be too long for directly " +
+		"including in the struct tag field",
 }
 
 type commandWithHelp struct {
@@ -41,7 +42,8 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 			Summary: false,
-		}))
+		}),
+		vars)
 	switch ctx.Command() {
 	case "echo <msg>":
 		fmt.Println(cli.Echo.Msg)
