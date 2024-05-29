@@ -51,6 +51,9 @@ type flattenedField struct {
 
 func flattenedFields(v reflect.Value, ptag *Tag) (out []flattenedField, err error) {
 	v = reflect.Indirect(v)
+	if v.Kind() != reflect.Struct {
+		return out, nil
+	}
 	for i := 0; i < v.NumField(); i++ {
 		ft := v.Type().Field(i)
 		fv := v.Field(i)
