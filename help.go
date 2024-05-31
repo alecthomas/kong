@@ -102,7 +102,7 @@ func DefaultHelpValueFormatter(value *Value) string {
 
 // DefaultShortHelpPrinter is the default HelpPrinter for short help on error.
 func DefaultShortHelpPrinter(options HelpOptions, ctx *Context) error {
-	w := newHelpWriter(ctx, options)
+	w := NewHelpWriter(ctx, options)
 	cmd := ctx.Selected()
 	app := ctx.Model
 	if cmd == nil {
@@ -120,21 +120,22 @@ func DefaultHelpPrinter(options HelpOptions, ctx *Context) error {
 	if ctx.Empty() {
 		options.Summary = false
 	}
-	w := newHelpWriter(ctx, options)
+	w := NewHelpWriter(ctx, options)
 	selected := ctx.Selected()
 	if selected == nil {
-		printApp(w, ctx.Model)
+		w.WriteApp(ctx.Model)
 	} else {
-		printCommand(w, ctx.Model, selected)
+		w.WriteCommand(ctx.Model, selected)
 	}
 	return w.Write(ctx.Stdout)
 }
 
-func printApp(w *helpWriter, app *Application) {
+// WriteApp writes the help output for the whole app.
+func (w *HelpWriter) WriteApp(app *Application) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s%s", app.Name, app.Summary())
 	}
-	printNodeDetail(w, app.Node, true)
+	w.WriteNodeDetail(app.Node, true)
 	cmds := app.Leaves(true)
 	if len(cmds) > 0 && app.HelpFlag != nil {
 		w.Print("")
@@ -146,18 +147,20 @@ func printApp(w *helpWriter, app *Application) {
 	}
 }
 
-func printCommand(w *helpWriter, app *Application, cmd *Command) {
+// WriteCommand writes the help output for a specific command.
+func (w *HelpWriter) WriteCommand(app *Application, cmd *Command) {
 	if !w.NoAppSummary {
 		w.Printf("Usage: %s %s", app.Name, cmd.Summary())
 	}
-	printNodeDetail(w, cmd, true)
+	w.WriteNodeDetail(cmd, true)
 	if w.Summary && app.HelpFlag != nil {
 		w.Print("")
 		w.Printf(`Run "%s --help" for more information.`, cmd.FullPath())
 	}
 }
 
-func printNodeDetail(w *helpWriter, node *Node, hide bool) {
+// WriteNodeDetail writes the help output for a node.
+func (w *HelpWriter) WriteNodeDetail(node *Node, hide bool) {
 	if node.Help != "" {
 		w.Print("")
 		w.Wrap(node.Help)
@@ -171,27 +174,10 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 	}
 	if len(node.Positional) > 0 {
 		w.Print("")
-		w.Print("Arguments:")
-		writePositionals(w.Indent(), node.Positional)
-	}
-	printFlags := func() {
-		if flags := node.AllFlags(true); len(flags) > 0 {
-			groupedFlags := collectFlagGroups(flags)
-			for _, group := range groupedFlags {
-				w.Print("")
-				if group.Metadata.Title != "" {
-					w.Wrap(group.Metadata.Title)
-				}
-				if group.Metadata.Description != "" {
-					w.Indent().Wrap(group.Metadata.Description)
-					w.Print("")
-				}
-				writeFlags(w.Indent(), group.Flags)
-			}
-		}
+		w.WritePositionals(node.Positional, "Arguments:")
 	}
 	if !w.FlagsLast {
-		printFlags()
+		w.WriteFlagsForCommand(node, "Flags:")
 	}
 	var cmds []*Node
 	if w.NoExpandSubcommands {
@@ -200,11 +186,9 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 		cmds = node.Leaves(hide)
 	}
 	if len(cmds) > 0 {
-		iw := w.Indent()
 		if w.Tree {
 			w.Print("")
-			w.Print("Commands:")
-			writeCommandTree(iw, node)
+			w.WriteCommandTree(node, "Commands:")
 		} else {
 			groupedCmds := collectCommandGroups(cmds)
 			for _, group := range groupedCmds {
@@ -213,36 +197,66 @@ func printNodeDetail(w *helpWriter, node *Node, hide bool) {
 					w.Wrap(group.Metadata.Title)
 				}
 				if group.Metadata.Description != "" {
-					w.Indent().Wrap(group.Metadata.Description)
+					w.Indent()
+					w.Wrap(group.Metadata.Description)
+					w.Unindent()
 					w.Print("")
 				}
 
 				if w.Compact {
-					writeCompactCommandList(group.Commands, iw)
+					w.Indent()
+					w.WriteCompactCommandList(group.Commands)
+					w.Unindent()
 				} else {
-					writeCommandList(group.Commands, iw)
+					w.Indent()
+					w.WriteCommandList(group.Commands)
+					w.Unindent()
 				}
 			}
 		}
 	}
 	if w.FlagsLast {
-		printFlags()
+		w.WriteFlagsForCommand(node, "Flags:")
 	}
 }
 
-func writeCommandList(cmds []*Node, iw *helpWriter) {
+// WriteFlagsForCommand writes the help output for flags.
+func (w *HelpWriter) WriteFlagsForCommand(node *Node, title string) {
+	if flags := node.AllFlags(true); len(flags) > 0 {
+		groupedFlags := collectFlagGroups(title, flags)
+		for _, group := range groupedFlags {
+			w.Print("")
+			if group.Metadata.Title != "" {
+				w.Wrap(group.Metadata.Title)
+			}
+			if group.Metadata.Description != "" {
+				w.Indent()
+				w.Wrap(group.Metadata.Description)
+				w.Unindent()
+				w.Print("")
+			}
+			w.Indent()
+			w.WriteFlags(group.Flags)
+			w.Unindent()
+		}
+	}
+}
+
+// WriteCommandList writes the help output for the command list.
+func (w *HelpWriter) WriteCommandList(cmds []*Node) {
 	for i, cmd := range cmds {
 		if cmd.Hidden {
 			continue
 		}
-		printCommandSummary(iw, cmd)
+		w.WriteCommandSummary(cmd)
 		if i != len(cmds)-1 {
-			iw.Print("")
+			w.Print("")
 		}
 	}
 }
 
-func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
+// WriteCompactCommandList writes the help output for the compact command list.
+func (w *HelpWriter) WriteCompactCommandList(cmds []*Node) {
 	rows := [][2]string{}
 	for _, cmd := range cmds {
 		if cmd.Hidden {
@@ -250,10 +264,14 @@ func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
 		}
 		rows = append(rows, [2]string{cmd.Path(), cmd.Help})
 	}
-	writeTwoColumns(iw, rows)
+	w.WriteTwoColumns(rows)
 }
 
-func writeCommandTree(w *helpWriter, node *Node) {
+// WriteCommandTree writes the help output for the command tree.
+func (w *HelpWriter) WriteCommandTree(node *Node, title string) {
+	if title != "" {
+		w.Print(title)
+	}
 	rows := make([][2]string, 0, len(node.Children)*2)
 	for i, cmd := range node.Children {
 		if cmd.Hidden {
@@ -264,7 +282,9 @@ func writeCommandTree(w *helpWriter, node *Node) {
 			rows = append(rows, [2]string{"", ""})
 		}
 	}
-	writeTwoColumns(w, rows)
+	w.Indent()
+	w.WriteTwoColumns(rows)
+	w.Unindent()
 }
 
 type helpFlagGroup struct {
@@ -272,7 +292,7 @@ type helpFlagGroup struct {
 	Flags    [][]*Flag
 }
 
-func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
+func collectFlagGroups(title string, flags [][]*Flag) []helpFlagGroup {
 	// Group keys in order of appearance.
 	groups := []*Group{}
 	// Flags grouped by their group key.
@@ -309,7 +329,7 @@ func collectFlagGroups(flags [][]*Flag) []helpFlagGroup {
 	// Ungrouped flags are always displayed first.
 	if ungroupedFlags, ok := flagsByGroup[""]; ok {
 		out = append(out, helpFlagGroup{
-			Metadata: &Group{Title: "Flags:"},
+			Metadata: &Group{Title: title},
 			Flags:    ungroupedFlags,
 		})
 	}
@@ -355,57 +375,73 @@ func collectCommandGroups(nodes []*Node) []helpCommandGroup {
 	return out
 }
 
-func printCommandSummary(w *helpWriter, cmd *Command) {
+// WriteCommandSummary prints the summary to HelpWriter
+func (w *HelpWriter) WriteCommandSummary(cmd *Command) {
 	w.Print(cmd.Summary())
 	if cmd.Help != "" {
-		w.Indent().Wrap(cmd.Help)
+		w.Indent()
+		w.Wrap(cmd.Help)
+		w.Unindent()
 	}
 }
 
-type helpWriter struct {
-	indent        string
-	width         int
-	lines         *[]string
-	helpFormatter HelpValueFormatter
+// HelpWriter is used to write help output.
+type HelpWriter struct {
+	indent          string
+	IndentCharacter string
+	width           int
+	lines           *[]string
+	helpFormatter   HelpValueFormatter
 	HelpOptions
 }
 
-func newHelpWriter(ctx *Context, options HelpOptions) *helpWriter {
+// NewHelpWriter creates a new HelpWriter.
+func NewHelpWriter(ctx *Context, options HelpOptions) *HelpWriter {
 	lines := []string{}
 	wrapWidth := guessWidth(ctx.Stdout)
 	if options.WrapUpperBound > 0 && wrapWidth > options.WrapUpperBound {
 		wrapWidth = options.WrapUpperBound
 	}
-	w := &helpWriter{
-		indent:        "",
-		width:         wrapWidth,
-		lines:         &lines,
-		helpFormatter: ctx.Kong.helpFormatter,
-		HelpOptions:   options,
+	w := &HelpWriter{
+		indent:          "",
+		IndentCharacter: strings.Repeat(" ", defaultIndent),
+		width:           wrapWidth,
+		lines:           &lines,
+		helpFormatter:   ctx.Kong.helpFormatter,
+		HelpOptions:     options,
 	}
 	return w
 }
 
-func (h *helpWriter) Printf(format string, args ...interface{}) {
-	h.Print(fmt.Sprintf(format, args...))
+// Printf writes the formated input to a line.
+func (w *HelpWriter) Printf(format string, args ...interface{}) {
+	w.Print(fmt.Sprintf(format, args...))
 }
 
-func (h *helpWriter) Print(text string) {
-	*h.lines = append(*h.lines, strings.TrimRight(h.indent+text, " "))
+// Print writes the text to a line.
+func (w *HelpWriter) Print(text string) {
+	*w.lines = append(*w.lines, strings.TrimRight(w.indent+text, " "))
 }
 
-// Indent returns a new helpWriter indented by two characters.
-func (h *helpWriter) Indent() *helpWriter {
-	return &helpWriter{indent: h.indent + "  ", lines: h.lines, width: h.width - 2, HelpOptions: h.HelpOptions, helpFormatter: h.helpFormatter}
+// Indent adds an indentation by IndentCharacter(defaults to two spaces).
+func (w *HelpWriter) Indent() {
+	w.indent += w.IndentCharacter
+	w.width -= len(w.IndentCharacter)
 }
 
-func (h *helpWriter) String() string {
-	return strings.Join(*h.lines, "\n")
+// Unindent removes an indentation by IndentCharacter(defaults to two spaces).
+func (w *HelpWriter) Unindent() {
+	w.indent = w.indent[:len(w.indent)-len(w.IndentCharacter)]
+	w.width += len(w.IndentCharacter)
 }
 
-func (h *helpWriter) Write(w io.Writer) error {
-	for _, line := range *h.lines {
-		_, err := io.WriteString(w, line+"\n")
+func (w *HelpWriter) String() string {
+	return strings.Join(*w.lines, "\n")
+}
+
+func (w *HelpWriter) Write(writer io.Writer) error {
+	for _, line := range *w.lines {
+		_, err := io.WriteString(writer, line+"\n")
 		if err != nil {
 			return err
 		}
@@ -413,23 +449,31 @@ func (h *helpWriter) Write(w io.Writer) error {
 	return nil
 }
 
-func (h *helpWriter) Wrap(text string) {
-	w := bytes.NewBuffer(nil)
-	doc.ToText(w, strings.TrimSpace(text), "", "    ", h.width)
-	for _, line := range strings.Split(strings.TrimSpace(w.String()), "\n") {
-		h.Print(line)
+// Wrap will write the text after adding new lines based on width of the terminal.
+func (w *HelpWriter) Wrap(text string) {
+	buff := bytes.NewBuffer(nil)
+	doc.ToText(buff, strings.TrimSpace(text), "", "   ", w.width)
+	for _, line := range strings.Split(strings.TrimSpace(buff.String()), "\n") {
+		w.Print(line)
 	}
 }
 
-func writePositionals(w *helpWriter, args []*Positional) {
+// WritePositionals writes positional to HelpWriter.
+func (w *HelpWriter) WritePositionals(args []*Positional, title string) {
+	if title != "" {
+		w.Print(title)
+	}
 	rows := [][2]string{}
 	for _, arg := range args {
 		rows = append(rows, [2]string{arg.Summary(), w.helpFormatter(arg)})
 	}
-	writeTwoColumns(w, rows)
+	w.Indent()
+	w.WriteTwoColumns(rows)
+	w.Unindent()
 }
 
-func writeFlags(w *helpWriter, groups [][]*Flag) {
+// WriteFlags writes the flags to HelpWriter.
+func (w *HelpWriter) WriteFlags(groups [][]*Flag) {
 	rows := [][2]string{}
 	haveShort := false
 	for _, group := range groups {
@@ -446,14 +490,15 @@ func writeFlags(w *helpWriter, groups [][]*Flag) {
 		}
 		for _, flag := range group {
 			if !flag.Hidden {
-				rows = append(rows, [2]string{formatFlag(haveShort, flag), w.helpFormatter(flag.Value)})
+				rows = append(rows, [2]string{FormatFlag(haveShort, flag), w.helpFormatter(flag.Value)})
 			}
 		}
 	}
-	writeTwoColumns(w, rows)
+	w.WriteTwoColumns(rows)
 }
 
-func writeTwoColumns(w *helpWriter, rows [][2]string) {
+// WriteTwoColumns writes two columns.
+func (w *HelpWriter) WriteTwoColumns(rows [][2]string) {
 	maxLeft := 375 * w.width / 1000
 	if maxLeft < 30 {
 		maxLeft = 30
@@ -485,8 +530,9 @@ func writeTwoColumns(w *helpWriter, rows [][2]string) {
 	}
 }
 
+// FormatFlag formats the flag for the help output.
 // haveShort will be true if there are short flags present at all in the help. Useful for column alignment.
-func formatFlag(haveShort bool, flag *Flag) string {
+func FormatFlag(haveShort bool, flag *Flag) string {
 	flagString := ""
 	name := flag.Name
 	isBool := flag.IsBool()
