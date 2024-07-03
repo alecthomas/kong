@@ -1551,6 +1551,12 @@ func TestPassthroughArgs(t *testing.T) {
 			"",
 			[]string{"--flag", "foobar"},
 		},
+		{
+			"UnrecognizedFlagAndArgs",
+			[]string{"--unrecognized-flag", "something"},
+			"",
+			[]string{"--unrecognized-flag", "something"},
+		},
 	}
 	for _, test := range tests {
 		test := test
