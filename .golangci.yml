@@ -87,3 +87,7 @@ issues:
     # Duplicate words are okay in tests.
     - linters: [dupword]
       path: _test\.go
+
+    - linters: [maintidx]
+      path: context\.go
+      text: 'Function name: trace'

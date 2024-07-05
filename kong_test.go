@@ -1526,6 +1526,54 @@ func TestEnumValidation(t *testing.T) {
 	}
 }
 
+func TestPassthroughArgs(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		flag    string
+		cmdArgs []string
+	}{
+		{
+			"NoArgs",
+			[]string{},
+			"",
+			[]string(nil),
+		},
+		{
+			"RecognizedFlagAndArgs",
+			[]string{"--flag", "foobar", "something"},
+			"foobar",
+			[]string{"something"},
+		},
+		{
+			"DashDashBeforeRecognizedFlag",
+			[]string{"--", "--flag", "foobar"},
+			"",
+			[]string{"--flag", "foobar"},
+		},
+		{
+			"UnrecognizedFlagAndArgs",
+			[]string{"--unrecognized-flag", "something"},
+			"",
+			[]string{"--unrecognized-flag", "something"},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			var cli struct {
+				Flag string
+				Args []string `arg:"" optional:"" passthrough:""`
+			}
+			p := mustNew(t, &cli)
+			_, err := p.Parse(test.args)
+			assert.NoError(t, err)
+			assert.Equal(t, test.flag, cli.Flag)
+			assert.Equal(t, test.cmdArgs, cli.Args)
+		})
+	}
+}
+
 func TestPassthroughCmd(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -420,12 +420,22 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 
 		case FlagToken:
 			if err := c.parseFlag(flags, token.String()); err != nil {
-				return err
+				if isUnknownFlagError(err) && positional < len(node.Positional) && node.Positional[positional].Passthrough {
+					c.scan.Pop()
+					c.scan.PushTyped(token.String(), PositionalArgumentToken)
+				} else {
+					return err
+				}
 			}
 
 		case ShortFlagToken:
 			if err := c.parseFlag(flags, token.String()); err != nil {
-				return err
+				if isUnknownFlagError(err) && positional < len(node.Positional) && node.Positional[positional].Passthrough {
+					c.scan.Pop()
+					c.scan.PushTyped(token.String(), PositionalArgumentToken)
+				} else {
+					return err
+				}
 			}
 
 		case FlagValueToken:
@@ -728,8 +738,18 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		c.Path = append(c.Path, &Path{Flag: flag})
 		return nil
 	}
-	return findPotentialCandidates(match, candidates, "unknown flag %s", match)
+	return &unknownFlagError{Cause: findPotentialCandidates(match, candidates, "unknown flag %s", match)}
 }
+
+func isUnknownFlagError(err error) bool {
+	var unknown *unknownFlagError
+	return errors.As(err, &unknown)
+}
+
+type unknownFlagError struct{ Cause error }
+
+func (e *unknownFlagError) Unwrap() error { return e.Cause }
+func (e *unknownFlagError) Error() string { return e.Cause.Error() }
 
 // Call an arbitrary function filling arguments with bound values.
 func (c *Context) Call(fn any, binds ...interface{}) (out []interface{}, err error) {
