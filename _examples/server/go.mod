@@ -12,5 +12,5 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kr/pty v1.1.8
 	github.com/mattn/go-isatty v0.0.12 // indirect
-	golang.org/x/crypto v0.22.0
+	golang.org/x/crypto v0.25.0
 )
