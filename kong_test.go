@@ -1297,6 +1297,12 @@ func (d *dynamicCommand) Run() error {
 	return nil
 }
 
+type commandFunc func() error
+
+func (cf commandFunc) Run() error {
+	return cf()
+}
+
 func TestDynamicCommands(t *testing.T) {
 	cli := struct {
 		One struct{} `cmd:"one"`
@@ -1304,9 +1310,12 @@ func TestDynamicCommands(t *testing.T) {
 	help := &strings.Builder{}
 	two := &dynamicCommand{}
 	three := &dynamicCommand{}
+	fourRan := false
+	four := commandFunc(func() error { fourRan = true; return nil })
 	p := mustNew(t, &cli,
 		kong.DynamicCommand("two", "", "", &two),
 		kong.DynamicCommand("three", "", "", three, "hidden"),
+		kong.DynamicCommand("four", "", "", &four),
 		kong.Writers(help, help),
 		kong.Exit(func(int) {}))
 	kctx, err := p.Parse([]string{"two", "--flag=flag"})
@@ -1317,8 +1326,15 @@ func TestDynamicCommands(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, two.ran)
 
+	kctx, err = p.Parse([]string{"four"})
+	assert.NoError(t, err)
+	assert.False(t, fourRan)
+	err = kctx.Run()
+	assert.NoError(t, err)
+	assert.True(t, fourRan)
+
 	_, err = p.Parse([]string{"--help"})
-	assert.EqualError(t, err, `expected one of "one",  "two"`)
+	assert.EqualError(t, err, `expected one of "one", "two", "four"`)
 	assert.NotContains(t, help.String(), "three", help.String())
 }
 
