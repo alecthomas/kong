@@ -1575,10 +1575,16 @@ func TestPassthroughArgs(t *testing.T) {
 			[]string{"something"},
 		},
 		{
-			"DashDashBeforeRecognizedFlag",
+			"DashDashBetweenArgs",
+			[]string{"foo", "--", "bar"},
+			"",
+			[]string{"foo", "--", "bar"},
+		},
+		{
+			"DashDash",
 			[]string{"--", "--flag", "foobar"},
 			"",
-			[]string{"--flag", "foobar"},
+			[]string{"--", "--flag", "foobar"},
 		},
 		{
 			"UnrecognizedFlagAndArgs",

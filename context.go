@@ -383,8 +383,12 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 
 				// Indicates end of parsing. All remaining arguments are treated as positional arguments only.
 				case v == "--":
-					c.scan.Pop()
 					c.endParsing()
+
+					// Pop the -- token unless the next positional argument accepts passthrough arguments.
+					if !(positional < len(node.Positional) && node.Positional[positional].Passthrough) {
+						c.scan.Pop()
+					}
 
 				// Long flag.
 				case strings.HasPrefix(v, "--"):
