@@ -315,6 +315,13 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			}
 			seenFlags["-"+string(tag.Short)] = true
 		}
+		if tag.Negatable {
+			negFlag := "--no-" + value.Name
+			if seenFlags[negFlag] {
+				return failField(v, ft, "duplicate negation flag %s", negFlag)
+			}
+			seenFlags[negFlag] = true
+		}
 		flag := &Flag{
 			Value:       value,
 			Aliases:     tag.Aliases,

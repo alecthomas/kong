@@ -417,6 +417,15 @@ func TestNegatableFlag(t *testing.T) {
 	}
 }
 
+func TestDuplicateNegatableLong(t *testing.T) {
+	cli2 := struct {
+		NoFlag bool
+		Flag   bool `negatable:""` // negation duplicates NoFlag
+	}{}
+	_, err := kong.New(&cli2)
+	assert.EqualError(t, err, "<anonymous struct>.Flag: duplicate negation flag --no-flag")
+}
+
 func TestExistingNoFlag(t *testing.T) {
 	var cli struct {
 		Cmd struct {
