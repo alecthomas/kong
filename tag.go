@@ -37,7 +37,7 @@ type Tag struct {
 	EnvPrefix   string
 	Embed       bool
 	Aliases     []string
-	Negatable   bool
+	Negatable   string
 	Passthrough bool
 
 	// Storage for all tag keys for arbitrary lookups.
@@ -252,11 +252,16 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	t.Prefix = t.Get("prefix")
 	t.EnvPrefix = t.Get("envprefix")
 	t.Embed = t.Has("embed")
-	negatable := t.Has("negatable")
-	if negatable && !isBool && !isBoolPtr {
-		return fmt.Errorf("negatable can only be set on booleans")
+	if t.Has("negatable") {
+		if !isBool && !isBoolPtr {
+			return fmt.Errorf("negatable can only be set on booleans")
+		}
+		negatable := t.Get("negatable")
+		if negatable == "" {
+			negatable = negatableDefault // placeholder for default negation of --no-<flag>
+		}
+		t.Negatable = negatable
 	}
-	t.Negatable = negatable
 	aliases := t.Get("aliases")
 	if len(aliases) > 0 {
 		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, tagSplitFn)...)

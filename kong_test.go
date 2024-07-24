@@ -356,8 +356,9 @@ func TestTraceErrorPartiallySucceeds(t *testing.T) {
 }
 
 type commandWithNegatableFlag struct {
-	Flag bool `kong:"default='true',negatable"`
-	ran  bool
+	Flag   bool `kong:"default='true',negatable"`
+	Custom bool `kong:"default='true',negatable='standard'"`
+	ran    bool
 }
 
 func (c *commandWithNegatableFlag) Run() error {
@@ -367,34 +368,64 @@ func (c *commandWithNegatableFlag) Run() error {
 
 func TestNegatableFlag(t *testing.T) {
 	tests := []struct {
-		name     string
-		args     []string
-		expected bool
+		name           string
+		args           []string
+		expectedFlag   bool
+		expectedCustom bool
 	}{
 		{
-			name:     "no flag",
-			args:     []string{"cmd"},
-			expected: true,
+			name:           "no flag",
+			args:           []string{"cmd"},
+			expectedFlag:   true,
+			expectedCustom: true,
 		},
 		{
-			name:     "boolean flag",
-			args:     []string{"cmd", "--flag"},
-			expected: true,
+			name:           "boolean flag",
+			args:           []string{"cmd", "--flag"},
+			expectedFlag:   true,
+			expectedCustom: true,
 		},
 		{
-			name:     "inverted boolean flag",
-			args:     []string{"cmd", "--flag=false"},
-			expected: false,
+			name:           "custom boolean flag",
+			args:           []string{"cmd", "--custom"},
+			expectedFlag:   true,
+			expectedCustom: true,
 		},
 		{
-			name:     "negated boolean flag",
-			args:     []string{"cmd", "--no-flag"},
-			expected: false,
+			name:           "inverted boolean flag",
+			args:           []string{"cmd", "--flag=false"},
+			expectedFlag:   false,
+			expectedCustom: true,
 		},
 		{
-			name:     "inverted negated boolean flag",
-			args:     []string{"cmd", "--no-flag=false"},
-			expected: true,
+			name:           "custom inverted boolean flag",
+			args:           []string{"cmd", "--custom=false"},
+			expectedFlag:   true,
+			expectedCustom: false,
+		},
+		{
+			name:           "negated boolean flag",
+			args:           []string{"cmd", "--no-flag"},
+			expectedFlag:   false,
+			expectedCustom: true,
+		},
+		{
+			name:           "custom negated boolean flag",
+			args:           []string{"cmd", "--standard"},
+			expectedFlag:   true,
+			expectedCustom: false,
+		},
+		{
+			name:           "inverted negated boolean flag",
+			args:           []string{"cmd", "--no-flag=false"},
+			expectedFlag:   true,
+			expectedCustom: true,
+		},
+		{
+			name:           "inverted custom negated boolean flag",
+			args:           []string{"cmd", "--standard=false"},
+			expectedFlag:   true,
+			expectedCustom: true,
 		},
 	}
 	for _, tt := range tests {
@@ -407,11 +438,13 @@ func TestNegatableFlag(t *testing.T) {
 			p := mustNew(t, &cli)
 			kctx, err := p.Parse(tt.args)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, cli.Cmd.Flag)
+			assert.Equal(t, tt.expectedFlag, cli.Cmd.Flag)
+			assert.Equal(t, tt.expectedCustom, cli.Cmd.Custom)
 
 			err = kctx.Run()
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, cli.Cmd.Flag)
+			assert.Equal(t, tt.expectedFlag, cli.Cmd.Flag)
+			assert.Equal(t, tt.expectedCustom, cli.Cmd.Custom)
 			assert.True(t, cli.Cmd.ran)
 		})
 	}
@@ -424,6 +457,13 @@ func TestDuplicateNegatableLong(t *testing.T) {
 	}{}
 	_, err := kong.New(&cli2)
 	assert.EqualError(t, err, "<anonymous struct>.Flag: duplicate negation flag --no-flag")
+
+	cli3 := struct {
+		One bool
+		Two bool `negatable:"one"` // negation duplicates Flag2
+	}{}
+	_, err = kong.New(&cli3)
+	assert.EqualError(t, err, "<anonymous struct>.Two: duplicate negation flag --one")
 }
 
 func TestExistingNoFlag(t *testing.T) {
