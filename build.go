@@ -323,6 +323,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			Envs:        tag.Envs,
 			Group:       buildGroupForKey(k, tag.Group),
 			Xor:         tag.Xor,
+			Xand:        tag.Xand,
 			Hidden:      tag.Hidden,
 		}
 		value.Flag = flag

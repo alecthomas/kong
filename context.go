@@ -262,6 +262,9 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkXorDuplicates(c.Path); err != nil {
 		return err
 	}
+	if err := checkXandMissing(c.Path); err != nil {
+		return err
+	}
 
 	if node.Type == ArgumentNode {
 		value := node.Argument
@@ -990,6 +993,38 @@ func checkXorDuplicates(paths []*Path) error {
 				}
 				seen[xor] = flag
 			}
+		}
+	}
+	return nil
+}
+
+func checkXandMissing(paths []*Path) error {
+	for _, path := range paths {
+		missingMsgs := []string{}
+		xandGroups := map[string][]*Flag{}
+		for _, flag := range path.Flags {
+			for _, xand := range flag.Xand {
+				xandGroups[xand] = append(xandGroups[xand], flag)
+			}
+		}
+		for _, flags := range xandGroups {
+			oneSet := false
+			notSet := []*Flag{}
+			flagNames := []string{}
+			for _, flag := range flags {
+				flagNames = append(flagNames, flag.Name)
+				if flag.Set {
+					oneSet = true
+				} else {
+					notSet = append(notSet, flag)
+				}
+			}
+			if len(notSet) > 0 && oneSet {
+				missingMsgs = append(missingMsgs, fmt.Sprintf("--%s must be used together", strings.Join(flagNames, " and --")))
+			}
+		}
+		if len(missingMsgs) > 0 {
+			return fmt.Errorf("%s", strings.Join(missingMsgs, ", "))
 		}
 	}
 	return nil
