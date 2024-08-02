@@ -1026,6 +1026,26 @@ func TestXorRequired(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
 }
 
+func TestXandRequired(t *testing.T) {
+	var cli struct {
+		One   bool `xand:"one,two" required:""`
+		Two   bool `xand:"one" required:""`
+		Three bool `xand:"two"`
+		Four  bool `required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--one", "--two", "--three"})
+	assert.EqualError(t, err, "missing flags: --four")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--four"})
+	assert.EqualError(t, err, "missing flags: --one and --three, --one and --two")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --four, --one and --three, --one and --two")
+}
+
 func TestXorRequiredMany(t *testing.T) {
 	var cli struct {
 		One   bool `xor:"one" required:""`
@@ -1043,6 +1063,21 @@ func TestXorRequiredMany(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
 	assert.EqualError(t, err, "missing flags: --one or --two or --three")
+}
+
+func TestXandRequiredMany(t *testing.T) {
+	var cli struct {
+		One   bool `xand:"one" required:""`
+		Two   bool `xand:"one" required:""`
+		Three bool `xand:"one" required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --one and --two and --three")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--three"})
+	assert.EqualError(t, err, "missing flags: --one and --two")
 }
 
 func TestEnumSequence(t *testing.T) {

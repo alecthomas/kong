@@ -834,22 +834,41 @@ func (c *Context) PrintUsage(summary bool) error {
 func checkMissingFlags(flags []*Flag) error {
 	xorGroupSet := map[string]bool{}
 	xorGroup := map[string][]string{}
+	xandGroupSet := map[string]bool{}
+	xandGroup := map[string][]string{}
+	xandGroupRequired := map[string]bool{}
 	missing := []string{}
 	for _, flag := range flags {
+		for _, xand := range flag.Xand {
+			if flag.Required {
+				xandGroupRequired[xand] = true
+			}
+		}
+	}
+	for _, flag := range flags {
+		for _, xand := range flag.Xand {
+			flag.Required = xandGroupRequired[xand]
+		}
 		if flag.Set {
 			for _, xor := range flag.Xor {
 				xorGroupSet[xor] = true
+			}
+			for _, xand := range flag.Xand {
+				xandGroupSet[xand] = true
 			}
 		}
 		if !flag.Required || flag.Set {
 			continue
 		}
-		if len(flag.Xor) > 0 {
+		if len(flag.Xor) > 0 || len(flag.Xand) > 0 {
 			for _, xor := range flag.Xor {
 				if xorGroupSet[xor] {
 					continue
 				}
 				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
+			}
+			for _, xand := range flag.Xand {
+				xandGroup[xand] = append(xandGroup[xand], flag.Summary())
 			}
 		} else {
 			missing = append(missing, flag.Summary())
@@ -858,6 +877,11 @@ func checkMissingFlags(flags []*Flag) error {
 	for xor, flags := range xorGroup {
 		if !xorGroupSet[xor] && len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " or "))
+		}
+	}
+	for _, flags := range xandGroup {
+		if len(flags) > 1 {
+			missing = append(missing, strings.Join(flags, " and "))
 		}
 	}
 
