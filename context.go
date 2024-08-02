@@ -259,10 +259,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
 		return err
 	}
-	if err := checkXorDuplicates(c.Path); err != nil {
-		return err
-	}
-	if err := checkXandMissing(c.Path); err != nil {
+	if err := checkXorDuplicatedAndXandMissing(c.Path); err != nil {
 		return err
 	}
 
@@ -1002,6 +999,20 @@ func checkPassthroughArg(target reflect.Value) bool {
 	default:
 		return false
 	}
+}
+
+func checkXorDuplicatedAndXandMissing(paths []*Path) error {
+	errs := []string{}
+	if err := checkXorDuplicates(paths); err != nil {
+		errs = append(errs, fmt.Sprintf("%s", err))
+	}
+	if err := checkXandMissing(paths); err != nil {
+		errs = append(errs, fmt.Sprintf("%s", err))
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf(strings.Join(errs, ", "))
+	}
+	return nil
 }
 
 func checkXorDuplicates(paths []*Path) error {

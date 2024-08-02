@@ -1006,6 +1006,26 @@ func TestMultiXand(t *testing.T) {
 	assert.EqualError(t, err, "--hello and --two must be used together")
 }
 
+func TestXorXand(t *testing.T) {
+	var cli struct {
+		Hello bool   `xor:"one" xand:"two"`
+		One   bool   `xor:"one"`
+		Two   string `xand:"two"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--hello"})
+	assert.EqualError(t, err, "--hello and --two must be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one"})
+	assert.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--hello", "--one"})
+	assert.EqualError(t, err, "--hello and --one can't be used together, --hello and --two must be used together")
+}
+
 func TestXorRequired(t *testing.T) {
 	var cli struct {
 		One   bool `xor:"one,two" required:""`
