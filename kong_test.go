@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -919,6 +920,21 @@ func TestXor(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestXand(t *testing.T) {
+	var cli struct {
+		Hello bool   `xand:"another"`
+		One   bool   `xand:"group"`
+		Two   string `xand:"group"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--hello", "--one"})
+	assert.EqualError(t, err, "--one and --two must be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one", "--two=hi", "--hello"})
+	assert.NoError(t, err)
+}
+
 func TestXorChild(t *testing.T) {
 	var cli struct {
 		One bool `xor:"group"`
@@ -936,6 +952,23 @@ func TestXorChild(t *testing.T) {
 	assert.Error(t, err, "--two and --three can't be used together")
 }
 
+func TestXandChild(t *testing.T) {
+	var cli struct {
+		One bool `xand:"group"`
+		Cmd struct {
+			Two   string `xand:"group"`
+			Three string `xand:"group"`
+		} `cmd`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--one", "cmd", "--two=hi", "--three=hello"})
+	assert.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--two=hi", "cmd"})
+	assert.Error(t, err, "--two and --three must be used together")
+}
+
 func TestMultiXor(t *testing.T) {
 	var cli struct {
 		Hello bool   `xor:"one,two"`
@@ -950,6 +983,47 @@ func TestMultiXor(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{"--hello", "--two=foo"})
 	assert.EqualError(t, err, "--hello and --two can't be used together")
+}
+
+func TestMultiXand(t *testing.T) {
+	var cli struct {
+		Hello bool   `xand:"one,two"`
+		One   bool   `xand:"one"`
+		Two   string `xand:"two"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--hello"})
+	// Split and combine error so messages always will be in the same order
+	// when testing
+	missingMsgs := strings.Split(fmt.Sprintf("%s", err), ", ")
+	sort.Strings(missingMsgs)
+	err = fmt.Errorf("%s", strings.Join(missingMsgs, ", "))
+	assert.EqualError(t, err, "--hello and --one must be used together, --hello and --two must be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--two=foo"})
+	assert.EqualError(t, err, "--hello and --two must be used together")
+}
+
+func TestXorXand(t *testing.T) {
+	var cli struct {
+		Hello bool   `xor:"one" xand:"two"`
+		One   bool   `xor:"one"`
+		Two   string `xand:"two"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--hello"})
+	assert.EqualError(t, err, "--hello and --two must be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one"})
+	assert.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--hello", "--one"})
+	assert.EqualError(t, err, "--hello and --one can't be used together, --hello and --two must be used together")
 }
 
 func TestXorRequired(t *testing.T) {
@@ -972,6 +1046,26 @@ func TestXorRequired(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
 }
 
+func TestXandRequired(t *testing.T) {
+	var cli struct {
+		One   bool `xand:"one,two" required:""`
+		Two   bool `xand:"one" required:""`
+		Three bool `xand:"two"`
+		Four  bool `required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--one", "--two", "--three"})
+	assert.EqualError(t, err, "missing flags: --four")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--four"})
+	assert.EqualError(t, err, "missing flags: --one and --three, --one and --two")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --four, --one and --three, --one and --two")
+}
+
 func TestXorRequiredMany(t *testing.T) {
 	var cli struct {
 		One   bool `xor:"one" required:""`
@@ -989,6 +1083,21 @@ func TestXorRequiredMany(t *testing.T) {
 	p = mustNew(t, &cli)
 	_, err = p.Parse([]string{})
 	assert.EqualError(t, err, "missing flags: --one or --two or --three")
+}
+
+func TestXandRequiredMany(t *testing.T) {
+	var cli struct {
+		One   bool `xand:"one" required:""`
+		Two   bool `xand:"one" required:""`
+		Three bool `xand:"one" required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --one and --two and --three")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--three"})
+	assert.EqualError(t, err, "missing flags: --one and --two")
 }
 
 func TestEnumSequence(t *testing.T) {
