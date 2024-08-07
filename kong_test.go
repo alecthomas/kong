@@ -920,11 +920,11 @@ func TestXor(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestXand(t *testing.T) {
+func TestAnd(t *testing.T) {
 	var cli struct {
-		Hello bool   `xand:"another"`
-		One   bool   `xand:"group"`
-		Two   string `xand:"group"`
+		Hello bool   `and:"another"`
+		One   bool   `and:"group"`
+		Two   string `and:"group"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"--hello", "--one"})
@@ -952,12 +952,12 @@ func TestXorChild(t *testing.T) {
 	assert.Error(t, err, "--two and --three can't be used together")
 }
 
-func TestXandChild(t *testing.T) {
+func TestAndChild(t *testing.T) {
 	var cli struct {
-		One bool `xand:"group"`
+		One bool `and:"group"`
 		Cmd struct {
-			Two   string `xand:"group"`
-			Three string `xand:"group"`
+			Two   string `and:"group"`
+			Three string `and:"group"`
 		} `cmd`
 	}
 	p := mustNew(t, &cli)
@@ -985,11 +985,11 @@ func TestMultiXor(t *testing.T) {
 	assert.EqualError(t, err, "--hello and --two can't be used together")
 }
 
-func TestMultiXand(t *testing.T) {
+func TestMultiAnd(t *testing.T) {
 	var cli struct {
-		Hello bool   `xand:"one,two"`
-		One   bool   `xand:"one"`
-		Two   string `xand:"two"`
+		Hello bool   `and:"one,two"`
+		One   bool   `and:"one"`
+		Two   string `and:"two"`
 	}
 
 	p := mustNew(t, &cli)
@@ -1006,11 +1006,11 @@ func TestMultiXand(t *testing.T) {
 	assert.EqualError(t, err, "--hello and --two must be used together")
 }
 
-func TestXorXand(t *testing.T) {
+func TestXorAnd(t *testing.T) {
 	var cli struct {
-		Hello bool   `xor:"one" xand:"two"`
+		Hello bool   `xor:"one" and:"two"`
 		One   bool   `xor:"one"`
-		Two   string `xand:"two"`
+		Two   string `and:"two"`
 	}
 
 	p := mustNew(t, &cli)
@@ -1046,11 +1046,11 @@ func TestXorRequired(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
 }
 
-func TestXandRequired(t *testing.T) {
+func TestAndRequired(t *testing.T) {
 	var cli struct {
-		One   bool `xand:"one,two" required:""`
-		Two   bool `xand:"one" required:""`
-		Three bool `xand:"two"`
+		One   bool `and:"one,two" required:""`
+		Two   bool `and:"one" required:""`
+		Three bool `and:"two"`
 		Four  bool `required:""`
 	}
 	p := mustNew(t, &cli)
@@ -1085,11 +1085,11 @@ func TestXorRequiredMany(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --one or --two or --three")
 }
 
-func TestXandRequiredMany(t *testing.T) {
+func TestAndRequiredMany(t *testing.T) {
 	var cli struct {
-		One   bool `xand:"one" required:""`
-		Two   bool `xand:"one" required:""`
-		Three bool `xand:"one" required:""`
+		One   bool `and:"one" required:""`
+		Two   bool `and:"one" required:""`
+		Three bool `and:"one" required:""`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{})

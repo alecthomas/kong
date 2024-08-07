@@ -259,7 +259,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
 		return err
 	}
-	if err := checkXorDuplicatedAndXandMissing(c.Path); err != nil {
+	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
 		return err
 	}
 
@@ -831,41 +831,41 @@ func (c *Context) PrintUsage(summary bool) error {
 func checkMissingFlags(flags []*Flag) error {
 	xorGroupSet := map[string]bool{}
 	xorGroup := map[string][]string{}
-	xandGroupSet := map[string]bool{}
-	xandGroup := map[string][]string{}
-	xandGroupRequired := map[string]bool{}
+	andGroupSet := map[string]bool{}
+	andGroup := map[string][]string{}
+	andGroupRequired := map[string]bool{}
 	missing := []string{}
 	for _, flag := range flags {
-		for _, xand := range flag.Xand {
+		for _, and := range flag.And {
 			if flag.Required {
-				xandGroupRequired[xand] = true
+				andGroupRequired[and] = true
 			}
 		}
 	}
 	for _, flag := range flags {
-		for _, xand := range flag.Xand {
-			flag.Required = xandGroupRequired[xand]
+		for _, and := range flag.And {
+			flag.Required = andGroupRequired[and]
 		}
 		if flag.Set {
 			for _, xor := range flag.Xor {
 				xorGroupSet[xor] = true
 			}
-			for _, xand := range flag.Xand {
-				xandGroupSet[xand] = true
+			for _, and := range flag.And {
+				andGroupSet[and] = true
 			}
 		}
 		if !flag.Required || flag.Set {
 			continue
 		}
-		if len(flag.Xor) > 0 || len(flag.Xand) > 0 {
+		if len(flag.Xor) > 0 || len(flag.And) > 0 {
 			for _, xor := range flag.Xor {
 				if xorGroupSet[xor] {
 					continue
 				}
 				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
 			}
-			for _, xand := range flag.Xand {
-				xandGroup[xand] = append(xandGroup[xand], flag.Summary())
+			for _, and := range flag.And {
+				andGroup[and] = append(andGroup[and], flag.Summary())
 			}
 		} else {
 			missing = append(missing, flag.Summary())
@@ -876,7 +876,7 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}
-	for _, flags := range xandGroup {
+	for _, flags := range andGroup {
 		if len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " and "))
 		}
@@ -1001,12 +1001,12 @@ func checkPassthroughArg(target reflect.Value) bool {
 	}
 }
 
-func checkXorDuplicatedAndXandMissing(paths []*Path) error {
+func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 	errs := []string{}
 	if err := checkXorDuplicates(paths); err != nil {
 		errs = append(errs, fmt.Sprintf("%s", err))
 	}
-	if err := checkXandMissing(paths); err != nil {
+	if err := checkAndMissing(paths); err != nil {
 		errs = append(errs, fmt.Sprintf("%s", err))
 	}
 	if len(errs) > 0 {
@@ -1033,16 +1033,16 @@ func checkXorDuplicates(paths []*Path) error {
 	return nil
 }
 
-func checkXandMissing(paths []*Path) error {
+func checkAndMissing(paths []*Path) error {
 	for _, path := range paths {
 		missingMsgs := []string{}
-		xandGroups := map[string][]*Flag{}
+		andGroups := map[string][]*Flag{}
 		for _, flag := range path.Flags {
-			for _, xand := range flag.Xand {
-				xandGroups[xand] = append(xandGroups[xand], flag)
+			for _, and := range flag.And {
+				andGroups[and] = append(andGroups[and], flag)
 			}
 		}
-		for _, flags := range xandGroups {
+		for _, flags := range andGroups {
 			oneSet := false
 			notSet := []*Flag{}
 			flagNames := []string{}

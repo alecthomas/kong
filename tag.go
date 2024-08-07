@@ -32,7 +32,7 @@ type Tag struct {
 	Enum        string
 	Group       string
 	Xor         []string
-	Xand        []string
+	And         []string
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 	EnvPrefix   string
@@ -250,8 +250,8 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	for _, xor := range t.GetAll("xor") {
 		t.Xor = append(t.Xor, strings.FieldsFunc(xor, tagSplitFn)...)
 	}
-	for _, xand := range t.GetAll("xand") {
-		t.Xand = append(t.Xand, strings.FieldsFunc(xand, tagSplitFn)...)
+	for _, and := range t.GetAll("and") {
+		t.And = append(t.And, strings.FieldsFunc(and, tagSplitFn)...)
 	}
 	t.Prefix = t.Get("prefix")
 	t.EnvPrefix = t.Get("envprefix")
