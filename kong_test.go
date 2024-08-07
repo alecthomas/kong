@@ -996,7 +996,7 @@ func TestMultiAnd(t *testing.T) {
 	_, err := p.Parse([]string{"--hello"})
 	// Split and combine error so messages always will be in the same order
 	// when testing
-	missingMsgs := strings.Split(fmt.Sprintf("%s", err), ", ")
+	missingMsgs := strings.Split(err.Error(), ", ")
 	sort.Strings(missingMsgs)
 	err = fmt.Errorf("%s", strings.Join(missingMsgs, ", "))
 	assert.EqualError(t, err, "--hello and --one must be used together, --hello and --two must be used together")

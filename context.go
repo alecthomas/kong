@@ -1004,10 +1004,10 @@ func checkPassthroughArg(target reflect.Value) bool {
 func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 	errs := []string{}
 	if err := checkXorDuplicates(paths); err != nil {
-		errs = append(errs, fmt.Sprintf("%s", err))
+		errs = append(errs, err.Error())
 	}
 	if err := checkAndMissing(paths); err != nil {
-		errs = append(errs, fmt.Sprintf("%s", err))
+		errs = append(errs, err.Error())
 	}
 	if len(errs) > 0 {
 		return fmt.Errorf(strings.Join(errs, ", "))
