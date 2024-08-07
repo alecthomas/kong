@@ -833,15 +833,8 @@ func checkMissingFlags(flags []*Flag) error {
 	xorGroup := map[string][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
-	andGroupRequired := map[string]bool{}
 	missing := []string{}
-	for _, flag := range flags {
-		for _, and := range flag.And {
-			if flag.Required {
-				andGroupRequired[and] = true
-			}
-		}
-	}
+	andGroupRequired := getRequiredAndGroupMap(flags)
 	for _, flag := range flags {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
@@ -889,6 +882,18 @@ func checkMissingFlags(flags []*Flag) error {
 	sort.Strings(missing)
 
 	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
+}
+
+func getRequiredAndGroupMap(flags []*Flag) map[string]bool {
+	andGroupRequired := map[string]bool{}
+	for _, flag := range flags {
+		for _, and := range flag.And {
+			if flag.Required {
+				andGroupRequired[and] = true
+			}
+		}
+	}
+	return andGroupRequired
 }
 
 func checkMissingChildren(node *Node) error {
