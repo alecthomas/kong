@@ -1026,6 +1026,16 @@ func TestXorAnd(t *testing.T) {
 	assert.EqualError(t, err, "--hello and --one can't be used together, --hello and --two must be used together")
 }
 
+func TestOverLappingXorAnd(t *testing.T) {
+	var cli struct {
+		Hello bool   `xor:"one" and:"two"`
+		One   bool   `xor:"one" and:"two"`
+		Two   string `xor:"one" and:"two"`
+	}
+	_, err := kong.New(&cli)
+	assert.EqualError(t, err, "invalid xor and and group combination, one and two overlap with more than one: [hello one two]")
+}
+
 func TestXorRequired(t *testing.T) {
 	var cli struct {
 		One   bool `xor:"one,two" required:""`

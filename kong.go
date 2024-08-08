@@ -167,7 +167,40 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	k.bindings.add(k.vars)
 
+	if err = checkOverlappingXorAnd(k); err != nil {
+		return nil, err
+	}
+
 	return k, nil
+}
+
+func checkOverlappingXorAnd(k *Kong) error {
+	xorGroups := map[string][]string{}
+	andGroups := map[string][]string{}
+	for _, flag := range k.Model.Node.Flags {
+		for _, xor := range flag.Xor {
+			xorGroups[xor] = append(xorGroups[xor], flag.Name)
+		}
+		for _, and := range flag.And {
+			andGroups[and] = append(andGroups[and], flag.Name)
+		}
+	}
+	for xor, xorSet := range xorGroups {
+		for and, andSet := range andGroups {
+			overlappingEntries := []string{}
+			for _, xorTag := range xorSet {
+				for _, andTag := range andSet {
+					if xorTag == andTag {
+						overlappingEntries = append(overlappingEntries, xorTag)
+					}
+				}
+			}
+			if len(overlappingEntries) > 1 {
+				return fmt.Errorf("invalid xor and and group combination, %s and %s overlap with more than one: %s", xor, and, overlappingEntries)
+			}
+		}
+	}
+	return nil
 }
 
 type varStack []Vars
