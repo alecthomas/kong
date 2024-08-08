@@ -1033,7 +1033,7 @@ func TestOverLappingXorAnd(t *testing.T) {
 		Two   string `xor:"one" and:"two"`
 	}
 	_, err := kong.New(&cli)
-	assert.EqualError(t, err, "invalid xor and and group combination, one and two overlap with more than one: [hello one two]")
+	assert.EqualError(t, err, "invalid xor and combination, one and two overlap with more than one: [hello one two]")
 }
 
 func TestXorRequired(t *testing.T) {

@@ -196,7 +196,7 @@ func checkOverlappingXorAnd(k *Kong) error {
 				}
 			}
 			if len(overlappingEntries) > 1 {
-				return fmt.Errorf("invalid xor and and group combination, %s and %s overlap with more than one: %s", xor, and, overlappingEntries)
+				return fmt.Errorf("invalid xor and combination, %s and %s overlap with more than one: %s", xor, and, overlappingEntries)
 			}
 		}
 	}
