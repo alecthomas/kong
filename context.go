@@ -710,13 +710,13 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 			candidates = append(candidates, alias)
 		}
 
-		neg := "--no-" + flag.Name
-		if !matched && !(match == neg && flag.Tag.Negatable) {
+		neg := negatableFlagName(flag.Name, flag.Tag.Negatable)
+		if !matched && match != neg {
 			continue
 		}
 		// Found a matching flag.
 		c.scan.Pop()
-		if match == neg && flag.Tag.Negatable {
+		if match == neg && flag.Tag.Negatable != "" {
 			flag.Negated = true
 		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))

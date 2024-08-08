@@ -71,6 +71,7 @@ func TestHelp(t *testing.T) {
 		Map      map[string]int `help:"A map of strings to ints."`
 		Required bool           `required help:"A required flag."`
 		Sort     bool           `negatable short:"s" help:"Is sortable or not."`
+		Approve  bool           `negatable:"deny" help:"Approve or deny message."`
 
 		One struct {
 			Flag string `help:"Nested flag."`
@@ -118,6 +119,7 @@ Flags:
       --map=KEY=VALUE;...    A map of strings to ints.
       --required             A required flag.
   -s, --[no-]sort            Is sortable or not.
+      --approve/deny         Approve or deny message.
 
 Commands:
   one --required [flags]
@@ -159,6 +161,7 @@ Flags:
       --map=KEY=VALUE;...    A map of strings to ints.
       --required             A required flag.
   -s, --[no-]sort            Is sortable or not.
+      --approve/deny         Approve or deny message.
 
       --flag=STRING          Nested flag under two.
       --required-two
