@@ -600,7 +600,7 @@ func TestAutoGroup(t *testing.T) {
 			if node, ok := parent.(*kong.Node); ok {
 				return &kong.Group{
 					Key:   node.Name,
-					Title: strings.Title(node.Name) + " flags:", //nolint
+					Title: strings.Title(node.Name) + " flags:",
 				}
 			}
 			return nil
