@@ -608,7 +608,7 @@ func TestMultilineMessage(t *testing.T) {
 			w := &bytes.Buffer{}
 			var cli struct{}
 			p := mustNew(t, &cli, kong.Writers(w, w))
-			p.Printf(test.text)
+			p.Printf("%s", test.text)
 			assert.Equal(t, test.want, w.String())
 		})
 	}
