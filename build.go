@@ -173,6 +173,9 @@ MAIN:
 		if flag.Short != 0 {
 			delete(seenFlags, "-"+string(flag.Short))
 		}
+		if negFlag := negatableFlagName(flag.Name, flag.Tag.Negatable); negFlag != "" {
+			delete(seenFlags, negFlag)
+		}
 		for _, aflag := range flag.Aliases {
 			delete(seenFlags, "--"+aflag)
 		}
