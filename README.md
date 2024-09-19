@@ -7,7 +7,7 @@
 
 <!-- TOC depthfrom:2 depthto:3 -->
 
-- [Release](#release)
+- [Version 1.0.0 Release](#version-100-release)
 - [Introduction](#introduction)
 - [Help](#help)
   - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
@@ -47,7 +47,7 @@
 
 Kong has been stable for a long time, so it seemed appropriate to cut a 1.0 release.
 
-There is one breaking change, #436, which should effect relatively few users.
+There is one breaking change, [#436](https://github.com/alecthomas/kong/pull/436), which should effect relatively few users.
 
 ## Introduction
 
