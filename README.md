@@ -748,7 +748,7 @@ The default help output is usually sufficient, but if not there are two solution
 
 ### `Bind(...)` - bind values for callback hooks and Run() methods
 
-See the [section on hooks](#hooks-beforeresolve-beforeapply-afterapply-and-the-bind-option) for details.
+See the [section on hooks](#hooks-beforereset-beforeresolve-beforeapply-afterapply-and-the-bind-option) for details.
 
 ### Other options
 
