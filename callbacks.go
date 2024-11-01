@@ -78,28 +78,19 @@ func callFunction(f reflect.Value, bindings bindings) error {
 	if f.Kind() != reflect.Func {
 		return fmt.Errorf("expected function, got %s", f.Type())
 	}
-	in := []reflect.Value{}
 	t := f.Type()
 	if t.NumOut() != 1 || !t.Out(0).Implements(callbackReturnSignature) {
 		return fmt.Errorf("return value of %s must implement \"error\"", t)
 	}
-	for i := 0; i < t.NumIn(); i++ {
-		pt := t.In(i)
-		if argf, ok := bindings[pt]; ok {
-			argv, err := argf()
-			if err != nil {
-				return err
-			}
-			in = append(in, argv)
-		} else {
-			return fmt.Errorf("couldn't find binding of type %s for parameter %d of %s(), use kong.Bind(%s)", pt, i, t, pt)
-		}
+	out, err := callAnyFunction(f, bindings)
+	if err != nil {
+		return err
 	}
-	out := f.Call(in)
-	if out[0].IsNil() {
+	ferr := out[0]
+	if ferrv := reflect.ValueOf(ferr); !ferrv.IsValid() || ferrv.IsNil() {
 		return nil
 	}
-	return out[0].Interface().(error) //nolint
+	return ferr.(error) //nolint:forcetypeassert
 }
 
 func callAnyFunction(f reflect.Value, bindings bindings) (out []any, err error) {
