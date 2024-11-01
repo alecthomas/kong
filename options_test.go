@@ -89,11 +89,13 @@ func TestCallbackCustomError(t *testing.T) {
 }
 
 type bindToProviderCLI struct {
+	Filled bool `default:"true"`
 	Called bool
 	Cmd    bindToProviderCmd `cmd:""`
 }
 
 type boundThing struct {
+	Filled bool
 }
 
 type bindToProviderCmd struct{}
@@ -105,7 +107,10 @@ func (*bindToProviderCmd) Run(cli *bindToProviderCLI, b *boundThing) error {
 
 func TestBindToProvider(t *testing.T) {
 	var cli bindToProviderCLI
-	app, err := New(&cli, BindToProvider(func() (*boundThing, error) { return &boundThing{}, nil }))
+	app, err := New(&cli, BindToProvider(func(cli *bindToProviderCLI) (*boundThing, error) {
+		assert.True(t, cli.Filled, "CLI struct should have already been populated by Kong")
+		return &boundThing{Filled: cli.Filled}, nil
+	}))
 	assert.NoError(t, err)
 	ctx, err := app.Parse([]string{"cmd"})
 	assert.NoError(t, err)
