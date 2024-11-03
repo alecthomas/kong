@@ -996,7 +996,7 @@ func checkEnum(value *Value, target reflect.Value) error {
 			}
 			enums = append(enums, fmt.Sprintf("%q", enum))
 		}
-		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
+		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), fmt.Sprintf("%v", target.Interface()))
 	}
 }
 

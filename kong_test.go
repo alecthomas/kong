@@ -2291,3 +2291,13 @@ func TestEnumPtrOmittedNoDefault(t *testing.T) {
 	assert.NotZero(t, ctx)
 	assert.Zero(t, cli.X)
 }
+
+func TestIntEnum(t *testing.T) {
+	var cli struct {
+		Enum int `enum:"1,2,3" default:"1"`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	_, err = k.Parse([]string{"--enum=123"})
+	assert.EqualError(t, err, `--enum must be one of "1","2","3" but got "123"`)
+}
