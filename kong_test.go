@@ -2314,3 +2314,16 @@ func TestIntEnum(t *testing.T) {
 	_, err = k.Parse([]string{"--enum=123"})
 	assert.EqualError(t, err, `--enum must be one of "1","2","3" but got "123"`)
 }
+
+func TestRecursiveVariableExpansion(t *testing.T) {
+	var cli struct {
+		Config string `type:"path" default:"${config_file}" help:"Default: ${default}"`
+	}
+	k := mustNew(t, &cli, kong.Vars{"config_file": "/etc/config"}, kong.Exit(func(int) {}))
+	w := &strings.Builder{}
+	k.Stderr = w
+	k.Stdout = w
+	_, err := k.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "Default: /etc/config")
+}
