@@ -809,18 +809,22 @@ func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 func (c *Context) Run(binds ...interface{}) (err error) {
 	node := c.Selected()
 	if node == nil {
-		if len(c.Path) > 0 {
-			selected := c.Path[0].Node()
-			if selected.Type == ApplicationNode {
-				method := getMethod(selected.Target, "Run")
-				if method.IsValid() {
-					return c.RunNode(selected, binds...)
-				}
-			}
+		if len(c.Path) == 0 {
+			return fmt.Errorf("no command selected")
 		}
-		return fmt.Errorf("no command selected")
+		selected := c.Path[0].Node()
+		if selected.Type == ApplicationNode {
+			method := getMethod(selected.Target, "Run")
+			if method.IsValid() {
+				node = selected
+			}
+		} else {
+			return fmt.Errorf("no command selected")
+		}
 	}
-	return c.RunNode(node, binds...)
+	runErr := c.RunNode(node, binds...)
+	err = c.Kong.applyHook(c, "AfterRun")
+	return errors.Join(runErr, err)
 }
 
 // PrintUsage to Kong's stdout.

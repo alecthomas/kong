@@ -2327,3 +2327,28 @@ func TestRecursiveVariableExpansion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, w.String(), "Default: /etc/config")
 }
+
+type afterRunCLI struct {
+	runCalled      bool `kong:"-"`
+	afterRunCalled bool `kong:"-"`
+}
+
+func (c *afterRunCLI) Run() error {
+	c.runCalled = true
+	return nil
+}
+
+func (c *afterRunCLI) AfterRun() error {
+	c.afterRunCalled = true
+	return nil
+}
+
+func TestAfterRun(t *testing.T) {
+	var cli afterRunCLI
+	k := mustNew(t, &cli)
+	kctx, err := k.Parse([]string{})
+	assert.NoError(t, err)
+	err = kctx.Run()
+	assert.NoError(t, err)
+	assert.Equal(t, afterRunCLI{runCalled: true, afterRunCalled: true}, cli)
+}

@@ -7,4 +7,4 @@ require (
 
 require github.com/hexops/gotextdiff v1.0.3 // indirect
 
-go 1.18
+go 1.20
