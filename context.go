@@ -208,7 +208,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 			desc = node.Path()
 		}
 		if validate := isValidatable(value); validate != nil {
-			if err := validate.Validate(); err != nil {
+			if err := validate.Validate(c); err != nil {
 				if desc != "" {
 					return fmt.Errorf("%s: %w", desc, err)
 				}
@@ -1094,12 +1094,23 @@ func findPotentialCandidates(needle string, haystack []string, format string, ar
 }
 
 type validatable interface{ Validate() error }
+type extendedValidatable interface {
+	Validate(kctx *Context) error
+}
 
-func isValidatable(v reflect.Value) validatable {
+// Proxy a validatable function to the extendedValidatable interface
+type validatableFunc func() error
+
+func (f validatableFunc) Validate(kctx *Context) error { return f() }
+
+func isValidatable(v reflect.Value) extendedValidatable {
 	if !v.IsValid() || (v.Kind() == reflect.Ptr || v.Kind() == reflect.Slice || v.Kind() == reflect.Map) && v.IsNil() {
 		return nil
 	}
 	if validate, ok := v.Interface().(validatable); ok {
+		return validatableFunc(validate.Validate)
+	}
+	if validate, ok := v.Interface().(extendedValidatable); ok {
 		return validate
 	}
 	if v.CanAddr() {

@@ -1466,6 +1466,19 @@ func TestValidateArg(t *testing.T) {
 	assert.EqualError(t, err, "<arg>: flag error")
 }
 
+type extendedValidateFlag string
+
+func (v *extendedValidateFlag) Validate(kctx *kong.Context) error { return errors.New("flag error") }
+
+func TestExtendedValidateFlag(t *testing.T) {
+	cli := struct {
+		Flag extendedValidateFlag
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag=one"})
+	assert.EqualError(t, err, "--flag: flag error")
+}
+
 func TestPointers(t *testing.T) {
 	cli := struct {
 		Mapped *mappedValue
