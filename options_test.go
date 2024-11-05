@@ -127,3 +127,22 @@ func TestFlagNamer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "SOMEFLAG", app.Model.Flags[1].Name)
 }
+
+type npError string
+
+func (e npError) Error() string {
+	return "ERROR: " + string(e)
+}
+
+func TestCallbackNonPointerError(t *testing.T) {
+	method := func() error {
+		return npError("failed")
+	}
+
+	var cli struct{}
+
+	p, err := New(&cli)
+	assert.NoError(t, err)
+	err = callFunction(reflect.ValueOf(method), p.bindings)
+	assert.EqualError(t, err, "ERROR: failed")
+}
