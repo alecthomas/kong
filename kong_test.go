@@ -48,6 +48,25 @@ func TestPositionalArguments(t *testing.T) {
 	})
 }
 
+func TestRemainderReturnsUnparsedArgs(t *testing.T) {
+	var cli struct {
+		User struct {
+			Create struct {
+				ID    int    `kong:"arg"`
+				First string `kong:"arg"`
+				Last  string `kong:"arg"`
+			} `kong:"cmd"`
+		} `kong:"cmd"`
+	}
+	p := mustNew(t, &cli)
+	args := []string{"user", "create", "10", "Alec", "Thomas"}
+	ctx, err := p.Parse(args)
+	assert.NoError(t, err)
+	for i, x := range ctx.Path {
+		assert.Equal(t, strings.Join(args[i:], " "), strings.Join(x.Remainder(), " "))
+	}
+}
+
 func TestBranchingArgument(t *testing.T) {
 	/*
 		app user create <id> <first> <last>
