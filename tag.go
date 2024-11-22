@@ -42,12 +42,12 @@ type Tag struct {
 	Passthrough bool
 
 	// Storage for all tag keys for arbitrary lookups.
-	items map[string][]string
+	Items map[string][]string
 }
 
 func (t *Tag) String() string {
 	out := []string{}
-	for key, list := range t.items {
+	for key, list := range t.Items {
 		for _, value := range list {
 			out = append(out, fmt.Sprintf("%s:%q", key, value))
 		}
@@ -162,7 +162,7 @@ func getTagInfo(ft reflect.StructField) (string, tagChars) {
 }
 
 func newEmptyTag() *Tag {
-	return &Tag{items: map[string][]string{}}
+	return &Tag{Items: map[string][]string{}}
 }
 
 func tagSplitFn(r rune) bool {
@@ -175,7 +175,7 @@ func parseTagString(s string) (*Tag, error) {
 		return nil, err
 	}
 	t := &Tag{
-		items: items,
+		Items: items,
 	}
 	err = hydrateTag(t, nil)
 	if err != nil {
@@ -195,7 +195,7 @@ func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 		return nil, err
 	}
 	t := &Tag{
-		items: items,
+		Items: items,
 	}
 	err = hydrateTag(t, ft.Type)
 	if err != nil {
@@ -294,7 +294,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 
 // Has returns true if the tag contained the given key.
 func (t *Tag) Has(k string) bool {
-	_, ok := t.items[k]
+	_, ok := t.Items[k]
 	return ok
 }
 
@@ -302,7 +302,7 @@ func (t *Tag) Has(k string) bool {
 //
 // Note that this will return the empty string if the tag is missing.
 func (t *Tag) Get(k string) string {
-	values := t.items[k]
+	values := t.Items[k]
 	if len(values) == 0 {
 		return ""
 	}
@@ -311,7 +311,7 @@ func (t *Tag) Get(k string) string {
 
 // GetAll returns all encountered values for a tag, in the case of multiple occurrences.
 func (t *Tag) GetAll(k string) []string {
-	return t.items[k]
+	return t.Items[k]
 }
 
 // GetBool returns true if the given tag looks like a boolean truth string.
