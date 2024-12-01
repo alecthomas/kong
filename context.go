@@ -425,7 +425,7 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 
 		case FlagToken:
 			if err := c.parseFlag(flags, token.String()); err != nil {
-				if isUnknownFlagError(err) && positional < len(node.Positional) && node.Positional[positional].Passthrough {
+				if isUnknownFlagError(err) && positional < len(node.Positional) && node.Positional[positional].PassthroughMode == PassThroughModeAll {
 					c.scan.Pop()
 					c.scan.PushTyped(token.String(), PositionalArgumentToken)
 				} else {
@@ -435,7 +435,7 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 
 		case ShortFlagToken:
 			if err := c.parseFlag(flags, token.String()); err != nil {
-				if isUnknownFlagError(err) && positional < len(node.Positional) && node.Positional[positional].Passthrough {
+				if isUnknownFlagError(err) && positional < len(node.Positional) && node.Positional[positional].PassthroughMode == PassThroughModeAll {
 					c.scan.Pop()
 					c.scan.PushTyped(token.String(), PositionalArgumentToken)
 				} else {

@@ -1803,6 +1803,35 @@ func TestPassthroughArgs(t *testing.T) {
 	}
 }
 
+func TestPassthroughPartial(t *testing.T) {
+	var cli struct {
+		Flag string
+		Args []string `arg:"" optional:"" passthrough:"partial"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag", "foobar", "something"})
+	assert.NoError(t, err)
+	assert.Equal(t, "foobar", cli.Flag)
+	assert.Equal(t, []string{"something"}, cli.Args)
+	_, err = p.Parse([]string{"--invalid", "foobar", "something"})
+	assert.EqualError(t, err, "unknown flag --invalid")
+}
+
+func TestPassthroughAll(t *testing.T) {
+	var cli struct {
+		Flag string
+		Args []string `arg:"" optional:"" passthrough:"all"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag", "foobar", "something"})
+	assert.NoError(t, err)
+	assert.Equal(t, "foobar", cli.Flag)
+	assert.Equal(t, []string{"something"}, cli.Args)
+	_, err = p.Parse([]string{"--invalid", "foobar", "something"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"--invalid", "foobar", "something"}, cli.Args)
+}
+
 func TestPassthroughCmd(t *testing.T) {
 	tests := []struct {
 		name    string
