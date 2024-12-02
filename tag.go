@@ -302,14 +302,16 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 		return fmt.Errorf("passthrough only makes sense for positional arguments or commands")
 	}
 	t.Passthrough = passthrough
-	passthroughMode := t.Get("passthrough")
-	switch passthroughMode {
-	case "partial":
-		t.PassthroughMode = PassThroughModePartial
-	case "all", "":
-		t.PassthroughMode = PassThroughModeAll
-	default:
-		return fmt.Errorf("invalid passthrough mode %q, must be one of 'partial' or 'all'", passthroughMode)
+	if t.Passthrough {
+		passthroughMode := t.Get("passthrough")
+		switch passthroughMode {
+		case "partial":
+			t.PassthroughMode = PassThroughModePartial
+		case "all", "":
+			t.PassthroughMode = PassThroughModeAll
+		default:
+			return fmt.Errorf("invalid passthrough mode %q, must be one of 'partial' or 'all'", passthroughMode)
+		}
 	}
 	return nil
 }
