@@ -2381,3 +2381,28 @@ func TestAfterRun(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, afterRunCLI{runCalled: true, afterRunCalled: true}, cli)
 }
+
+type ProvidedString string
+
+type providerCLI struct {
+	Sub providerSubCommand `cmd:""`
+}
+
+type providerSubCommand struct{}
+
+func (p *providerCLI) ProvideFoo() (ProvidedString, error) {
+	return ProvidedString("foo"), nil
+}
+
+func (p *providerSubCommand) Run(t *testing.T, ps ProvidedString) error {
+	assert.Equal(t, ProvidedString("foo"), ps)
+	return nil
+}
+
+func TestProviderMethods(t *testing.T) {
+	k := mustNew(t, &providerCLI{})
+	kctx, err := k.Parse([]string{"sub"})
+	assert.NoError(t, err)
+	err = kctx.Run(t)
+	assert.NoError(t, err)
+}
