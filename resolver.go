@@ -2,7 +2,9 @@ package kong
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -65,4 +67,64 @@ func JSON(r io.Reader) (Resolver, error) {
 func snakeCase(name string) string {
 	name = strings.Join(strings.Split(strings.Title(name), "-"), "")
 	return strings.ToLower(name[:1]) + name[1:]
+}
+
+func EnvResolver() Resolver {
+	once := Once()
+	return ResolverFunc(func(context *Context, parent *Path, flag *Flag) (interface{}, error) {
+		if err := once(func() error { return visit(context.Path) }); err != nil {
+			return nil, err
+		}
+		for _, env := range flag.Tag.Envs {
+			envar, ok := os.LookupEnv(env)
+			// Parse the first non-empty ENV in the list
+			if ok {
+				return envar, nil
+			}
+		}
+		return nil, nil
+	})
+}
+
+func visit(paths []*Path) error {
+	for _, path := range paths {
+		if path.Command == nil {
+			continue
+		}
+		for _, positional := range path.Command.Positional {
+			if positional.Tag == nil {
+				continue
+			}
+			visitValue(positional)
+		}
+		if path.Command.Argument != nil {
+			visitValue(path.Command.Argument)
+		}
+	}
+	return nil
+}
+
+func visitValue(value *Value) error {
+	for _, env := range value.Tag.Envs {
+		envar, ok := os.LookupEnv(env)
+		if !ok {
+			continue
+		}
+		token := Token{Type: FlagValueToken, Value: envar}
+		if err := value.Parse(ScanFromTokens(token), value.Target); err != nil {
+			return fmt.Errorf("%s (from envar %s=%q)", err, env, envar)
+		}
+	}
+	return nil
+}
+
+func Once() func(func() error) error {
+	done := false
+	return func(fn func() error) error {
+		if !done {
+			done = true
+			return fn()
+		}
+		return nil
+	}
 }
