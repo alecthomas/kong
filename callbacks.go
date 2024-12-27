@@ -68,6 +68,33 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 	return method
 }
 
+// Get methods from the given value and any embedded fields.
+func getMethods(value reflect.Value, name string) []reflect.Value {
+	// Collect all possible receivers
+	receivers := []reflect.Value{value}
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	if value.Kind() == reflect.Struct {
+		t := value.Type()
+		for i := 0; i < value.NumField(); i++ {
+			field := value.Field(i)
+			fieldType := t.Field(i)
+			if fieldType.IsExported() && fieldType.Anonymous {
+				receivers = append(receivers, field)
+			}
+		}
+	}
+	// Search all receivers for methods
+	var methods []reflect.Value
+	for _, receiver := range receivers {
+		if method := getMethod(receiver, name); method.IsValid() {
+			methods = append(methods, method)
+		}
+	}
+	return methods
+}
+
 func callFunction(f reflect.Value, bindings bindings) error {
 	if f.Kind() != reflect.Func {
 		return fmt.Errorf("expected function, got %s", f.Type())

@@ -361,16 +361,14 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		default:
 			panic("unsupported Path")
 		}
-		method := getMethod(value, name)
-		if !method.IsValid() {
-			continue
-		}
-		binds := k.bindings.clone()
-		binds.add(ctx, trace)
-		binds.add(trace.Node().Vars().CloneWith(k.vars))
-		binds.merge(ctx.bindings)
-		if err := callFunction(method, binds); err != nil {
-			return err
+		for _, method := range getMethods(value, name) {
+			binds := k.bindings.clone()
+			binds.add(ctx, trace)
+			binds.add(trace.Node().Vars().CloneWith(k.vars))
+			binds.merge(ctx.bindings)
+			if err := callFunction(method, binds); err != nil {
+				return err
+			}
 		}
 	}
 	// Path[0] will always be the app root.
@@ -392,13 +390,11 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 			if !flag.HasDefault || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
 				continue
 			}
-			method := getMethod(flag.Target, name)
-			if !method.IsValid() {
-				continue
-			}
-			path := &Path{Flag: flag}
-			if err := callFunction(method, binds.clone().add(path)); err != nil {
-				return next(err)
+			for _, method := range getMethods(flag.Target, name) {
+				path := &Path{Flag: flag}
+				if err := callFunction(method, binds.clone().add(path)); err != nil {
+					return next(err)
+				}
 			}
 		}
 		return next(nil)

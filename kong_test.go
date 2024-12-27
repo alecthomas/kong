@@ -2406,3 +2406,36 @@ func TestProviderMethods(t *testing.T) {
 	err = kctx.Run(t)
 	assert.NoError(t, err)
 }
+
+type EmbeddedCallback struct {
+	Embedded bool
+}
+
+func (e *EmbeddedCallback) AfterApply() error {
+	e.Embedded = true
+	return nil
+}
+
+type EmbeddedRoot struct {
+	EmbeddedCallback
+	Root bool
+}
+
+func (e *EmbeddedRoot) AfterApply() error {
+	e.Root = true
+	return nil
+}
+
+func TestEmbeddedCallbacks(t *testing.T) {
+	actual := &EmbeddedRoot{}
+	k := mustNew(t, actual)
+	_, err := k.Parse(nil)
+	assert.NoError(t, err)
+	expected := &EmbeddedRoot{
+		EmbeddedCallback: EmbeddedCallback{
+			Embedded: true,
+		},
+		Root: true,
+	}
+	assert.Equal(t, expected, actual)
+}

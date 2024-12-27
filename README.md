@@ -307,8 +307,8 @@ func main() {
 
 ## Hooks: BeforeReset(), BeforeResolve(), BeforeApply(), AfterApply() and the Bind() option
 
-If a node in the grammar has a `BeforeReset(...)`, `BeforeResolve
-(...)`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those
+If a node in the CLI, or any of its embedded fields, has a `BeforeReset(...) error`, `BeforeResolve
+(...) error`, `BeforeApply(...) error` and/or `AfterApply(...) error` method, those
 methods will be called before values are reset, before validation/assignment,
 and after validation/assignment, respectively.
 
@@ -338,40 +338,6 @@ func main() {
   ctx := kong.Parse(&cli, kong.Bind(logger))
 
   // ...
-}
-```
-
-Another example of using hooks is load the env-file:
-
-```go
-package main
-
-import (
-  "fmt"
-  "github.com/alecthomas/kong"
-  "github.com/joho/godotenv"
-)
-
-type EnvFlag string
-
-// BeforeResolve loads env file.
-func (c EnvFlag) BeforeReset(ctx *kong.Context, trace *kong.Path) error {
-  path := string(ctx.FlagValue(trace.Flag).(EnvFlag)) // nolint
-  path = kong.ExpandPath(path)
-  if err := godotenv.Load(path); err != nil {
-    return err
-  }
-  return nil
-}
-
-var CLI struct {
-  EnvFile EnvFlag
-  Flag `env:"FLAG"`
-}
-
-func main() {
-  _ = kong.Parse(&CLI)
-  fmt.Println(CLI.Flag)
 }
 ```
 
