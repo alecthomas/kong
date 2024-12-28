@@ -2439,3 +2439,27 @@ func TestEmbeddedCallbacks(t *testing.T) {
 	}
 	assert.Equal(t, expected, actual)
 }
+
+type applyCalledOnce struct {
+	Dev bool
+}
+
+func (c *applyCalledOnce) AfterApply() error {
+	c.Dev = false
+	return nil
+}
+
+func (c applyCalledOnce) Run() error {
+	if c.Dev {
+		return fmt.Errorf("--dev should not be set")
+	}
+	return nil
+}
+
+func TestApplyCalledOnce(t *testing.T) {
+	cli := &applyCalledOnce{}
+	kctx, err := mustNew(t, cli).Parse([]string{"--dev"})
+	assert.NoError(t, err)
+	err = kctx.Run()
+	assert.NoError(t, err)
+}
