@@ -2,7 +2,6 @@ package kong_test
 
 import (
 	"errors"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -13,23 +12,13 @@ import (
 
 type envMap map[string]string
 
-func tempEnv(env envMap) func() {
-	for k, v := range env {
-		os.Setenv(k, v)
-	}
-
-	return func() {
-		for k := range env {
-			os.Unsetenv(k)
-		}
-	}
-}
-
-func newEnvParser(t *testing.T, cli interface{}, env envMap, options ...kong.Option) (*kong.Kong, func()) {
+func newEnvParser(t *testing.T, cli interface{}, env envMap, options ...kong.Option) *kong.Kong {
 	t.Helper()
-	restoreEnv := tempEnv(env)
+	for name, value := range env {
+		t.Setenv(name, value)
+	}
 	parser := mustNew(t, cli, options...)
-	return parser, restoreEnv
+	return parser
 }
 
 func TestEnvarsFlagBasic(t *testing.T) {
@@ -39,7 +28,7 @@ func TestEnvarsFlagBasic(t *testing.T) {
 		Interp string `env:"${kongInterp}"`
 	}
 	kongInterpEnv := "KONG_INTERP"
-	parser, unsetEnvs := newEnvParser(t, &cli,
+	parser := newEnvParser(t, &cli,
 		envMap{
 			"KONG_STRING": "bye",
 			"KONG_SLICE":  "5,2,9",
@@ -49,7 +38,6 @@ func TestEnvarsFlagBasic(t *testing.T) {
 			"kongInterp": kongInterpEnv,
 		},
 	)
-	defer unsetEnvs()
 
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
@@ -63,14 +51,13 @@ func TestEnvarsFlagMultiple(t *testing.T) {
 		FirstENVPresent  string `env:"KONG_TEST1_1,KONG_TEST1_2"`
 		SecondENVPresent string `env:"KONG_TEST2_1,KONG_TEST2_2"`
 	}
-	parser, unsetEnvs := newEnvParser(t, &cli,
+	parser := newEnvParser(t, &cli,
 		envMap{
 			"KONG_TEST1_1": "value1.1",
 			"KONG_TEST1_2": "value1.2",
 			"KONG_TEST2_2": "value2.2",
 		},
 	)
-	defer unsetEnvs()
 
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
@@ -82,8 +69,7 @@ func TestEnvarsFlagOverride(t *testing.T) {
 	var cli struct {
 		Flag string `env:"KONG_FLAG"`
 	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_FLAG": "bye"})
-	defer restoreEnv()
+	parser := newEnvParser(t, &cli, envMap{"KONG_FLAG": "bye"})
 
 	_, err := parser.Parse([]string{"--flag=hello"})
 	assert.NoError(t, err)
@@ -94,8 +80,7 @@ func TestEnvarsTag(t *testing.T) {
 	var cli struct {
 		Slice []int `env:"KONG_NUMBERS"`
 	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "5,2,9"})
-	defer restoreEnv()
+	parser := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "5,2,9"})
 
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
@@ -109,8 +94,7 @@ func TestEnvarsEnvPrefix(t *testing.T) {
 	var cli struct {
 		Anonymous `envprefix:"KONG_"`
 	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "1,2,3"})
-	defer restoreEnv()
+	parser := newEnvParser(t, &cli, envMap{"KONG_NUMBERS": "1,2,3"})
 
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
@@ -125,8 +109,7 @@ func TestEnvarsEnvPrefixMultiple(t *testing.T) {
 	var cli struct {
 		Anonymous `envprefix:"KONG_"`
 	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_NUMBERS1_1": "1,2,3", "KONG_NUMBERS2_2": "5,6,7"})
-	defer restoreEnv()
+	parser := newEnvParser(t, &cli, envMap{"KONG_NUMBERS1_1": "1,2,3", "KONG_NUMBERS2_2": "5,6,7"})
 
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
@@ -144,8 +127,7 @@ func TestEnvarsNestedEnvPrefix(t *testing.T) {
 	var cli struct {
 		Anonymous `envprefix:"KONG_"`
 	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{"KONG_ANON_STRING": "abc"})
-	defer restoreEnv()
+	parser := newEnvParser(t, &cli, envMap{"KONG_ANON_STRING": "abc"})
 
 	_, err := parser.Parse([]string{})
 	assert.NoError(t, err)
@@ -156,15 +138,13 @@ func TestEnvarsWithDefault(t *testing.T) {
 	var cli struct {
 		Flag string `env:"KONG_FLAG" default:"default"`
 	}
-	parser, restoreEnv := newEnvParser(t, &cli, envMap{})
-	defer restoreEnv()
+	parser := newEnvParser(t, &cli, envMap{})
 
 	_, err := parser.Parse(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "default", cli.Flag)
 
-	parser, restoreEnv = newEnvParser(t, &cli, envMap{"KONG_FLAG": "moo"})
-	defer restoreEnv()
+	parser = newEnvParser(t, &cli, envMap{"KONG_FLAG": "moo"})
 	_, err = parser.Parse(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "moo", cli.Flag)
@@ -194,7 +174,7 @@ func TestEnv(t *testing.T) {
 	}
 
 	// With the prefix
-	parser, unsetEnvs := newEnvParser(t, &cli, envMap{
+	parser := newEnvParser(t, &cli, envMap{
 		"KONG_ONE_FLAG":   "one",
 		"KONG_TWO_FLAG":   "two",
 		"KONG_THREE_FLAG": "three",
@@ -202,14 +182,13 @@ func TestEnv(t *testing.T) {
 		"KONG_FIVE":       "true",
 		"KONG_SIX":        "true",
 	}, kong.DefaultEnvars("KONG"))
-	defer unsetEnvs()
 
 	_, err := parser.Parse(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, cli)
 
 	// Without the prefix
-	parser, unsetEnvs = newEnvParser(t, &cli, envMap{
+	parser = newEnvParser(t, &cli, envMap{
 		"ONE_FLAG":   "one",
 		"TWO_FLAG":   "two",
 		"THREE_FLAG": "three",
@@ -217,7 +196,6 @@ func TestEnv(t *testing.T) {
 		"FIVE":       "true",
 		"SIX":        "true",
 	}, kong.DefaultEnvars(""))
-	defer unsetEnvs()
 
 	_, err = parser.Parse(nil)
 	assert.NoError(t, err)
@@ -281,10 +259,10 @@ func TestResolversWithMappers(t *testing.T) {
 		Flag string `env:"KONG_MOO" type:"upper"`
 	}
 
-	restoreEnv := tempEnv(envMap{"KONG_MOO": "meow"})
-	defer restoreEnv()
+	t.Setenv("KONG_MOO", "meow")
 
-	parser := mustNew(t, &cli,
+	parser := newEnvParser(t, &cli,
+		envMap{"KONG_MOO": "meow"},
 		kong.NamedMapper("upper", testUppercaseMapper{}),
 	)
 	_, err := parser.Parse([]string{})

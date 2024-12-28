@@ -955,14 +955,12 @@ func TestDefaultEnumValidated(t *testing.T) {
 }
 
 func TestEnvarEnumValidated(t *testing.T) {
-	restore := tempEnv(map[string]string{
-		"FLAG": "invalid",
-	})
-	defer restore()
 	var cli struct {
 		Flag string `env:"FLAG" required:"" enum:"valid"`
 	}
-	p := mustNew(t, &cli)
+	p := newEnvParser(t, &cli, envMap{
+		"FLAG": "invalid",
+	})
 	_, err := p.Parse(nil)
 	assert.EqualError(t, err, "--flag must be one of \"valid\" but got \"invalid\"")
 }
@@ -1234,10 +1232,9 @@ func TestIssue153(t *testing.T) {
 		Ls LsCmd `cmd help:"List paths."`
 	}
 
-	p, revert := newEnvParser(t, &cli, envMap{
+	p := newEnvParser(t, &cli, envMap{
 		"CMD_PATHS": "hello",
 	})
-	defer revert()
 	_, err := p.Parse([]string{"ls"})
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"hello"}, cli.Ls.Paths)
