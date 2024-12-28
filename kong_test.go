@@ -14,7 +14,7 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-func mustNew(t *testing.T, cli interface{}, options ...kong.Option) *kong.Kong {
+func mustNew(t *testing.T, cli any, options ...kong.Option) *kong.Kong {
 	t.Helper()
 	options = append([]kong.Option{
 		kong.Name("test"),
@@ -1680,7 +1680,7 @@ func TestOptionReturnsErr(t *testing.T) {
 func TestEnumValidation(t *testing.T) {
 	tests := []struct {
 		name string
-		cli  interface{}
+		cli  any
 		fail bool
 	}{
 		{
@@ -1954,7 +1954,7 @@ func TestVersionFlagShouldStillWork(t *testing.T) {
 func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 	tests := []struct {
 		name string
-		cli  interface{}
+		cli  any
 		args []string
 		err  string
 	}{
@@ -2004,7 +2004,7 @@ func TestSliceDecoderHelpfulErrorMsg(t *testing.T) {
 func TestMapDecoderHelpfulErrorMsg(t *testing.T) {
 	tests := []struct {
 		name     string
-		cli      interface{}
+		cli      any
 		args     []string
 		expected string
 	}{

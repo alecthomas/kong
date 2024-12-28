@@ -648,7 +648,7 @@ normal validation.
 
 ## Modifying Kong's behaviour
 
-Each Kong parser can be configured via functional options passed to `New(cli interface{}, options...Option)`.
+Each Kong parser can be configured via functional options passed to `New(cli any, options...Option)`.
 
 The full set of options can be found [here](https://godoc.org/github.com/alecthomas/kong#Option).
 
@@ -706,7 +706,7 @@ All builtin Go types (as well as a bunch of useful stdlib types like `time.Time`
 1. `NamedMapper(string, Mapper)` and using the tag key `type:"<name>"`.
 2. `KindMapper(reflect.Kind, Mapper)`.
 3. `TypeMapper(reflect.Type, Mapper)`.
-4. `ValueMapper(interface{}, Mapper)`, passing in a pointer to a field of the grammar.
+4. `ValueMapper(any, Mapper)`, passing in a pointer to a field of the grammar.
 
 ### `ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help
 

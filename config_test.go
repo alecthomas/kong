@@ -42,7 +42,7 @@ func TestConfigValidation(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func makeConfig(t *testing.T, config interface{}) (path string, cleanup func()) {
+func makeConfig(t *testing.T, config any) (path string, cleanup func()) {
 	t.Helper()
 	w, err := os.CreateTemp("", "")
 	assert.NoError(t, err)

@@ -69,7 +69,7 @@ func (n *Node) Leaf() bool {
 // Find a command/argument/flag by pointer to its field.
 //
 // Returns nil if not found. Panics if ptr is not a pointer.
-func (n *Node) Find(ptr interface{}) *Node {
+func (n *Node) Find(ptr any) *Node {
 	key := reflect.ValueOf(ptr)
 	if key.Kind() != reflect.Ptr {
 		panic("expected a pointer")

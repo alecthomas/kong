@@ -9,9 +9,9 @@ import (
 // Plugins are dynamically embedded command-line structures.
 //
 // Each element in the Plugins list *must* be a pointer to a structure.
-type Plugins []interface{}
+type Plugins []any
 
-func build(k *Kong, ast interface{}) (app *Application, err error) {
+func build(k *Kong, ast any) (app *Application, err error) {
 	v := reflect.ValueOf(ast)
 	iv := reflect.Indirect(v)
 	if v.Kind() != reflect.Ptr || iv.Kind() != reflect.Struct {

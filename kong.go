@@ -15,7 +15,7 @@ var (
 	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
 )
 
-func failField(parent reflect.Value, field reflect.StructField, format string, args ...interface{}) error {
+func failField(parent reflect.Value, field reflect.StructField, format string, args ...any) error {
 	name := parent.Type().Name()
 	if name == "" {
 		name = "<anonymous struct>"
@@ -24,7 +24,7 @@ func failField(parent reflect.Value, field reflect.StructField, format string, a
 }
 
 // Must creates a new Parser or panics if there is an error.
-func Must(ast interface{}, options ...Option) *Kong {
+func Must(ast any, options ...Option) *Kong {
 	k, err := New(ast, options...)
 	if err != nil {
 		panic(err)
@@ -76,7 +76,7 @@ type Kong struct {
 // New creates a new Kong parser on grammar.
 //
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
-func New(grammar interface{}, options ...Option) (*Kong, error) {
+func New(grammar any, options ...Option) (*Kong, error) {
 	k := &Kong{
 		Exit:          os.Exit,
 		Stdout:        os.Stdout,
@@ -401,7 +401,7 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 	})
 }
 
-func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...interface{}) {
+func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...any) {
 	lines := strings.Split(strings.TrimRight(fmt.Sprintf(format, args...), "\n"), "\n")
 	leader := ""
 	for _, l := range leaders {
@@ -417,25 +417,25 @@ func formatMultilineMessage(w io.Writer, leaders []string, format string, args .
 }
 
 // Printf writes a message to Kong.Stdout with the application name prefixed.
-func (k *Kong) Printf(format string, args ...interface{}) *Kong {
+func (k *Kong) Printf(format string, args ...any) *Kong {
 	formatMultilineMessage(k.Stdout, []string{k.Model.Name}, format, args...)
 	return k
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
-func (k *Kong) Errorf(format string, args ...interface{}) *Kong {
+func (k *Kong) Errorf(format string, args ...any) *Kong {
 	formatMultilineMessage(k.Stderr, []string{k.Model.Name, "error"}, format, args...)
 	return k
 }
 
 // Fatalf writes a message to Kong.Stderr with the application name prefixed then exits with a non-zero status.
-func (k *Kong) Fatalf(format string, args ...interface{}) {
+func (k *Kong) Fatalf(format string, args ...any) {
 	k.Errorf(format, args...)
 	k.Exit(1)
 }
 
 // FatalIfErrorf terminates with an error message if err != nil.
-func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
+func (k *Kong) FatalIfErrorf(err error, args ...any) {
 	if err == nil {
 		return
 	}

@@ -12,7 +12,7 @@ import (
 
 type envMap map[string]string
 
-func newEnvParser(t *testing.T, cli interface{}, env envMap, options ...kong.Option) *kong.Kong {
+func newEnvParser(t *testing.T, cli any, env envMap, options ...kong.Option) *kong.Kong {
 	t.Helper()
 	for name, value := range env {
 		t.Setenv(name, value)
@@ -275,7 +275,7 @@ func TestResolverWithBool(t *testing.T) {
 		Bool bool
 	}
 
-	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 		if flag.Name == "bool" {
 			return true, nil
 		}
@@ -294,14 +294,14 @@ func TestLastResolverWins(t *testing.T) {
 		Int []int
 	}
 
-	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 		if flag.Name == "int" {
 			return 1, nil
 		}
 		return nil, nil
 	}
 
-	var second kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+	var second kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 		if flag.Name == "int" {
 			return 2, nil
 		}
@@ -318,7 +318,7 @@ func TestResolverSatisfiesRequired(t *testing.T) {
 	var cli struct {
 		Int int `required`
 	}
-	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 		if flag.Name == "int" {
 			return 1, nil
 		}
@@ -336,7 +336,7 @@ func TestResolverTriggersHooks(t *testing.T) {
 		Flag hookValue
 	}
 
-	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+	var first kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 		if flag.Name == "flag" {
 			return "one", nil
 		}
@@ -355,7 +355,7 @@ type validatingResolver struct {
 }
 
 func (v *validatingResolver) Validate(app *kong.Application) error { return v.err }
-func (v *validatingResolver) Resolve(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+func (v *validatingResolver) Resolve(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 	return nil, nil
 }
 
