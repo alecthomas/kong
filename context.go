@@ -26,6 +26,9 @@ type Path struct {
 
 	// True if this Path element was created as the result of a resolver.
 	Resolved bool
+
+	// Remaining tokens after this node
+	rest []Token
 }
 
 // Node returns the Node associated with this Path, or nil if Path is a non-Node.
@@ -64,6 +67,15 @@ func (p *Path) Visitable() Visitable {
 	return nil
 }
 
+// Rest returns the remaining unparsed args after this Path element.
+func (p *Path) Rest() []string {
+	args := []string{}
+	for _, token := range p.rest {
+		args = append(args, token.String())
+	}
+	return args
+}
+
 // Context contains the current parse context.
 type Context struct {
 	*Kong
@@ -87,14 +99,15 @@ type Context struct {
 // This just constructs a new trace. To fully apply the trace you must call Reset(), Resolve(),
 // Validate() and Apply().
 func Trace(k *Kong, args []string) (*Context, error) {
+	s := Scan(args...)
 	c := &Context{
 		Kong: k,
 		Args: args,
 		Path: []*Path{
-			{App: k.Model, Flags: k.Model.Flags},
+			{App: k.Model, Flags: k.Model.Flags, rest: s.PeekAll()},
 		},
 		values:   map[*Value]reflect.Value{},
-		scan:     Scan(args...),
+		scan:     s,
 		bindings: bindings{},
 	}
 	c.Error = c.trace(c.Model.Node)
@@ -465,6 +478,7 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 				c.Path = append(c.Path, &Path{
 					Parent:     node,
 					Positional: arg,
+					rest:       c.scan.PeekAll(),
 				})
 				positional++
 				break
@@ -499,6 +513,7 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 						Parent:  node,
 						Command: branch,
 						Flags:   branch.Flags,
+						rest:    c.scan.PeekAll(),
 					})
 					return c.trace(branch)
 				}
@@ -513,6 +528,7 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 							Parent:   node,
 							Argument: branch,
 							Flags:    branch.Flags,
+							rest:     c.scan.PeekAll(),
 						})
 						return c.trace(branch)
 					}
@@ -526,6 +542,7 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 					Parent:  node,
 					Command: node.DefaultCmd,
 					Flags:   node.DefaultCmd.Flags,
+					rest:    c.scan.PeekAll(),
 				})
 				return c.trace(node.DefaultCmd)
 			}
@@ -551,6 +568,7 @@ func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 			Parent:  node.DefaultCmd,
 			Command: node.DefaultCmd,
 			Flags:   node.DefaultCmd.Flags,
+			rest:    c.scan.PeekAll(),
 		})
 	}
 	return nil
@@ -597,6 +615,7 @@ func (c *Context) Resolve() error {
 			inserted = append(inserted, &Path{
 				Flag:     flag,
 				Resolved: true,
+				rest:     c.scan.PeekAll(),
 			})
 		}
 	}
@@ -740,7 +759,10 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 			}
 			flag.Value.Apply(value)
 		}
-		c.Path = append(c.Path, &Path{Flag: flag})
+		c.Path = append(c.Path, &Path{
+			Flag: flag,
+			rest: c.scan.PeekAll(),
+		})
 		return nil
 	}
 	return &unknownFlagError{Cause: findPotentialCandidates(match, candidates, "unknown flag %s", match)}
