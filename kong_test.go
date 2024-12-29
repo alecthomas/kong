@@ -2475,3 +2475,23 @@ func TestCustomTypeNoEllipsis(t *testing.T) {
 	help := w.String()
 	assert.NotContains(t, help, "...")
 }
+
+func TestPrefixXorIssue343(t *testing.T) {
+	type DBConfig struct {
+		Password        string `help:"Password" xor:"password" optional:""`
+		PasswordFile    string `help:"File which content will be used for a password" xor:"password" optional:""`
+		PasswordCommand string `help:"Command to run to retrieve password" xor:"password" optional:""`
+	}
+
+	type SourceTargetConfig struct {
+		Source DBConfig `help:"Database config of source to be copied from" prefix:"source-" xorprefix:"source-" embed:""`
+		Target DBConfig `help:"Database config of source to be copied from" prefix:"target-" xorprefix:"target-" embed:""`
+	}
+
+	cli := SourceTargetConfig{}
+	kctx := mustNew(t, &cli)
+	_, err := kctx.Parse([]string{"--source-password=foo", "--target-password=bar"})
+	assert.NoError(t, err)
+	_, err = kctx.Parse([]string{"--source-password-file=foo", "--source-password=bar"})
+	assert.Error(t, err)
+}
