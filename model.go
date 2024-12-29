@@ -433,7 +433,7 @@ func (f *Flag) FormatPlaceHolder() string {
 		return placeholderHelper.PlaceHolder(f)
 	}
 	tail := ""
-	if f.Value.IsSlice() && f.Value.Tag.Sep != -1 {
+	if f.Value.IsSlice() && f.Value.Tag.Sep != -1 && f.Tag.Type == "" {
 		tail += string(f.Value.Tag.Sep) + "..."
 	}
 	if f.PlaceHolder != "" {
@@ -446,7 +446,7 @@ func (f *Flag) FormatPlaceHolder() string {
 		return f.Default + tail
 	}
 	if f.Value.IsMap() {
-		if f.Value.Tag.MapSep != -1 {
+		if f.Value.Tag.MapSep != -1 && f.Tag.Type == "" {
 			tail = string(f.Value.Tag.MapSep) + "..."
 		}
 		return "KEY=VALUE" + tail

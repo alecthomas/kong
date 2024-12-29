@@ -2460,3 +2460,18 @@ func TestApplyCalledOnce(t *testing.T) {
 	err = kctx.Run()
 	assert.NoError(t, err)
 }
+
+func TestCustomTypeNoEllipsis(t *testing.T) {
+	type CLI struct {
+		Flag []byte `type:"existingfile"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli, kong.Exit(func(int) {}))
+	w := &strings.Builder{}
+	p.Stderr = w
+	p.Stdout = w
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	help := w.String()
+	assert.NotContains(t, help, "...")
+}
