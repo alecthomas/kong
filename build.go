@@ -154,6 +154,12 @@ MAIN:
 			}
 		}
 
+		if len(tag.And) != 0 {
+			for i := range tag.And {
+				tag.And[i] = tag.XorPrefix + tag.And[i]
+			}
+		}
+
 		// Nested structs are either commands or args, unless they implement the Mapper interface.
 		if field.value.Kind() == reflect.Struct && (tag.Cmd || tag.Arg) && k.registry.ForValue(fv) == nil {
 			typ := CommandNode
