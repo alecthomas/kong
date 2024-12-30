@@ -2,7 +2,9 @@ package kong
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -65,4 +67,62 @@ func JSON(r io.Reader) (Resolver, error) {
 func snakeCase(name string) string {
 	name = strings.Join(strings.Split(strings.Title(name), "-"), "")
 	return strings.ToLower(name[:1]) + name[1:]
+}
+
+func EnvResolver() Resolver {
+	// Resolvers are typically only invoked for flags, as shown here:
+	// https://github.com/alecthomas/kong/blob/v1.6.0/context.go#L567
+	// However, environment variable annotations can also apply to arguments,
+	// as demonstrated in this test:
+	// https://github.com/alecthomas/kong/blob/v1.6.0/kong_test.go#L1226-L1244
+	// To handle this, we ensure that arguments are resolved as well.
+	// Since the resolution only needs to happen once, we use this boolean
+	// to track whether the resolution process has already been performed.
+	argsResolved := false
+	return ResolverFunc(func(context *Context, parent *Path, flag *Flag) (interface{}, error) {
+		if !argsResolved {
+			resolveArgs(context.Path)
+			argsResolved = true
+		}
+		for _, env := range flag.Tag.Envs {
+			envar, ok := os.LookupEnv(env)
+			// Parse the first non-empty ENV in the list
+			if ok {
+				return envar, nil
+			}
+		}
+		return nil, nil
+	})
+}
+
+func resolveArgs(paths []*Path) error {
+	for _, path := range paths {
+		if path.Command == nil {
+			continue
+		}
+		for _, positional := range path.Command.Positional {
+			if positional.Tag == nil {
+				continue
+			}
+			visitValue(positional)
+		}
+		if path.Command.Argument != nil {
+			visitValue(path.Command.Argument)
+		}
+	}
+	return nil
+}
+
+func visitValue(value *Value) error {
+	for _, env := range value.Tag.Envs {
+		envar, ok := os.LookupEnv(env)
+		if !ok {
+			continue
+		}
+		token := Token{Type: FlagValueToken, Value: envar}
+		if err := value.Parse(ScanFromTokens(token), value.Target); err != nil {
+			return fmt.Errorf("%s (from envar %s=%q)", err, env, envar)
+		}
+	}
+	return nil
 }
