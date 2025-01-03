@@ -827,7 +827,9 @@ func (c *Context) Run(binds ...any) (err error) {
 			if method.IsValid() {
 				node = selected
 			}
-		} else {
+		}
+
+		if node == nil {
 			return fmt.Errorf("no command selected")
 		}
 	}
