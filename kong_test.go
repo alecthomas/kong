@@ -2495,3 +2495,16 @@ func TestPrefixXorIssue343(t *testing.T) {
 	_, err = kctx.Parse([]string{"--source-password-file=foo", "--source-password=bar"})
 	assert.Error(t, err)
 }
+
+func TestIssue483EmptyRootNodeNoRun(t *testing.T) {
+	var emptyCLI struct{}
+	parser, err := kong.New(&emptyCLI)
+	assert.NoError(t, err)
+
+	kctx, err := parser.Parse([]string{})
+	assert.NoError(t, err)
+
+	err = kctx.Run()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no command selected")
+}
