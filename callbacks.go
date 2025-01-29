@@ -80,7 +80,19 @@ func getMethods(value reflect.Value, name string) []reflect.Value {
 		for i := 0; i < value.NumField(); i++ {
 			field := value.Field(i)
 			fieldType := t.Field(i)
-			if fieldType.IsExported() && fieldType.Anonymous {
+			if !fieldType.IsExported() {
+				continue
+			}
+
+			// Hooks on exported embedded fields should be called.
+			if fieldType.Anonymous {
+				receivers = append(receivers, field)
+				continue
+			}
+
+			// Hooks on exported fields that are not exported,
+			// but are tagged with `embed:""` should be called.
+			if _, ok := fieldType.Tag.Lookup("embed"); ok {
 				receivers = append(receivers, field)
 			}
 		}

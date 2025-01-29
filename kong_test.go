@@ -2413,9 +2413,19 @@ func (e *EmbeddedCallback) AfterApply() error {
 	return nil
 }
 
+type taggedEmbeddedCallback struct {
+	Tagged bool
+}
+
+func (e *taggedEmbeddedCallback) AfterApply() error {
+	e.Tagged = true
+	return nil
+}
+
 type EmbeddedRoot struct {
 	EmbeddedCallback
-	Root bool
+	Tagged taggedEmbeddedCallback `embed:""`
+	Root   bool
 }
 
 func (e *EmbeddedRoot) AfterApply() error {
@@ -2431,6 +2441,9 @@ func TestEmbeddedCallbacks(t *testing.T) {
 	expected := &EmbeddedRoot{
 		EmbeddedCallback: EmbeddedCallback{
 			Embedded: true,
+		},
+		Tagged: taggedEmbeddedCallback{
+			Tagged: true,
 		},
 		Root: true,
 	}
