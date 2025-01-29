@@ -68,35 +68,60 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 	return method
 }
 
-// Get methods from the given value and any embedded fields.
+// getMethods gets all methods with the given name from the given value
+// and any embedded fields.
+//
+// Returns a slice of bound methods that can be called directly.
 func getMethods(value reflect.Value, name string) []reflect.Value {
-	// Collect all possible receivers
 	receivers := []reflect.Value{value}
-	if value.Kind() == reflect.Ptr {
-		value = value.Elem()
-	}
-	if value.Kind() == reflect.Struct {
-		t := value.Type()
-		for i := 0; i < value.NumField(); i++ {
-			field := value.Field(i)
-			fieldType := t.Field(i)
-			if !fieldType.IsExported() {
-				continue
-			}
 
-			// Hooks on exported embedded fields should be called.
-			if fieldType.Anonymous {
-				receivers = append(receivers, field)
-				continue
-			}
+	// Traverse all embedded fields of the struct
+	// starting from the given value
+	// and collect all possible receivers.
+	//
+	// Two kinds of embedded fields are considered if they're exported:
+	//
+	//   - standard Go embedded fields
+	//   - fields tagged with `embed:""`
+	for pending := []reflect.Value{value}; len(pending) > 0; pending = pending[1:] {
+		value := pending[0]
 
-			// Hooks on exported fields that are not exported,
-			// but are tagged with `embed:""` should be called.
-			if _, ok := fieldType.Tag.Lookup("embed"); ok {
-				receivers = append(receivers, field)
+		if value.Kind() == reflect.Ptr {
+			value = value.Elem()
+		}
+
+		if value.Kind() == reflect.Struct {
+			t := value.Type()
+			for i := 0; i < value.NumField(); i++ {
+				fieldValue := value.Field(i)
+				field := t.Field(i)
+				fieldType := field.Type
+
+				// Fields must be exported to be considered.
+				if !field.IsExported() {
+					continue
+				}
+
+				// Consider a field embedded if it's actually embedded
+				// or if it's tagged with `embed:""`.
+				_, isEmbedded := field.Tag.Lookup("embed")
+				isEmbedded = isEmbedded || field.Anonymous
+
+				if !isEmbedded {
+					continue
+				}
+
+				receivers = append(receivers, fieldValue)
+
+				// If the embedded field is a struct or a pointer to a struct,
+				// add it to the list of structs to traverse.
+				if fieldType.Kind() == reflect.Struct || fieldType.Kind() == reflect.Ptr {
+					pending = append(pending, fieldValue)
+				}
 			}
 		}
 	}
+
 	// Search all receivers for methods
 	var methods []reflect.Value
 	for _, receiver := range receivers {
