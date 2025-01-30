@@ -2521,3 +2521,23 @@ func TestIssue483EmptyRootNodeNoRun(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no command selected")
 }
+
+type providerWithoutErrorCLI struct {
+}
+
+func (p *providerWithoutErrorCLI) Run(name string) error {
+	if name == "Bob" {
+		return nil
+	}
+	return fmt.Errorf("name %s is not Bob", name)
+}
+
+func TestProviderWithoutError(t *testing.T) {
+	k := mustNew(t, &providerWithoutErrorCLI{})
+	kctx, err := k.Parse(nil)
+	assert.NoError(t, err)
+	err = kctx.BindToProvider(func() string { return "Bob" })
+	assert.NoError(t, err)
+	err = kctx.Run()
+	assert.NoError(t, err)
+}
