@@ -77,35 +77,53 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 	return method
 }
 
-// Get methods from the given value and any embedded fields.
+// getMethods gets all methods with the given name from the given value
+// and any embedded fields.
+//
+// Returns a slice of bound methods that can be called directly.
 func getMethods(value reflect.Value, name string) []reflect.Value {
-	// Collect all possible receivers
-	receivers := []reflect.Value{value}
-	if value.Kind() == reflect.Ptr {
-		value = value.Elem()
-	}
-	if value.Kind() == reflect.Struct {
-		t := value.Type()
-		for i := 0; i < value.NumField(); i++ {
-			field := value.Field(i)
-			fieldType := t.Field(i)
-			if !fieldType.IsExported() {
-				continue
-			}
+	// Traverses embedded fields of the struct
+	// starting from the given value to collect all possible receivers
+	// for the given method name.
+	var traverse func(value reflect.Value, receivers []reflect.Value) []reflect.Value
+	traverse = func(value reflect.Value, receivers []reflect.Value) []reflect.Value {
+		// Always consider the current value for hooks.
+		receivers = append(receivers, value)
 
-			// Hooks on exported embedded fields should be called.
-			if fieldType.Anonymous {
-				receivers = append(receivers, field)
-				continue
-			}
+		if value.Kind() == reflect.Ptr {
+			value = value.Elem()
+		}
 
-			// Hooks on exported fields that are not exported,
-			// but are tagged with `embed:""` should be called.
-			if _, ok := fieldType.Tag.Lookup("embed"); ok {
-				receivers = append(receivers, field)
+		// If the current value is a struct, also consider embedded fields.
+		// Two kinds of embedded fields are considered if they're exported:
+		//
+		//   - standard Go embedded fields
+		//   - fields tagged with `embed:""`
+		if value.Kind() == reflect.Struct {
+			t := value.Type()
+			for i := 0; i < value.NumField(); i++ {
+				fieldValue := value.Field(i)
+				field := t.Field(i)
+
+				if !field.IsExported() {
+					continue
+				}
+
+				// Consider a field embedded if it's actually embedded
+				// or if it's tagged with `embed:""`.
+				_, isEmbedded := field.Tag.Lookup("embed")
+				isEmbedded = isEmbedded || field.Anonymous
+				if isEmbedded {
+					receivers = traverse(fieldValue, receivers)
+				}
 			}
 		}
+
+		return receivers
 	}
+
+	receivers := traverse(value, nil /* receivers */)
+
 	// Search all receivers for methods
 	var methods []reflect.Value
 	for _, receiver := range receivers {

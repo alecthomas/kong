@@ -2405,6 +2405,8 @@ func TestProviderMethods(t *testing.T) {
 }
 
 type EmbeddedCallback struct {
+	Nested NestedCallback `embed:""`
+
 	Embedded bool
 }
 
@@ -2414,11 +2416,22 @@ func (e *EmbeddedCallback) AfterApply() error {
 }
 
 type taggedEmbeddedCallback struct {
+	NestedCallback
+
 	Tagged bool
 }
 
 func (e *taggedEmbeddedCallback) AfterApply() error {
 	e.Tagged = true
+	return nil
+}
+
+type NestedCallback struct {
+	nested bool
+}
+
+func (n *NestedCallback) AfterApply() error {
+	n.nested = true
 	return nil
 }
 
@@ -2441,9 +2454,15 @@ func TestEmbeddedCallbacks(t *testing.T) {
 	expected := &EmbeddedRoot{
 		EmbeddedCallback: EmbeddedCallback{
 			Embedded: true,
+			Nested: NestedCallback{
+				nested: true,
+			},
 		},
 		Tagged: taggedEmbeddedCallback{
 			Tagged: true,
+			NestedCallback: NestedCallback{
+				nested: true,
+			},
 		},
 		Root: true,
 	}
