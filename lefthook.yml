@@ -1,0 +1,7 @@
+pre-push:
+  jobs:
+    - name: test
+      run: go test -v ./...
+
+    - name: lint
+      run: golangci-lint run
