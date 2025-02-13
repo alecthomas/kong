@@ -756,3 +756,31 @@ func TestValuesThatLookLikeFlags(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{"-foo": "-bar"}, cli.Map)
 }
+
+type DecodeCLI struct {
+	Foo DecodeFoo `env:"FOO"`
+}
+
+type DecodeFoo struct {
+	Bar string
+}
+
+func (f DecodeFoo) Decode(ctx *kong.DecodeContext) error {
+	ctx.Value.Target.Set(reflect.ValueOf(struct {
+		Bar string
+	}{"baz"}))
+	return nil
+}
+
+func TestDecode(t *testing.T) {
+	c := &DecodeCLI{}
+	parser, err := kong.New(c)
+	assert.NoError(t, err)
+
+	t.Setenv("FOO", "foo")
+
+	_, err = parser.Parse([]string{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, c.Foo.Bar, "baz")
+}
