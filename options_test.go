@@ -119,6 +119,43 @@ func TestBindToProvider(t *testing.T) {
 	assert.True(t, cli.Called)
 }
 
+func TestBindSingletonProvider(t *testing.T) {
+	type (
+		Connection struct{}
+		ClientA    struct{ conn *Connection }
+		ClientB    struct{ conn *Connection }
+	)
+
+	var numConnections int
+	newConnection := func() *Connection {
+		numConnections++
+		return &Connection{}
+	}
+
+	var cli struct{}
+	app, err := New(&cli,
+		BindSingletonProvider(newConnection),
+		BindToProvider(func(conn *Connection) *ClientA {
+			return &ClientA{conn: conn}
+		}),
+		BindToProvider(func(conn *Connection) *ClientB {
+			return &ClientB{conn: conn}
+		}),
+	)
+	assert.NoError(t, err)
+
+	ctx, err := app.Parse([]string{})
+	assert.NoError(t, err)
+
+	_, err = ctx.Call(func(a *ClientA, b *ClientB) {
+		assert.NotZero(t, a.conn)
+		assert.NotZero(t, b.conn)
+
+		assert.Equal(t, 1, numConnections, "expected newConnection to be called only once")
+	})
+	assert.NoError(t, err)
+}
+
 func TestFlagNamer(t *testing.T) {
 	var cli struct {
 		SomeFlag string
