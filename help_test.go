@@ -83,8 +83,7 @@ func TestHelp(t *testing.T) {
 
 			Three threeArg `arg help:"Sub-sub-arg."`
 
-			Four struct {
-			} `cmd help:"Sub-sub-command."`
+			Four struct{} `cmd help:"Sub-sub-command."`
 		} `cmd help:"Another subcommand."`
 	}
 
@@ -192,8 +191,7 @@ func TestFlagsLast(t *testing.T) {
 
 			Three threeArg `arg help:"Sub-sub-arg."`
 
-			Four struct {
-			} `cmd help:"Sub-sub-command."`
+			Four struct{} `cmd help:"Sub-sub-command."`
 		} `cmd help:"Another subcommand."`
 	}
 
@@ -296,8 +294,7 @@ func TestHelpTree(t *testing.T) {
 		Two struct {
 			Three threeArg `arg help:"Sub-sub-arg."`
 
-			Four struct {
-			} `cmd help:"Sub-sub-command." aliases:"for,fore"`
+			Four struct{} `cmd help:"Sub-sub-command." aliases:"for,fore"`
 		} `cmd help:"Another subcommand."`
 	}
 
@@ -390,8 +387,7 @@ func TestHelpCompactNoExpand(t *testing.T) {
 		Two struct {
 			Three threeArg `arg help:"Sub-sub-arg."`
 
-			Four struct {
-			} `cmd help:"Sub-sub-command." aliases:"for,fore"`
+			Four struct{} `cmd help:"Sub-sub-command." aliases:"for,fore"`
 		} `cmd help:"Another subcommand."`
 	}
 
@@ -603,7 +599,7 @@ func TestAutoGroup(t *testing.T) {
 			if node, ok := parent.(*kong.Node); ok {
 				return &kong.Group{
 					Key:   node.Name,
-					Title: strings.Title(node.Name) + " flags:",
+					Title: strings.Title(node.Name) + " flags:", //nolint:staticcheck // strings.Title in test is okay
 				}
 			}
 			return nil

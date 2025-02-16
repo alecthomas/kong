@@ -268,9 +268,8 @@ func TestFileContentFlag(t *testing.T) {
 	var cli struct {
 		File kong.FileContentFlag
 	}
-	f, err := os.CreateTemp("", "")
+	f, err := os.CreateTemp(t.TempDir(), "")
 	assert.NoError(t, err)
-	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
 	f.Close()
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
@@ -282,9 +281,8 @@ func TestNamedFileContentFlag(t *testing.T) {
 	var cli struct {
 		File kong.NamedFileContentFlag
 	}
-	f, err := os.CreateTemp("", "")
+	f, err := os.CreateTemp(t.TempDir(), "")
 	assert.NoError(t, err)
-	defer os.Remove(f.Name())
 	fmt.Fprint(f, "hello world")
 	f.Close()
 	_, err = mustNew(t, &cli).Parse([]string{"--file", f.Name()})
