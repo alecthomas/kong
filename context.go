@@ -120,10 +120,19 @@ func (c *Context) BindTo(impl, iface any) {
 // This is useful when the Run() function of different commands require different values that may
 // not all be initialisable from the main() function.
 //
-// "provider" must be a function with the signature func(...) (T, error) or func(...) T, where
-// ... will be recursively injected with bound values.
+// "provider" must be a function with the signature func(...) (T, error) or func(...) T,
+// where ... will be recursively injected with bound values.
 func (c *Context) BindToProvider(provider any) error {
-	return c.bindings.addProvider(provider)
+	return c.bindings.addProvider(provider, false /* singleton */)
+}
+
+// BindSingletonProvider allows binding of provider functions.
+// The provider will be called once and the result cached.
+//
+// "provider" must be a function with the signature func(...) (T, error) or func(...) T,
+// where ... will be recursively injected with bound values.
+func (c *Context) BindSingletonProvider(provider any) error {
+	return c.bindings.addProvider(provider, true /* singleton */)
 }
 
 // Value returns the value for a particular path element.
@@ -792,7 +801,7 @@ func (c *Context) RunNode(node *Node, binds ...any) (err error) {
 					methodt := t.Method(i)
 					if strings.HasPrefix(methodt.Name, "Provide") {
 						method := p.Method(i)
-						if err := methodBinds.addProvider(method.Interface()); err != nil {
+						if err := methodBinds.addProvider(method.Interface(), false /* singleton */); err != nil {
 							return fmt.Errorf("%s.%s: %w", t.Name(), methodt.Name, err)
 						}
 					}
