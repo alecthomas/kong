@@ -15,12 +15,10 @@ func TestMultipleConfigLoading(t *testing.T) {
 	}
 
 	cli.Flag = "first"
-	first, cleanFirst := makeConfig(t, &cli)
-	defer cleanFirst()
+	first := makeConfig(t, &cli)
 
 	cli.Flag = ""
-	second, cleanSecond := makeConfig(t, &cli)
-	defer cleanSecond()
+	second := makeConfig(t, &cli)
 
 	p := mustNew(t, &cli, kong.Configuration(kong.JSON, first, second))
 	_, err := p.Parse(nil)
@@ -34,20 +32,19 @@ func TestConfigValidation(t *testing.T) {
 	}
 
 	cli.Flag = "invalid"
-	conf, cleanConf := makeConfig(t, &cli)
-	defer cleanConf()
+	conf := makeConfig(t, &cli)
 
 	p := mustNew(t, &cli, kong.Configuration(kong.JSON, conf))
 	_, err := p.Parse(nil)
 	assert.Error(t, err)
 }
 
-func makeConfig(t *testing.T, config any) (path string, cleanup func()) {
+func makeConfig(t *testing.T, config any) (path string) {
 	t.Helper()
-	w, err := os.CreateTemp("", "")
+	w, err := os.CreateTemp(t.TempDir(), "")
 	assert.NoError(t, err)
 	defer w.Close()
 	err = json.NewEncoder(w).Encode(config)
 	assert.NoError(t, err)
-	return w.Name(), func() { os.Remove(w.Name()) }
+	return w.Name()
 }

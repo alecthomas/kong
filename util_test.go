@@ -16,9 +16,8 @@ func TestConfigFlag(t *testing.T) {
 		Flag   string
 	}
 
-	w, err := os.CreateTemp("", "")
+	w, err := os.CreateTemp(t.TempDir(), "")
 	assert.NoError(t, err)
-	defer os.Remove(w.Name())
 	w.WriteString(`{"flag": "hello world"}`) //nolint: errcheck
 	w.Close()
 

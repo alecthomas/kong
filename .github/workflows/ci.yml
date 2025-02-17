@@ -13,7 +13,7 @@ jobs:
       matrix:
         # These are the release channels.
         # Hermit will handle installing the right patch.
-        go: ["1.20", "1.21"]
+        go: ["1.23", "1.24"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
       matrix:
         # These are versions for GitHub's setup-go.
         # '.x' will pick the latest patch release.
-        go: ["1.20.x", "1.21.x"]
+        go: ["1.23.x", "1.24.x"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
