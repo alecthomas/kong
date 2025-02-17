@@ -856,6 +856,43 @@ func TestExcludedField(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestExcludeEmbeddedField(t *testing.T) {
+	type Embedded struct {
+		Flag     string
+		Excluded string
+	}
+	type Embedded2 struct {
+		Flag2    string
+		Excluded string
+	}
+	var cli struct {
+		Embedded
+		Excluded string `kong:"-"`
+		Embedded2
+	}
+	var cli2 struct {
+		Embedded  Embedded  `kong:"embed"`
+		Excluded  string    `kong:"-"`
+		Embedded2 Embedded2 `kong:"embed"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--flag=foo"})
+	assert.NoError(t, err)
+	_, err = p.Parse([]string{"--flag-2=foo"})
+	assert.NoError(t, err)
+	_, err = p.Parse([]string{"--excluded=foo"})
+	assert.Error(t, err)
+
+	p = mustNew(t, &cli2)
+	_, err = p.Parse([]string{"--flag=foo"})
+	assert.NoError(t, err)
+	_, err = p.Parse([]string{"--flag-2=foo"})
+	assert.NoError(t, err)
+	_, err = p.Parse([]string{"--excluded=foo"})
+	assert.Error(t, err)
+}
+
 func TestUnnamedFieldEmbeds(t *testing.T) {
 	type Embed struct {
 		Flag string
