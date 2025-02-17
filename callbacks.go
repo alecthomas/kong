@@ -38,6 +38,23 @@ func newFunctionBinding(f reflect.Value, singleton bool) *binding {
 	return &binding{fn: f, singleton: singleton}
 }
 
+// Get returns the pre-resolved value for the binding,
+// or false if the binding is not resolved.
+func (b *binding) Get() (v reflect.Value, ok bool) {
+	return b.val, b.done
+}
+
+// Set sets the value of the binding to the given value,
+// marking it as resolved.
+//
+// If the binding is not a singleton, this method does nothing.
+func (b *binding) Set(v reflect.Value) {
+	if b.singleton {
+		b.val = v
+		b.done = true
+	}
+}
+
 // A map of type to function that returns a value of that type.
 //
 // The function should have the signature func(...) (T, error). Arguments are recursively resolved.
@@ -187,8 +204,8 @@ func callAnyFunction(f reflect.Value, bindings bindings) (out []any, err error) 
 		}
 
 		// Don't need to call the function if the value is already resolved.
-		if binding.done && binding.singleton {
-			in = append(in, binding.val)
+		if val, ok := binding.Get(); ok {
+			in = append(in, val)
 			continue
 		}
 
@@ -202,10 +219,7 @@ func callAnyFunction(f reflect.Value, bindings bindings) (out []any, err error) 
 		}
 
 		val := reflect.ValueOf(argv[0])
-		if binding.singleton {
-			binding.val = val
-			binding.done = true
-		}
+		binding.Set(val)
 		in = append(in, val)
 	}
 	outv := f.Call(in)
