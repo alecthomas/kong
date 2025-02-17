@@ -362,7 +362,7 @@ func (l *LsCmd) Run(cli *CLI) error {
   return nil
 }
 
-func (r *RmCmD) Run(author AuthorName) error{
+func (r *RmCmd) Run(author AuthorName) error{
 // use binded author here
   return nil
 }
