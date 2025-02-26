@@ -14,9 +14,11 @@ const (
 )
 
 // Help flag.
-type helpValue bool
+type helpFlag bool
 
-func (h helpValue) BeforeReset(ctx *Context) error {
+func (h helpFlag) IgnoreDefault() {}
+
+func (h helpFlag) BeforeReset(ctx *Context) error {
 	options := ctx.Kong.helpOptions
 	options.Summary = false
 	err := ctx.Kong.help(options, ctx)

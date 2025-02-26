@@ -550,11 +550,16 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 	return c.maybeSelectDefault(flags, node)
 }
 
+// IgnoreDefault can be implemented by flags that want to be applied before any default commands.
+type IgnoreDefault interface {
+	IgnoreDefault()
+}
+
 // End of the line, check for a default command, but only if we're not displaying help,
 // otherwise we'd only ever display the help for the default command.
 func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 	for _, flag := range flags {
-		if flag.Name == "help" && flag.Set {
+		if _, ok := flag.Target.Interface().(IgnoreDefault); ok && flag.Set {
 			return nil
 		}
 	}

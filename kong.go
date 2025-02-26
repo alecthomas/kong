@@ -283,7 +283,7 @@ func (k *Kong) extraFlags() []*Flag {
 	if k.noDefaultHelp {
 		return nil
 	}
-	var helpTarget helpValue
+	var helpTarget helpFlag
 	value := reflect.ValueOf(&helpTarget).Elem()
 	helpFlag := &Flag{
 		Short: 'h',
