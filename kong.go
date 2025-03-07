@@ -428,13 +428,15 @@ func (k *Kong) Errorf(format string, args ...any) *Kong {
 	return k
 }
 
-// Fatalf writes a message to Kong.Stderr with the application name prefixed then exits with a non-zero status.
+// Fatalf writes a message to Kong.Stderr with the application name prefixed then exits with status 1.
 func (k *Kong) Fatalf(format string, args ...any) {
 	k.Errorf(format, args...)
 	k.Exit(1)
 }
 
 // FatalIfErrorf terminates with an error message if err != nil.
+// If the error implements the ExitCoder interface, the ExitCode() method is called and
+// the application exits with that status. Otherwise, the application exits with status 1.
 func (k *Kong) FatalIfErrorf(err error, args ...any) {
 	if err == nil {
 		return
@@ -455,7 +457,8 @@ func (k *Kong) FatalIfErrorf(err error, args ...any) {
 			fmt.Fprintln(k.Stdout)
 		}
 	}
-	k.Fatalf("%s", msg)
+	k.Errorf("%s", msg)
+	k.Exit(exitCodeFromError(err))
 }
 
 // LoadConfig from path using the loader configured via Configuration(loader).
