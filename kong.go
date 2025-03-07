@@ -311,32 +311,32 @@ func (k *Kong) extraFlags() []*Flag {
 // invalid one, which will report a normal error).
 func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	ctx, err = Trace(k, args)
-	if err != nil {
+	if err != nil { // Trace is not expected to return an err
 		return nil, err
 	}
 	if ctx.Error != nil {
-		return nil, &ParseError{error: ctx.Error, Context: ctx}
+		return nil, exitAsUsageError(&ParseError{error: ctx.Error, Context: ctx})
 	}
 	if err = k.applyHook(ctx, "BeforeReset"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Reset(); err != nil {
-		return nil, &ParseError{error: err, Context: ctx}
+		return nil, exitAsUsageError(&ParseError{error: err, Context: ctx})
 	}
 	if err = k.applyHook(ctx, "BeforeResolve"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Resolve(); err != nil {
-		return nil, &ParseError{error: err, Context: ctx}
+		return nil, exitAsUsageError(&ParseError{error: err, Context: ctx})
 	}
 	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if _, err = ctx.Apply(); err != nil {
+	if _, err = ctx.Apply(); err != nil { // Apply is not expected to return an err
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Validate(); err != nil {
-		return nil, &ParseError{error: err, Context: ctx}
+		return nil, exitAsUsageError(&ParseError{error: err, Context: ctx})
 	}
 	if err = k.applyHook(ctx, "AfterApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
