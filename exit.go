@@ -5,6 +5,9 @@ import "errors"
 const (
 	exitOk    = 0
 	exitNotOk = 1
+
+	// Semantic exit codes from https://github.com/square/exit?tab=readme-ov-file#about
+	exitUsageError = 80
 )
 
 // ExitCoder is an interface that may be implemented by an error value to
@@ -26,4 +29,17 @@ func exitCodeFromError(err error) int {
 	}
 
 	return exitNotOk
+}
+
+type exitCodeError struct {
+	code int
+	err  error
+}
+
+func (e *exitCodeError) Error() string { return e.err.Error() }
+func (e *exitCodeError) Unwrap() error { return e.err }
+func (e *exitCodeError) ExitCode() int { return e.code }
+
+func exitAsUsageError(err error) error {
+	return &exitCodeError{code: exitUsageError, err: err}
 }

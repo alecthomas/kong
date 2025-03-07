@@ -786,10 +786,11 @@ func TestUsageOnError(t *testing.T) {
 		Flag string `help:"A required flag." required`
 	}
 	w := &strings.Builder{}
+	exitCode := -1
 	p := mustNew(t, &cli,
 		kong.Writers(w, w),
 		kong.Description("Some description."),
-		kong.Exit(func(int) {}),
+		kong.Exit(func(code int) { exitCode = code }),
 		kong.UsageOnError(),
 	)
 	_, err := p.Parse([]string{})
@@ -806,6 +807,7 @@ Flags:
 test: error: missing flags: --flag=STRING
 `
 	assert.Equal(t, expected, w.String())
+	assert.Equal(t, 80, exitCode)
 }
 
 func TestShortUsageOnError(t *testing.T) {
@@ -813,10 +815,11 @@ func TestShortUsageOnError(t *testing.T) {
 		Flag string `help:"A required flag." required`
 	}
 	w := &strings.Builder{}
+	exitCode := -1
 	p := mustNew(t, &cli,
 		kong.Writers(w, w),
 		kong.Description("Some description."),
-		kong.Exit(func(int) {}),
+		kong.Exit(func(code int) { exitCode = code }),
 		kong.ShortUsageOnError(),
 	)
 	_, err := p.Parse([]string{})
@@ -829,6 +832,7 @@ Run "test --help" for more information.
 test: error: missing flags: --flag=STRING
 `
 	assert.Equal(t, expected, w.String())
+	assert.Equal(t, 80, exitCode)
 }
 
 func TestCustomShortUsageOnError(t *testing.T) {
@@ -840,10 +844,11 @@ func TestCustomShortUsageOnError(t *testing.T) {
 		fmt.Fprintln(ctx.Stdout, "🤷 wish I could help")
 		return nil
 	}
+	exitCode := -1
 	p := mustNew(t, &cli,
 		kong.Writers(w, w),
 		kong.Description("Some description."),
-		kong.Exit(func(int) {}),
+		kong.Exit(func(code int) { exitCode = code }),
 		kong.ShortHelp(shortHelp),
 		kong.ShortUsageOnError(),
 	)
@@ -856,4 +861,5 @@ func TestCustomShortUsageOnError(t *testing.T) {
 test: error: missing flags: --flag=STRING
 `
 	assert.Equal(t, expected, w.String())
+	assert.Equal(t, 80, exitCode)
 }
