@@ -51,7 +51,7 @@ func TestHelpOptionalArgs(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	assert.True(t, exited)
-	expected := `Usage: test-app [<one> [<two>]] [flags]
+	expected := `Usage: test-app [<one> [<two>]]
 
 Arguments:
   [<one>]    One optional arg.
@@ -320,7 +320,7 @@ func TestHelpTree(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app <command> [flags]
+		expected := `Usage: test-app <command>
 
 A test app.
 
@@ -353,7 +353,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app one (un,uno) <command> [flags]
+		expected := `Usage: test-app one (un,uno) <command>
 
 subcommand one
 
@@ -413,7 +413,7 @@ func TestHelpCompactNoExpand(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app <command> [flags]
+		expected := `Usage: test-app <command>
 
 A test app.
 
@@ -442,7 +442,7 @@ Run "test-app <command> --help" for more information on a command.
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app one (un,uno) <command> [flags]
+		expected := `Usage: test-app one (un,uno) <command>
 
 subcommand one
 
@@ -795,7 +795,7 @@ func TestUsageOnError(t *testing.T) {
 	_, err := p.Parse([]string{})
 	p.FatalIfErrorf(err)
 
-	expected := `Usage: test --flag=STRING [flags]
+	expected := `Usage: test --flag=STRING
 
 Some description.
 
@@ -823,7 +823,7 @@ func TestShortUsageOnError(t *testing.T) {
 	assert.Error(t, err)
 	p.FatalIfErrorf(err)
 
-	expected := `Usage: test --flag=STRING [flags]
+	expected := `Usage: test --flag=STRING
 Run "test --help" for more information.
 
 test: error: missing flags: --flag=STRING

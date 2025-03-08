@@ -1,6 +1,7 @@
 package kong_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -69,4 +70,23 @@ func TestFlagString(t *testing.T) {
 		assert.True(t, ok, "unknown flag name: %s", flag.Name)
 		assert.Equal(t, want, flag.String())
 	}
+}
+
+func TestIgnoreHelpInUsage(t *testing.T) {
+	var cli struct {
+		One string `required:""`
+	}
+
+	k := mustNew(t, &cli)
+	w := &bytes.Buffer{}
+	k.Stdout = w
+	k.Exit = func(code int) {}
+	_, err := k.Parse([]string{"--help"})
+	assert.Error(t, err)
+	assert.Equal(t, `Usage: test --one=STRING
+
+Flags:
+  -h, --help          Show context-sensitive help.
+      --one=STRING
+`, w.String())
 }
