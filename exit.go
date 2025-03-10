@@ -30,16 +30,3 @@ func exitCodeFromError(err error) int {
 
 	return exitNotOk
 }
-
-type exitCodeError struct {
-	code int
-	err  error
-}
-
-func (e *exitCodeError) Error() string { return e.err.Error() }
-func (e *exitCodeError) Unwrap() error { return e.err }
-func (e *exitCodeError) ExitCode() int { return e.code }
-
-func exitAsUsageError(err error) error {
-	return &exitCodeError{code: exitUsageError, err: err}
-}
