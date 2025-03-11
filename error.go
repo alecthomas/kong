@@ -10,3 +10,6 @@ type ParseError struct {
 
 // Unwrap returns the original cause of the error.
 func (p *ParseError) Unwrap() error { return p.error }
+
+// ExitCode returns the status that Kong should exit with if it fails with a ParseError.
+func (p *ParseError) ExitCode() int { return exitUsageError }
