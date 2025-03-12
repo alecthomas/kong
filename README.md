@@ -620,8 +620,8 @@ also supports dynamically adding commands via `kong.DynamicCommand()`.
 
 ## Variable interpolation
 
-Kong supports limited variable interpolation into help strings, enum lists and
-default values.
+Kong supports limited variable interpolation into help strings, placeholder strings,
+enum lists and default values.
 
 Variables are in the form:
 

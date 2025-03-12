@@ -766,8 +766,8 @@ func TestPassesThroughOriginalCommandError(t *testing.T) {
 
 func TestInterpolationIntoModel(t *testing.T) {
 	var cli struct {
-		Flag    string `default:"${default_value}" help:"Help, I need ${somebody}" enum:"${enum}"`
-		EnumRef string `enum:"a,b" required:"" help:"One of ${enum}"`
+		Flag    string `default:"${default_value}" help:"Help, I need ${somebody}" enum:"${enum}" placeholder:"${enum}"`
+		EnumRef string `enum:"a,b" required:"" help:"One of ${enum}" placeholder:"${enum}"`
 		EnvRef  string `env:"${env}" help:"God ${env}"`
 	}
 	_, err := kong.New(&cli)
@@ -787,7 +787,9 @@ func TestInterpolationIntoModel(t *testing.T) {
 	assert.Equal(t, "Help, I need chickens!", flag.Help)
 	assert.Equal(t, map[string]bool{"a": true, "b": true, "c": true, "d": true}, flag.EnumMap())
 	assert.Equal(t, []string{"a", "b", "c", "d"}, flag.EnumSlice())
+	assert.Equal(t, "a,b,c,d", flag.PlaceHolder)
 	assert.Equal(t, "One of a,b", flag2.Help)
+	assert.Equal(t, "a,b", flag2.PlaceHolder)
 	assert.Equal(t, []string{"SAVE_THE_QUEEN"}, flag3.Envs)
 	assert.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
