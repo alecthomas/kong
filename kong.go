@@ -270,6 +270,11 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		if len(value.Flag.Envs) != 0 {
 			updatedVars["env"] = value.Flag.Envs[0]
 		}
+
+		value.Flag.PlaceHolder, err = interpolate(value.Flag.PlaceHolder, vars, updatedVars)
+		if err != nil {
+			return fmt.Errorf("placeholder value for %s: %s", value.Summary(), err)
+		}
 	}
 	value.Help, err = interpolate(value.Help, vars, updatedVars)
 	if err != nil {
