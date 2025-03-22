@@ -588,6 +588,65 @@ func TestHooks(t *testing.T) {
 	}
 }
 
+func TestGlobalHooks(t *testing.T) {
+	var cli struct {
+		One struct {
+			Two   string `kong:"arg,optional"`
+			Three string
+		} `cmd:""`
+	}
+
+	called := []string{}
+	log := func(name string) any {
+		return func(value *kong.Path) error {
+			switch {
+			case value.App != nil:
+				called = append(called, fmt.Sprintf("%s (app)", name))
+
+			case value.Positional != nil:
+				called = append(called, fmt.Sprintf("%s (arg) %s", name, value.Positional.Name))
+
+			case value.Flag != nil:
+				called = append(called, fmt.Sprintf("%s (flag) %s", name, value.Flag.Name))
+
+			case value.Argument != nil:
+				called = append(called, fmt.Sprintf("%s (arg) %s", name, value.Argument.Name))
+
+			case value.Command != nil:
+				called = append(called, fmt.Sprintf("%s (cmd) %s", name, value.Command.Name))
+			}
+			return nil
+		}
+	}
+	p := mustNew(t, &cli,
+		kong.WithBeforeReset(log("BeforeReset")),
+		kong.WithBeforeResolve(log("BeforeResolve")),
+		kong.WithBeforeApply(log("BeforeApply")),
+		kong.WithAfterApply(log("AfterApply")),
+	)
+
+	_, err := p.Parse([]string{"one", "two", "--three=THREE"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{
+		"BeforeReset (app)",
+		"BeforeReset (cmd) one",
+		"BeforeReset (arg) two",
+		"BeforeReset (flag) three",
+		"BeforeResolve (app)",
+		"BeforeResolve (cmd) one",
+		"BeforeResolve (arg) two",
+		"BeforeResolve (flag) three",
+		"BeforeApply (app)",
+		"BeforeApply (cmd) one",
+		"BeforeApply (arg) two",
+		"BeforeApply (flag) three",
+		"AfterApply (app)",
+		"AfterApply (cmd) one",
+		"AfterApply (arg) two",
+		"AfterApply (flag) three",
+	}, called)
+}
+
 func TestShort(t *testing.T) {
 	var cli struct {
 		Bool   bool   `short:"b"`
