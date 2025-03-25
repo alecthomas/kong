@@ -1,0 +1,31 @@
+name: changelog
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  cliffy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.CHANGELOG_COMMITTER_APP_ID }}
+          private-key: ${{ secrets.CHANGELOG_COMMITTER_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          ref: master # always check out the default branch even when triggered by tag push
+          fetch-depth: 0 # clone the whole commit history
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: cashapp/activate-hermit@v1
+      - run: git-cliff -o CHANGELOG.md
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "doc(changelog): Update CHANGELOG.md"
