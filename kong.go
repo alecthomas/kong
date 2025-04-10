@@ -354,27 +354,13 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 
 func (k *Kong) applyHook(ctx *Context, name string) error {
 	for _, trace := range ctx.Path {
-		var value reflect.Value
-		switch {
-		case trace.App != nil:
-			value = trace.App.Target
-		case trace.Argument != nil:
-			value = trace.Argument.Target
-		case trace.Command != nil:
-			value = trace.Command.Target
-		case trace.Positional != nil:
-			value = trace.Positional.Target
-		case trace.Flag != nil:
-			value = trace.Flag.Value.Target
-		default:
+		value := trace.Target()
+		if !value.IsValid() {
 			panic("unsupported Path")
 		}
 		for _, method := range k.getMethods(value, name) {
-			binds := k.bindings.clone()
-			binds.add(ctx, trace)
-			binds.add(trace.Node().Vars().CloneWith(k.vars))
-			binds.merge(ctx.bindings)
-			if err := callFunction(method, binds); err != nil {
+			err := ctx.CallErr(method, trace, trace.Node().Vars().CloneWith(k.vars))
+			if err != nil {
 				return err
 			}
 		}
@@ -403,14 +389,14 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 		if !ok {
 			return next(nil)
 		}
-		binds := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
 		for _, flag := range node.Flags {
 			if !flag.HasDefault || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
 				continue
 			}
 			for _, method := range getMethods(flag.Target, name) {
 				path := &Path{Flag: flag}
-				if err := callFunction(method, binds.clone().add(path)); err != nil {
+				err := ctx.CallErr(method, node.Vars().CloneWith(k.vars), path)
+				if err != nil {
 					return next(err)
 				}
 			}

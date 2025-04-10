@@ -46,6 +46,23 @@ func (p *Path) Node() *Node {
 	return nil
 }
 
+func (p *Path) Target() reflect.Value {
+	switch {
+	case p.App != nil:
+		return p.App.Target
+	case p.Argument != nil:
+		return p.Argument.Target
+	case p.Command != nil:
+		return p.Command.Target
+	case p.Positional != nil:
+		return p.Positional.Target
+	case p.Flag != nil:
+		return p.Flag.Value.Target
+	default:
+		return reflect.Value{}
+	}
+}
+
 // Visitable returns the Visitable for this path element.
 func (p *Path) Visitable() Visitable {
 	switch {
@@ -795,11 +812,25 @@ type unknownFlagError struct{ Cause error }
 func (e *unknownFlagError) Unwrap() error { return e.Cause }
 func (e *unknownFlagError) Error() string { return e.Cause.Error() }
 
+func (c *Context) cloneBindings(binds ...any) bindings {
+	return c.Kong.bindings.clone().merge(c.bindings).add(binds...).add(c)
+}
+
 // Call an arbitrary function filling arguments with bound values.
 func (c *Context) Call(fn any, binds ...any) (out []any, err error) {
-	fv := reflect.ValueOf(fn)
-	bindings := c.Kong.bindings.clone().add(binds...).add(c).merge(c.bindings)
-	return callAnyFunction(fv, bindings)
+	fv, ok := fn.(reflect.Value)
+	if !ok {
+		fv = reflect.ValueOf(fn)
+	}
+	return callAnyFunction(fv, c.cloneBindings(binds...))
+}
+
+func (c *Context) CallErr(fn any, binds ...any) error {
+	fv, ok := fn.(reflect.Value)
+	if !ok {
+		fv = reflect.ValueOf(fn)
+	}
+	return callAnyFunctionErr(fv, c.cloneBindings(binds...))
 }
 
 // RunNode calls the Run() method on an arbitrary node.
@@ -843,7 +874,7 @@ func (c *Context) RunNode(node *Node, binds ...any) (err error) {
 		return fmt.Errorf("no Run() method found in hierarchy of %s", c.Selected().Summary())
 	}
 	for _, method := range methods {
-		if err = callFunction(method.method, method.binds); err != nil {
+		if err = callAnyFunctionErr(method.method, method.binds); err != nil {
 			return err
 		}
 	}
