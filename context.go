@@ -802,77 +802,48 @@ func (c *Context) Call(fn any, binds ...any) (out []any, err error) {
 	return callAnyFunction(fv, bindings)
 }
 
-// RunNode calls the Run() method on an arbitrary node.
-//
-// This is useful in conjunction with Visit(), for dynamically running commands.
-//
-// Any passed values will be bindable to arguments of the target Run() method. Additionally,
-// all parent nodes in the command structure will be bound.
-func (c *Context) RunNode(node *Node, binds ...any) (err error) {
-	type targetMethod struct {
-		node   *Node
-		method reflect.Value
-		binds  bindings
-	}
-	methodBinds := c.Kong.bindings.clone().add(binds...).add(c).merge(c.bindings)
-	methods := []targetMethod{}
-	for i := 0; node != nil; i, node = i+1, node.Parent {
+func (c *Context) getRootRunner() (*Runner, error) {
+	var runner *Runner
+	for i := len(c.Path) - 1; i >= 0; i-- {
+		node := c.Path[i].Node()
+		if node == nil {
+			continue
+		}
 		method := getMethod(node.Target, "Run")
-		methodBinds = methodBinds.clone()
-		for p := node; p != nil; p = p.Parent {
-			methodBinds = methodBinds.add(p.Target.Addr().Interface())
-			// Try value and pointer to value.
-			for _, p := range []reflect.Value{p.Target, p.Target.Addr()} {
-				t := p.Type()
-				for i := 0; i < p.NumMethod(); i++ {
-					methodt := t.Method(i)
-					if strings.HasPrefix(methodt.Name, "Provide") {
-						method := p.Method(i)
-						if err := methodBinds.addProvider(method.Interface(), false /* singleton */); err != nil {
-							return fmt.Errorf("%s.%s: %w", t.Name(), methodt.Name, err)
-						}
-					}
-				}
+		if method.IsValid() {
+
+			runner = &Runner{
+				Context: c,
+				Node:    node,
+				Next:    runner,
+				method:  method,
 			}
 		}
-		if method.IsValid() {
-			methods = append(methods, targetMethod{node, method, methodBinds})
-		}
 	}
-	if len(methods) == 0 {
-		return fmt.Errorf("no Run() method found in hierarchy of %s", c.Selected().Summary())
-	}
-	for _, method := range methods {
-		if err = callFunction(method.method, method.binds); err != nil {
-			return err
-		}
-	}
-	return nil
+
+	return runner, nil
 }
 
-// Run executes the Run() method on the selected command, which must exist.
+// Exec calls the Run() method on an arbitrary node.
 //
 // Any passed values will be bindable to arguments of the target Run() method. Additionally,
 // all parent nodes in the command structure will be bound.
 func (c *Context) Run(binds ...any) (err error) {
-	node := c.Selected()
-	if node == nil {
-		if len(c.Path) == 0 {
-			return fmt.Errorf("no command selected")
-		}
-		selected := c.Path[0].Node()
-		if selected.Type == ApplicationNode {
-			method := getMethod(selected.Target, "Run")
-			if method.IsValid() {
-				node = selected
-			}
-		}
+	runner, err := c.getRootRunner()
 
-		if node == nil {
+	if err != nil {
+		return err
+	}
+
+	if runner == nil {
+		selected := c.Selected()
+		if selected == nil {
 			return fmt.Errorf("no command selected")
 		}
+		return fmt.Errorf("no Run() method found in hierarchy of %s", selected.Summary())
 	}
-	runErr := c.RunNode(node, binds...)
+
+	runErr := runner.runCurrent(binds...)
 	err = c.Kong.applyHook(c, "AfterRun")
 	return errors.Join(runErr, err)
 }
