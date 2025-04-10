@@ -3,7 +3,6 @@ package kong
 import (
 	"fmt"
 	"math"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -366,9 +365,9 @@ func (v *Value) Apply(value reflect.Value) {
 }
 
 // ApplyDefault value to field if it is not already set.
-func (v *Value) ApplyDefault() error {
+func (v *Value) ApplyDefault(lookupEnv func(string) (string, bool)) error {
 	if reflectValueIsZero(v.Target) {
-		return v.Reset()
+		return v.Reset(lookupEnv)
 	}
 	v.Set = true
 	return nil
@@ -378,11 +377,11 @@ func (v *Value) ApplyDefault() error {
 // or its "default" tag.
 //
 // Does not include resolvers.
-func (v *Value) Reset() error {
+func (v *Value) Reset(lookupEnv func(string) (string, bool)) error {
 	v.Target.Set(reflect.Zero(v.Target.Type()))
 	if len(v.Tag.Envs) != 0 {
 		for _, env := range v.Tag.Envs {
-			envar, ok := os.LookupEnv(env)
+			envar, ok := lookupEnv(env)
 			// Parse the first non-empty ENV in the list
 			if ok {
 				err := v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: envar}), v.Target)

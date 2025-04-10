@@ -3,7 +3,6 @@ package kong
 import (
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -190,7 +189,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	err := Visit(c.Model, func(node Visitable, next Next) error {
 		switch node := node.(type) {
 		case *Value:
-			ok := atLeastOneEnvSet(node.Tag.Envs)
+			ok := c.atLeastOneEnvSet(node.Tag.Envs)
 			if node.Enum != "" && (!node.Required || node.HasDefault || (len(node.Tag.Envs) != 0 && ok)) {
 				if err := checkEnum(node, node.Target); err != nil {
 					return err
@@ -198,7 +197,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 			}
 
 		case *Flag:
-			ok := atLeastOneEnvSet(node.Tag.Envs)
+			ok := c.atLeastOneEnvSet(node.Tag.Envs)
 			if node.Enum != "" && (!node.Required || node.HasDefault || (len(node.Tag.Envs) != 0 && ok)) {
 				if err := checkEnum(node.Value, node.Target); err != nil {
 					return err
@@ -281,7 +280,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingChildren(node); err != nil {
 		return err
 	}
-	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
+	if err := c.checkMissingPositionals(positionals, node.Positional); err != nil {
 		return err
 	}
 	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
@@ -351,7 +350,7 @@ func (c *Context) FlagValue(flag *Flag) any {
 func (c *Context) Reset() error {
 	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		if value, ok := node.(*Value); ok {
-			return next(value.Reset())
+			return next(value.Reset(c.LookupEnv))
 		}
 		return next(nil)
 	})
@@ -680,7 +679,7 @@ func (c *Context) ApplyDefaults() error {
 		default:
 		}
 		if value != nil {
-			if err := value.ApplyDefault(); err != nil {
+			if err := value.ApplyDefault(c.LookupEnv); err != nil {
 				return err
 			}
 		}
@@ -994,7 +993,7 @@ func checkMissingChildren(node *Node) error {
 }
 
 // If we're missing any positionals and they're required, return an error.
-func checkMissingPositionals(positional int, values []*Value) error {
+func (c *Context) checkMissingPositionals(positional int, values []*Value) error {
 	// All the positionals are in.
 	if positional >= len(values) {
 		return nil
@@ -1010,7 +1009,7 @@ func checkMissingPositionals(positional int, values []*Value) error {
 		arg := values[positional]
 		// TODO(aat): Fix hardcoding of these env checks all over the place :\
 		if len(arg.Tag.Envs) != 0 {
-			if atLeastOneEnvSet(arg.Tag.Envs) {
+			if c.atLeastOneEnvSet(arg.Tag.Envs) {
 				continue
 			}
 		}
@@ -1173,9 +1172,9 @@ func isValidatable(v reflect.Value) extendedValidatable {
 	return nil
 }
 
-func atLeastOneEnvSet(envs []string) bool {
+func (c *Context) atLeastOneEnvSet(envs []string) bool {
 	for _, env := range envs {
-		if _, ok := os.LookupEnv(env); ok {
+		if _, ok := c.LookupEnv(env); ok {
 			return true
 		}
 	}

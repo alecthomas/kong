@@ -45,7 +45,8 @@ type Kong struct {
 	Model *Application
 
 	// Termination function (defaults to os.Exit)
-	Exit func(int)
+	Exit      func(int)
+	LookupEnv func(key string) (string, bool)
 
 	Stdout io.Writer
 	Stderr io.Writer
@@ -81,6 +82,7 @@ type Kong struct {
 func New(grammar any, options ...Option) (*Kong, error) {
 	k := &Kong{
 		Exit:          os.Exit,
+		LookupEnv:     os.LookupEnv,
 		Stdout:        os.Stdout,
 		Stderr:        os.Stderr,
 		registry:      NewRegistry().RegisterDefaults(),

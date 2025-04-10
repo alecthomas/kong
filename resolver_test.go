@@ -12,11 +12,14 @@ import (
 
 type envMap map[string]string
 
+func (e envMap) LookupEnv(name string) (string, bool) {
+	value, ok := e[name]
+	return value, ok
+}
+
 func newEnvParser(t *testing.T, cli any, env envMap, options ...kong.Option) *kong.Kong {
 	t.Helper()
-	for name, value := range env {
-		t.Setenv(name, value)
-	}
+	options = append(options, kong.LookupEnv(env.LookupEnv))
 	parser := mustNew(t, cli, options...)
 	return parser
 }

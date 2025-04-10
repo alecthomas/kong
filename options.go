@@ -55,6 +55,13 @@ func Exit(exit func(int)) Option {
 	})
 }
 
+func LookupEnv(lookupEnv func(string) (string, bool)) Option {
+	return OptionFunc(func(k *Kong) error {
+		k.LookupEnv = lookupEnv
+		return nil
+	})
+}
+
 type embedded struct {
 	strct any
 	tags  []string
