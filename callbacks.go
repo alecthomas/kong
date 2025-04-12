@@ -171,7 +171,7 @@ func getMethods(value reflect.Value, name string) (methods []reflect.Value) {
 	return
 }
 
-func callFunction(f reflect.Value, bindings bindings) error {
+func callAnyFunctionErr(f reflect.Value, bindings bindings) error {
 	if f.Kind() != reflect.Func {
 		return fmt.Errorf("expected function, got %s", f.Type())
 	}

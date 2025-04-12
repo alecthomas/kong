@@ -38,7 +38,7 @@ func TestBindTo(t *testing.T) {
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
-	err = callFunction(reflect.ValueOf(method), p.bindings)
+	err = callAnyFunctionErr(reflect.ValueOf(method), p.bindings)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", saw)
 }
@@ -58,7 +58,7 @@ func TestInvalidCallback(t *testing.T) {
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
-	err = callFunction(reflect.ValueOf(method), p.bindings)
+	err = callAnyFunctionErr(reflect.ValueOf(method), p.bindings)
 	assert.EqualError(t, err, `return value of func(kong.iface) string must implement "error"`)
 }
 
@@ -83,7 +83,7 @@ func TestCallbackCustomError(t *testing.T) {
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
 	assert.NoError(t, err)
-	err = callFunction(reflect.ValueOf(method), p.bindings)
+	err = callAnyFunctionErr(reflect.ValueOf(method), p.bindings)
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", saw)
 }
@@ -180,6 +180,6 @@ func TestCallbackNonPointerError(t *testing.T) {
 
 	p, err := New(&cli)
 	assert.NoError(t, err)
-	err = callFunction(reflect.ValueOf(method), p.bindings)
+	err = callAnyFunctionErr(reflect.ValueOf(method), p.bindings)
 	assert.EqualError(t, err, "ERROR: failed")
 }
