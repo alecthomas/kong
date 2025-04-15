@@ -2677,3 +2677,86 @@ func TestProviderWithoutError(t *testing.T) {
 	err = kctx.Run()
 	assert.NoError(t, err)
 }
+
+type nestedCtx struct {
+	t      *testing.T
+	values []string
+}
+
+func (n *nestedCtx) visit(value string, check string) {
+	if len(n.values) == 0 {
+		n.t.Errorf("no values in context")
+		return
+	}
+	if n.values[len(n.values)-1] != check {
+		n.t.Errorf("expected %s, got %s", check, n.values[len(n.values)-1])
+	}
+	n.values = append(n.values, value)
+}
+
+type nestedCmdL3 struct {
+}
+
+func (n *nestedCmdL3) Run(r *kong.Runner, buf *nestedCtx, prev string) error {
+	buf.visit(r.Node.Name, prev)
+	return nil
+}
+
+type nestedCmdL2 struct {
+	V1 *nestedCmdL3 `cmd:"" name:"l3v1"`
+	V2 *nestedCmdL3 `cmd:"" name:"l3v2"`
+}
+
+func (n *nestedCmdL2) Run(r *kong.Runner, buf *nestedCtx, prev string) error {
+	buf.visit(r.Node.Name, prev)
+	if r.Node.Name == "l2v2" {
+		return nil
+	}
+	return r.RunNext(r.Node.Name)
+}
+
+type nestedCmdL1 struct {
+	L2V1 *nestedCmdL2 `cmd:"" name:"l2v1"`
+	L2V2 *nestedCmdL2 `cmd:"" name:"l2v2"`
+}
+
+func (n *nestedCmdL1) Run(r *kong.Runner, buf *nestedCtx, prev string) error {
+	r.Context.Bind(buf)
+	buf.visit("l1", prev)
+	return r.RunNext("l1")
+}
+
+func TestNestedCmd(t *testing.T) {
+	testCases := [][2]string{
+		{"root->l1->l2v1->l3v1", "root->l1->l2v1->l3v1"},
+		{"root->l1->l2v1->l3v2", "root->l1->l2v1->l3v2"},
+		{"root->l1->l2v2->l3v1", "root->l1->l2v2"},
+		{"root->l1->l2v2->l3v2", "root->l1->l2v2"},
+	}
+
+	for _, pair := range testCases {
+		input, answer := pair[0], pair[1]
+		t.Run(input, func(t *testing.T) {
+			args := strings.Split(input, "->")
+
+			var cli struct {
+				L1 *nestedCmdL1 `cmd:"" name:"l1"`
+			}
+
+			k := mustNew(t, &cli)
+			kctx, err := k.Parse(args[1:])
+
+			assert.NoError(t, err)
+			buf := &nestedCtx{
+				t:      t,
+				values: []string{"root"},
+			}
+			err = kctx.Run(buf, "root")
+			assert.NoError(t, err)
+
+			result := strings.Join(buf.values, "->")
+
+			assert.Equal(t, answer, result, "expected %s, got %s", answer, result)
+		})
+	}
+}
