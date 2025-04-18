@@ -760,7 +760,23 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		if match == neg && flag.Tag.Negatable != "" {
 			flag.Negated = true
 		}
-		err := flag.Parse(c.scan, c.getValue(flag.Value))
+
+		flagValue := c.getValue(flag.Value)
+
+		// If this flag takes a value (e.g. is not a bool), get the next token and
+		// re-push it as FlagValueToken if it looks like a (negative) numeric value.
+		// This prevents the value being interpreted as a short flag.
+		kind := flagValue.Kind()
+		if kind != reflect.Bool {
+			if peek := c.scan.Peek(); peek.Type == UntypedToken {
+				if s, ok := peek.Value.(string); ok && len(s) > 1 && s[0] == '-' && s[1] >= '0' && s[1] <= '9' {
+					tok := c.scan.Pop()
+					c.scan.PushTyped(tok.Value, FlagValueToken)
+				}
+			}
+		}
+
+		err := flag.Parse(c.scan, flagValue)
 		if err != nil {
 			var expected *expectedError
 			if errors.As(err, &expected) && expected.token.InferredType().IsAny(FlagToken, ShortFlagToken) {

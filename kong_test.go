@@ -1043,13 +1043,46 @@ func TestParentBindings(t *testing.T) {
 	assert.Equal(t, "foo", cli.Command.value)
 }
 
-func TestNumericParamErrors(t *testing.T) {
+func TestNegativeNumericParam(t *testing.T) {
 	var cli struct {
 		Name string
 	}
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{"--name", "-10"})
-	assert.EqualError(t, err, `--name: expected string value but got "-10" (short flag); perhaps try --name="-10"?`)
+	assert.NoError(t, err)
+	assert.Equal(t, "-10", cli.Name)
+}
+
+func TestNegativeNumericShortFlagParam(t *testing.T) {
+	var cli struct {
+		Name string `short:"n"`
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"-n", "-1"})
+	assert.NoError(t, err)
+	assert.Equal(t, "-1", cli.Name)
+}
+
+func TestNegativeNumericShortFlagParamWithExtraNumericFlag(t *testing.T) {
+	var cli struct {
+		Name      string `short:"n"`
+		Priority1 bool   `short:"1"`
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"-n", "-1", "-1"})
+	assert.NoError(t, err)
+	assert.Equal(t, "-1", cli.Name)
+	assert.Equal(t, true, cli.Priority1)
+}
+
+func TestNegativeNumericShortFlagParamAsFloat(t *testing.T) {
+	var cli struct {
+		NegativePi float64 `short:"p"`
+	}
+	parser := mustNew(t, &cli)
+	_, err := parser.Parse([]string{"-p", "-3.14159265358979323846"})
+	assert.NoError(t, err)
+	assert.Equal(t, -3.14159265358979323846, cli.NegativePi)
 }
 
 func TestDefaultValueIsHyphen(t *testing.T) {
