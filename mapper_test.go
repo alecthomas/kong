@@ -395,6 +395,31 @@ func TestNumbers(t *testing.T) {
 			I64: math.MinInt64,
 		}, cli)
 	})
+	t.Run("Integer literals", func(t *testing.T) {
+		integerLiterals := "10_0"
+
+		_, err := p.Parse([]string{
+			fmt.Sprintf("--i-8=%s", integerLiterals),
+			fmt.Sprintf("--i-16=%s", integerLiterals),
+			fmt.Sprintf("--i-32=%s", integerLiterals),
+			fmt.Sprintf("--i-64=%s", integerLiterals),
+			fmt.Sprintf("--u-8=%s", integerLiterals),
+			fmt.Sprintf("--u-16=%s", integerLiterals),
+			fmt.Sprintf("--u-32=%s", integerLiterals),
+			fmt.Sprintf("--u-64=%s", integerLiterals),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, CLI{
+			I8:  int8(100),
+			I16: int16(100),
+			I32: int32(100),
+			I64: int64(100),
+			U8:  uint8(100),
+			U16: uint16(100),
+			U32: uint32(100),
+			U64: uint64(100),
+		}, cli)
+	})
 }
 
 func TestJSONLargeNumber(t *testing.T) {
