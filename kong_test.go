@@ -1043,15 +1043,6 @@ func TestParentBindings(t *testing.T) {
 	assert.Equal(t, "foo", cli.Command.value)
 }
 
-func TestNumericParamErrors(t *testing.T) {
-	var cli struct {
-		Name string
-	}
-	parser := mustNew(t, &cli)
-	_, err := parser.Parse([]string{"--name", "-10"})
-	assert.EqualError(t, err, `--name: expected string value but got "-10" (short flag); perhaps try --name="-10"?`)
-}
-
 func TestDefaultValueIsHyphen(t *testing.T) {
 	var cli struct {
 		Flag string `default:"-"`
@@ -2676,4 +2667,40 @@ func TestProviderWithoutError(t *testing.T) {
 	assert.NoError(t, err)
 	err = kctx.Run()
 	assert.NoError(t, err)
+}
+
+func TestParseHyphenParameter(t *testing.T) {
+	type shortFlag struct {
+		Flag    string `short:"f"`
+		Other   string `short:"o"`
+		Numeric int    `short:"n"`
+	}
+
+	t.Run("ShortFlag", func(t *testing.T) {
+		actual := &shortFlag{}
+		_, err := mustNew(t, actual, kong.WithHyphenPrefixedParameters(true)).Parse([]string{"-f", "-foo"})
+		assert.NoError(t, err)
+		assert.Equal(t, &shortFlag{Flag: "-foo"}, actual)
+	})
+
+	t.Run("LongFlag", func(t *testing.T) {
+		actual := &shortFlag{}
+		_, err := mustNew(t, actual, kong.WithHyphenPrefixedParameters(true)).Parse([]string{"--flag", "-foo"})
+		assert.NoError(t, err)
+		assert.Equal(t, &shortFlag{Flag: "-foo"}, actual)
+	})
+
+	t.Run("ParamMatchesFlag", func(t *testing.T) {
+		actual := &shortFlag{}
+		_, err := mustNew(t, actual, kong.WithHyphenPrefixedParameters(true)).Parse([]string{"--flag", "-oo"})
+		assert.NoError(t, err)
+		assert.Equal(t, &shortFlag{Flag: "-oo"}, actual)
+	})
+
+	t.Run("NegativeNumber", func(t *testing.T) {
+		actual := &shortFlag{}
+		_, err := mustNew(t, actual, kong.WithHyphenPrefixedParameters(true)).Parse([]string{"--numeric", "-10"})
+		assert.NoError(t, err)
+		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
+	})
 }
