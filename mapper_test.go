@@ -700,7 +700,7 @@ func TestExistingDirMapperDefaultMissingCmds(t *testing.T) {
 	assert.IsError(t, err, os.ErrNotExist)
 }
 
-func TestSignalMapper(t *testing.T) {
+func TestSignalMapperName(t *testing.T) {
 	var cli struct {
 		Flag syscall.Signal
 	}
@@ -710,7 +710,17 @@ func TestSignalMapper(t *testing.T) {
 	assert.Equal(t, syscall.SIGINT, cli.Flag)
 }
 
-func TestSignalMapperJSONResolver(t *testing.T) {
+func TestSignalMapperNumber(t *testing.T) {
+	var cli struct {
+		Flag syscall.Signal
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--flag=15"})
+	assert.NoError(t, err)
+	assert.Equal(t, syscall.Signal(15), cli.Flag)
+}
+
+func TestSignalMapperNumberJSONResolver(t *testing.T) {
 	var cli struct {
 		Flag syscall.Signal
 	}
