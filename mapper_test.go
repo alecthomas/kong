@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -697,6 +698,28 @@ func TestExistingDirMapperDefaultMissingCmds(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bbb-missing-dir:")
 	assert.IsError(t, err, os.ErrNotExist)
+}
+
+func TestSignalMapper(t *testing.T) {
+	var cli struct {
+		Flag syscall.Signal
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--flag=SIGINT"})
+	assert.NoError(t, err)
+	assert.Equal(t, syscall.SIGINT, cli.Flag)
+}
+
+func TestSignalMapperJSONResolver(t *testing.T) {
+	var cli struct {
+		Flag syscall.Signal
+	}
+	resolver, err := kong.JSON(strings.NewReader(`{"flag": 2}`))
+	assert.NoError(t, err)
+	k := mustNew(t, &cli, kong.Resolvers(resolver))
+	_, err = k.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, syscall.SIGINT, cli.Flag)
 }
 
 func TestMapperPlaceHolder(t *testing.T) {

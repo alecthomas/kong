@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -285,6 +286,7 @@ func (r *Registry) RegisterDefaults() *Registry {
 		RegisterType(reflect.TypeOf(time.Duration(0)), durationDecoder()).
 		RegisterType(reflect.TypeOf(&url.URL{}), urlMapper()).
 		RegisterType(reflect.TypeOf(&os.File{}), fileMapper(r)).
+		RegisterType(reflect.TypeOf(syscall.Signal(0)), signalDecoder()).
 		RegisterName("path", pathMapper(r)).
 		RegisterName("existingfile", existingFileMapper(r)).
 		RegisterName("existingdir", existingDirMapper(r)).
@@ -571,6 +573,103 @@ func sliceDecoder(r *Registry) MapperFunc {
 			}
 			target.Set(reflect.Append(target, childValue))
 		}
+		return nil
+	}
+}
+
+func signalDecoder() MapperFunc {
+	return func(ctx *DecodeContext, target reflect.Value) error {
+		var value string
+		if err := ctx.Scan.PopValueInto("signal", &value); err != nil {
+			return err
+		}
+
+		var errUnknownSignal = fmt.Errorf("unknown signal \"%s\"", value)
+
+		n, err := strconv.ParseInt(value, 10, 0)
+		if err == nil {
+			if n <= 0 || n > 31 {
+				return errUnknownSignal
+			}
+		} else {
+			// Formatted from builtin/syscall/zerrors_linux_amd64.go "Signals" const block.
+			switch strings.TrimPrefix(strings.ToUpper(value), "SIG") {
+			case "ABRT":
+				n = 0x6
+			case "ALRM":
+				n = 0xe
+			case "BUS":
+				n = 0x7
+			case "CHLD":
+				n = 0x11
+			case "CLD":
+				n = 0x11
+			case "CONT":
+				n = 0x12
+			case "FPE":
+				n = 0x8
+			case "HUP":
+				n = 0x1
+			case "ILL":
+				n = 0x4
+			case "INT":
+				n = 0x2
+			case "IO":
+				n = 0x1d
+			case "IOT":
+				n = 0x6
+			case "KILL":
+				n = 0x9
+			case "PIPE":
+				n = 0xd
+			case "POLL":
+				n = 0x1d
+			case "PROF":
+				n = 0x1b
+			case "PWR":
+				n = 0x1e
+			case "QUIT":
+				n = 0x3
+			case "SEGV":
+				n = 0xb
+			case "STKFLT":
+				n = 0x10
+			case "STOP":
+				n = 0x13
+			case "SYS":
+				n = 0x1f
+			case "TERM":
+				n = 0xf
+			case "TRAP":
+				n = 0x5
+			case "TSTP":
+				n = 0x14
+			case "TTIN":
+				n = 0x15
+			case "TTOU":
+				n = 0x16
+			case "UNUSED":
+				n = 0x1f
+			case "URG":
+				n = 0x17
+			case "USR1":
+				n = 0xa
+			case "USR2":
+				n = 0xc
+			case "VTALRM":
+				n = 0x1a
+			case "WINCH":
+				n = 0x1c
+			case "XCPU":
+				n = 0x18
+			case "XFSZ":
+				n = 0x19
+			default:
+				return errUnknownSignal
+			}
+		}
+
+		target.SetInt(n)
 		return nil
 	}
 }

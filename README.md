@@ -379,7 +379,7 @@ func (r *RmCmD) Run(author AuthorName) error{
 
 func main() {
   var cli CLI
-  
+
   ctx := kong.Parse(&cli, Bind(AuthorName("penguin")))
   err := ctx.Run()
 ```
@@ -545,12 +545,13 @@ specifies the element type. For maps, the tag has the format
 Any field implementing `encoding.TextUnmarshaler` or `json.Unmarshaler` will use those interfaces
 for decoding values. Kong also includes builtin support for many common Go types:
 
-| Type            | Description                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------------------- |
-| `time.Duration` | Populated using `time.ParseDuration()`.                                                                     |
-| `time.Time`     | Populated using `time.Parse()`. Format defaults to RFC3339 but can be overridden with the `format:"X"` tag. |
-| `*os.File`      | Path to a file that will be opened, or `-` for `os.Stdin`. File must be closed by the user.                 |
-| `*url.URL`      | Populated with `url.Parse()`.                                                                               |
+| Type             | Description                                                                                                 |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| `time.Duration`  | Populated using `time.ParseDuration()`.                                                                     |
+| `time.Time`      | Populated using `time.Parse()`. Format defaults to RFC3339 but can be overridden with the `format:"X"` tag. |
+| `*os.File`       | Path to a file that will be opened, or `-` for `os.Stdin`. File must be closed by the user.                 |
+| `*url.URL`       | Populated with `url.Parse()`.                                                                               |
+| `syscall.Signal` | Name of a signal or that signal number.                                                                     |
 
 For more fine-grained control, if a field implements the
 [MapperValue](https://godoc.org/github.com/alecthomas/kong#MapperValue)
