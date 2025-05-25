@@ -591,7 +591,7 @@ func signalDecoder() MapperFunc {
 		case string:
 			sig, err := strconv.ParseInt(v, 10, 0)
 			if err == nil {
-				if n <= 0 || n > 31 {
+				if sig <= 0 || sig > 31 {
 					return errUnknownSignal
 				}
 				n = sig
