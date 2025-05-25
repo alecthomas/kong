@@ -579,21 +579,27 @@ func sliceDecoder(r *Registry) MapperFunc {
 
 func signalDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		var value string
-		if err := ctx.Scan.PopValueInto("signal", &value); err != nil {
+		t, err := ctx.Scan.PopValue("signal")
+		if err != nil {
 			return err
 		}
 
-		var errUnknownSignal = fmt.Errorf("unknown signal \"%s\"", value)
+		var errUnknownSignal = fmt.Errorf("unknown signal \"%s\"", t.String())
+		var n int64
 
-		n, err := strconv.ParseInt(value, 10, 0)
-		if err == nil {
-			if n <= 0 || n > 31 {
-				return errUnknownSignal
+		switch v := t.Value.(type) {
+		case string:
+			sig, err := strconv.ParseInt(v, 10, 0)
+			if err == nil {
+				if n <= 0 || n > 31 {
+					return errUnknownSignal
+				}
+				n = sig
+				break
 			}
-		} else {
+
 			// Formatted from builtin/syscall/zerrors_linux_amd64.go "Signals" const block.
-			switch strings.TrimPrefix(strings.ToUpper(value), "SIG") {
+			switch strings.TrimPrefix(strings.ToUpper(v), "SIG") {
 			case "ABRT":
 				n = 0x6
 			case "ALRM":
@@ -667,6 +673,20 @@ func signalDecoder() MapperFunc {
 			default:
 				return errUnknownSignal
 			}
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+			var iv = v.(int64)
+			if iv <= 0 || iv > 31 {
+				return errUnknownSignal
+			}
+			n = iv
+		case float32, float64:
+			var iv = int64(v.(float64))
+			if iv <= 0 || iv > 31 {
+				return errUnknownSignal
+			}
+			n = iv
+		default:
+			return errUnknownSignal
 		}
 
 		target.SetInt(n)
