@@ -5,6 +5,11 @@ require (
 	github.com/alecthomas/repr v0.4.0
 )
 
-require github.com/hexops/gotextdiff v1.0.3 // indirect
+require (
+	github.com/agnivade/levenshtein v1.2.1 // indirect
+	github.com/hexops/gotextdiff v1.0.3 // indirect
+)
 
-go 1.20
+go 1.21
+
+toolchain go1.24.0

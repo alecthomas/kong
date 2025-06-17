@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/agnivade/levenshtein"
 )
 
 // Path records the nodes and parsed values from the current command-line.
@@ -1134,7 +1136,7 @@ func findPotentialCandidates(needle string, haystack []string, format string, ar
 	}
 	closestCandidates := []string{}
 	for _, candidate := range haystack {
-		if strings.HasPrefix(candidate, needle) || levenshtein(candidate, needle) <= 2 {
+		if strings.HasPrefix(candidate, needle) || levenshtein.ComputeDistance(candidate, needle) <= 2 {
 			closestCandidates = append(closestCandidates, fmt.Sprintf("%q", candidate))
 		}
 	}
