@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/alecthomas/colour v0.1.0
-	github.com/alecthomas/kong v1.11.0
+	github.com/alecthomas/kong v1.12.0
 	github.com/chzyer/readline v1.5.1
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
