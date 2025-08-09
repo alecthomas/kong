@@ -326,19 +326,19 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if ctx.Error != nil {
 		return nil, &ParseError{error: ctx.Error, Context: ctx, exitCode: exitUsageError}
 	}
-	if err = k.applyHook(ctx, "BeforeReset"); err != nil {
+	if err = k.ApplyHook(ctx, "BeforeReset"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Reset(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "BeforeResolve"); err != nil {
+	if err = k.ApplyHook(ctx, "BeforeResolve"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Resolve(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
+	if err = k.ApplyHook(ctx, "BeforeApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if _, err = ctx.Apply(); err != nil { // Apply is not expected to return an err
@@ -347,13 +347,13 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err = ctx.Validate(); err != nil {
 		return nil, &ParseError{error: err, Context: ctx, exitCode: exitUsageError}
 	}
-	if err = k.applyHook(ctx, "AfterApply"); err != nil {
+	if err = k.ApplyHook(ctx, "AfterApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	return ctx, nil
 }
 
-func (k *Kong) applyHook(ctx *Context, name string) error {
+func (k *Kong) ApplyHook(ctx *Context, name string) error {
 	for _, trace := range ctx.Path {
 		var value reflect.Value
 		switch {
