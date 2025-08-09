@@ -873,7 +873,7 @@ func (c *Context) Run(binds ...any) (err error) {
 		}
 	}
 	runErr := c.RunNode(node, binds...)
-	err = c.Kong.applyHook(c, "AfterRun")
+	err = c.Kong.ApplyHook(c, "AfterRun")
 	return errors.Join(runErr, err)
 }
 
