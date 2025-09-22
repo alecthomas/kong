@@ -2452,6 +2452,9 @@ func TestIntEnum(t *testing.T) {
 func TestRecursiveVariableExpansion(t *testing.T) {
 	var cli struct {
 		Config string `type:"path" default:"${config_file}" help:"Default: ${default}"`
+		Embed  struct {
+			Test string `help:"Another name: ${anotherName}"`
+		} `embed:"" set:"anotherName=${config_file}"`
 	}
 	k := mustNew(t, &cli, kong.Vars{"config_file": "/etc/config"}, kong.Exit(func(int) {}))
 	w := &strings.Builder{}
@@ -2460,6 +2463,7 @@ func TestRecursiveVariableExpansion(t *testing.T) {
 	_, err := k.Parse([]string{"--help"})
 	assert.NoError(t, err)
 	assert.Contains(t, w.String(), "Default: /etc/config")
+	assert.Contains(t, w.String(), "Another name: /etc/config")
 }
 
 type afterRunCLI struct {
