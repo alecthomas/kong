@@ -472,7 +472,7 @@ func (k *Kong) FatalIfErrorf(err error, args ...any) {
 	if errors.As(err, &parseErr) {
 		switch k.usageOnError {
 		case fullUsage:
-			_ = k.help(k.helpOptions, parseErr.Context)
+			_ = parseErr.Context.printHelp(k.helpOptions)
 			fmt.Fprintln(k.Stdout)
 		case shortUsage:
 			_ = k.shortHelp(k.helpOptions, parseErr.Context)
