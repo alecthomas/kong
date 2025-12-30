@@ -139,8 +139,9 @@ func getMethods(value reflect.Value, name string) (methods []reflect.Value) {
 		return
 	}
 
-	if method := getMethod(value, name); method.IsValid() {
-		methods = append(methods, method)
+	parentMethod := getMethod(value, name)
+	if parentMethod.IsValid() {
+		methods = append(methods, parentMethod)
 	}
 
 	if value.Kind() != reflect.Struct {
@@ -158,6 +159,14 @@ func getMethods(value reflect.Value, name string) (methods []reflect.Value) {
 
 		if !field.IsExported() {
 			continue
+		}
+
+		// Skip anonymous fields whose methods are already promoted to the parent.
+		if field.Anonymous && parentMethod.IsValid() {
+			method := getMethod(fieldValue, name)
+			if method.IsValid() && method.Pointer() == parentMethod.Pointer() {
+				continue
+			}
 		}
 
 		// Consider a field embedded if it's actually embedded
