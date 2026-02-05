@@ -205,9 +205,7 @@ Commands may define default metadata by implementing:
 ```go
 Signature() string
 ```
-
-The returned value uses **bare tag syntax** and is merged with struct tags.
-If the same field is defined in both places, **struct tags take precedence**.
+The returned value uses bare tag syntax and is merged with the command's struct tags. If the same field is defined in both places, struct tags take precedence.
 
 ```go
 type Cmd struct{}
