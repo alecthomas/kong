@@ -198,20 +198,26 @@ Flags:
       --flag    Regular flag help
 ```
 
-### Command signature override
+### Command signature defaults
 
-Commands can override their own metadata via an optional `Signature() string` method.
-The returned string uses the bare tag format and is merged with struct tags (struct tags win).
+Commands may define default metadata by implementing:
+
+```go
+Signature() string
+```
+
+The returned value uses **bare tag syntax** and is merged with struct tags.
+If the same field is defined in both places, **struct tags take precedence**.
 
 ```go
 type Cmd struct{}
 
 func (Cmd) Signature() string {
-  return `name:"migrate" help:"Run migrations" aliases:"mig,mg" group:"DB"`
+	return `name:"migrate" help:"Run migrations" aliases:"mig,mg" group:"DB"`
 }
 ```
 
-The `Signature()` method is discovered via type assertion on the command value (or pointer).
+`Signature()` is discovered automatically on the command value or pointer.
 
 ## Command handling
 
