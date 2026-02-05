@@ -198,6 +198,21 @@ Flags:
       --flag    Regular flag help
 ```
 
+### Command signature override
+
+Commands can override their own metadata via an optional `Signature() string` method.
+The returned string uses the bare tag format and takes precedence over struct tags.
+
+```go
+type Cmd struct{}
+
+func (Cmd) Signature() string {
+  return `name:"migrate" help:"Run migrations" aliases:"mig,mg" group:"DB"`
+}
+```
+
+The `Signature()` method is discovered via type assertion on the command value (or pointer).
+
 ## Command handling
 
 There are two ways to handle commands in Kong.
