@@ -2708,3 +2708,60 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
 }
+
+func TestStrictDuplicateFlags(t *testing.T) {
+	t.Run("allows duplicate flags by default", func(t *testing.T) {
+		var cli struct {
+			Flag string `help:"A flag"`
+		}
+		p := mustNew(t, &cli)
+
+		// Should succeed - last value wins
+		_, err := p.Parse([]string{"--flag=first", "--flag=second"})
+		assert.NoError(t, err)
+		assert.Equal(t, "second", cli.Flag)
+	})
+
+	t.Run("errors on duplicate flags when strict mode enabled", func(t *testing.T) {
+		var cli struct {
+			Flag string `help:"A flag"`
+		}
+		p := mustNew(t, &cli, kong.StrictDuplicateFlags())
+
+		_, err := p.Parse([]string{"--flag=first", "--flag=second"})
+		assert.EqualError(t, err, "flag --flag provided more than once")
+	})
+
+	t.Run("handles short flags", func(t *testing.T) {
+		var cli struct {
+			Flag string `short:"f" help:"A flag"`
+		}
+		p := mustNew(t, &cli, kong.StrictDuplicateFlags())
+
+		_, err := p.Parse([]string{"-f", "first", "--flag", "second"})
+		assert.EqualError(t, err, "flag --flag provided more than once")
+	})
+
+	t.Run("allows slice flags to have multiple values", func(t *testing.T) {
+		var cli struct {
+			Flags []string `help:"Multiple flags"`
+		}
+		p := mustNew(t, &cli, kong.StrictDuplicateFlags())
+
+		// Slice flags should still work with repeated values
+		_, err := p.Parse([]string{"--flags=first", "--flags=second"})
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"first", "second"}, cli.Flags)
+	})
+
+	t.Run("allows different flags", func(t *testing.T) {
+		var cli struct {
+			Flag1 string `help:"First flag"`
+			Flag2 string `help:"Second flag"`
+		}
+		p := mustNew(t, &cli, kong.StrictDuplicateFlags())
+
+		_, err := p.Parse([]string{"--flag-1=value1", "--flag-2=value2"})
+		assert.NoError(t, err)
+	})
+}
