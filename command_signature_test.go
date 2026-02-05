@@ -25,24 +25,24 @@ func TestSignatureMethodOverridesTags(t *testing.T) {
 		t.Fatalf("expected 1 command, got %d", len(k.Model.Node.Children))
 	}
 	cmd := k.Model.Node.Children[0]
-	if got, want := cmd.Name, "method"; got != want {
+	if got, want := cmd.Name, "tag"; got != want {
 		t.Fatalf("name = %q, want %q", got, want)
 	}
-	if got, want := strings.Join(cmd.Aliases, ","), "m1,m2"; got != want {
+	if got, want := strings.Join(cmd.Aliases, ","), "t1,t2"; got != want {
 		t.Fatalf("aliases = %q, want %q", got, want)
 	}
-	if got, want := cmd.Help, "method help"; got != want {
+	if got, want := cmd.Help, "tag help"; got != want {
 		t.Fatalf("help = %q, want %q", got, want)
 	}
 	if !cmd.Hidden {
 		t.Fatalf("hidden = %v, want true", cmd.Hidden)
 	}
-	if cmd.Group == nil || cmd.Group.Key != "Method Group" {
+	if cmd.Group == nil || cmd.Group.Key != "Tag Group" {
 		key := ""
 		if cmd.Group != nil {
 			key = cmd.Group.Key
 		}
-		t.Fatalf("group key = %q, want %q", key, "Method Group")
+		t.Fatalf("group key = %q, want %q", key, "Tag Group")
 	}
 }
 

@@ -56,20 +56,20 @@ func applyCommandSignature(node *Node, v reflect.Value, ft reflect.StructField, 
 	if !ok || sigTag == nil {
 		return nil
 	}
-	if sigTag.Name != "" {
+	if tag.Name == "" && sigTag.Name != "" {
 		*name = sigTag.Name
 		tag.Name = sigTag.Name
 	}
-	if len(sigTag.Aliases) > 0 {
+	if len(tag.Aliases) == 0 && len(sigTag.Aliases) > 0 {
 		tag.Aliases = sigTag.Aliases
 	}
-	if sigTag.Help != "" {
+	if tag.Help == "" && sigTag.Help != "" {
 		tag.Help = sigTag.Help
 	}
-	if sigTag.Has("hidden") {
+	if !tag.Has("hidden") && sigTag.Has("hidden") {
 		tag.Hidden = sigTag.Hidden
 	}
-	if sigTag.Group != "" {
+	if tag.Group == "" && sigTag.Group != "" {
 		tag.Group = sigTag.Group
 	}
 	return nil

@@ -201,7 +201,7 @@ Flags:
 ### Command signature override
 
 Commands can override their own metadata via an optional `Signature() string` method.
-The returned string uses the bare tag format and takes precedence over struct tags.
+The returned string uses the bare tag format and is merged with struct tags (struct tags win).
 
 ```go
 type Cmd struct{}
