@@ -11,13 +11,13 @@ type SignatureOverride interface {
 	Signature() string
 }
 
-func commandSignatureTagFromValue(v reflect.Value) (*Tag, bool, error) {
+func commandSignatureTagFromValue(v reflect.Value) (string, bool) {
 	if !v.IsValid() {
-		return nil, false, nil
+		return "", false
 	}
 	var (
 		sig string
-		ok  bool
+		has bool
 	)
 	check := func(candidate any) {
 		if candidate == nil {
@@ -25,52 +25,50 @@ func commandSignatureTagFromValue(v reflect.Value) (*Tag, bool, error) {
 		}
 		if provider, okProvider := candidate.(SignatureOverride); okProvider {
 			sig = provider.Signature()
-			ok = true
+			has = true
 		}
 	}
 	if v.CanInterface() {
 		check(v.Interface())
 	}
-	if !ok && v.CanAddr() && v.Addr().CanInterface() {
+	if !has && v.CanAddr() && v.Addr().CanInterface() {
 		check(v.Addr().Interface())
 	}
-	if !ok {
-		return nil, false, nil
+	if !has {
+		return "", false
 	}
 	sig = strings.TrimSpace(sig)
 	if sig == "" {
-		return nil, true, nil
+		return "", false
 	}
-	tag, err := parseTagString(sig)
-	if err != nil {
-		return nil, true, err
-	}
-	return tag, true, nil
+	return sig, true
 }
 
-func applyCommandSignature(node *Node, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name *string) error {
-	sigTag, ok, err := commandSignatureTagFromValue(fv)
+func applyCommandSignature(v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag) error {
+	sigTag, ok := commandSignatureTagFromValue(fv)
+	if !ok {
+		return nil
+	}
+
+	items, err := parseTagItems(sigTag, bareChars)
 	if err != nil {
 		return failField(v, ft, "signature: %s", err)
 	}
-	if !ok || sigTag == nil {
-		return nil
+
+	mergedItems := make(map[string][]string, len(tag.items)+len(items))
+	for key, values := range tag.items {
+		mergedItems[key] = append([]string(nil), values...)
 	}
-	if tag.Name == "" && sigTag.Name != "" {
-		*name = sigTag.Name
-		tag.Name = sigTag.Name
+	// Signature tags are appended after field tags, so existing struct tags
+	// take precedence for single-value options.
+	for key, values := range items {
+		mergedItems[key] = append(mergedItems[key], values...)
 	}
-	if len(tag.Aliases) == 0 && len(sigTag.Aliases) > 0 {
-		tag.Aliases = sigTag.Aliases
+	merged := &Tag{items: mergedItems}
+	if err := hydrateTag(merged, ft.Type); err != nil {
+		return failField(v, ft, "signature: %s", err)
 	}
-	if tag.Help == "" && sigTag.Help != "" {
-		tag.Help = sigTag.Help
-	}
-	if !tag.Has("hidden") && sigTag.Has("hidden") {
-		tag.Hidden = sigTag.Hidden
-	}
-	if tag.Group == "" && sigTag.Group != "" {
-		tag.Group = sigTag.Group
-	}
+	*tag = *merged
+
 	return nil
 }

@@ -66,6 +66,16 @@ func flattenedFields(v reflect.Value, ptag *Tag) (out []flattenedField, err erro
 			ignored[ft.Name] = true
 			continue
 		}
+		// Command and embedded structs can be pointers, so we hydrate them now.
+		if (tag.Cmd || tag.Embed) && ft.Type.Kind() == reflect.Ptr {
+			fv = reflect.New(ft.Type.Elem()).Elem()
+			v.FieldByIndex(ft.Index).Set(fv.Addr())
+		}
+		if tag.Cmd {
+			if err := applyCommandSignature(v, ft, fv, tag); err != nil {
+				return nil, err
+			}
+		}
 		// Assign group if it's not already set.
 		if tag.Group == "" {
 			tag.Group = ptag.Group
@@ -76,11 +86,6 @@ func flattenedFields(v reflect.Value, ptag *Tag) (out []flattenedField, err erro
 		tag.XorPrefix = ptag.XorPrefix + tag.XorPrefix
 		// Combine parent vars.
 		tag.Vars = ptag.Vars.CloneWith(tag.Vars)
-		// Command and embedded structs can be pointers, so we hydrate them now.
-		if (tag.Cmd || tag.Embed) && ft.Type.Kind() == reflect.Ptr {
-			fv = reflect.New(ft.Type.Elem()).Elem()
-			v.FieldByIndex(ft.Index).Set(fv.Addr())
-		}
 		if !ft.Anonymous && !tag.Embed {
 			if fv.CanSet() {
 				field := flattenedField{field: ft, value: fv, tag: tag}
@@ -244,10 +249,10 @@ func validatePositionalArguments(node *Node) error {
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {
-	if typ == CommandNode {
-		if err := applyCommandSignature(node, v, ft, fv, tag, &name); err != nil {
-			return err
-		}
+	// Name was computed before command signatures are applied in flattenedFields(),
+	// so recompute from the hydrated tag for command nodes.
+	if typ == CommandNode && tag.Name != "" {
+		name = tag.Prefix + tag.Name
 	}
 	child, err := buildNode(k, fv, typ, newEmptyTag(), seenFlags)
 	if err != nil {
