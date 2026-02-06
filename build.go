@@ -249,11 +249,6 @@ func validatePositionalArguments(node *Node) error {
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {
-	// Name was computed before command signatures are applied in flattenedFields(),
-	// so recompute from the hydrated tag for command nodes.
-	if typ == CommandNode && tag.Name != "" {
-		name = tag.Prefix + tag.Name
-	}
 	child, err := buildNode(k, fv, typ, newEmptyTag(), seenFlags)
 	if err != nil {
 		return err
