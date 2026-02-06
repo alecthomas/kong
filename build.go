@@ -244,6 +244,11 @@ func validatePositionalArguments(node *Node) error {
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {
+	if typ == CommandNode {
+		if err := applyCommandSignature(node, v, ft, fv, tag, &name); err != nil {
+			return err
+		}
+	}
 	child, err := buildNode(k, fv, typ, newEmptyTag(), seenFlags)
 	if err != nil {
 		return err

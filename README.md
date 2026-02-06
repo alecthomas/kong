@@ -10,6 +10,7 @@
 - [Help](#help)
   - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
   - [Defining help in Kong](#defining-help-in-kong)
+  - [Command signature](#command-signature)
 - [Command handling](#command-handling)
   - [Switch on the command string](#switch-on-the-command-string)
   - [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
@@ -197,6 +198,22 @@ Flags:
   -h, --help    Show context-sensitive help.
       --flag    Regular flag help
 ```
+
+### Command signature
+
+In addition to struct tags, commands may optionally define default metadata at the command level by implementing:
+
+```go
+type Cmd struct{}
+
+func (Cmd) Signature() string {
+    return `name:"migrate" help:"Run migrations" aliases:"mig,mg" group:"DB"`
+}
+```
+
+The returned value uses bare tag syntax and is merged with the command’s struct tags. If the same field is defined in both places, struct tags take precedence.
+
+This is useful when command metadata should live alongside the command implementation rather than being repeated across struct tags.
 
 ## Command handling
 
