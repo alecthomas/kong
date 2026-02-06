@@ -807,3 +807,25 @@ func TestDecode(t *testing.T) {
 
 	assert.Equal(t, c.Foo.Bar, "baz")
 }
+
+func TestFileMapperWithDefaultNonExistentFile(t *testing.T) {
+	type CLI struct {
+		File *os.File `default:"testdata/missing-default.txt"`
+	}
+	var cli CLI
+	p := mustNew(t, &cli)
+
+	// Test 1: With CLI arg pointing to existing file - should succeed
+	_, err := p.Parse([]string{"--file", "testdata/file.txt"})
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.File)
+	assert.Contains(t, cli.File.Name(), "file.txt")
+	_ = cli.File.Close()
+
+	// Test 2: Without CLI arg - should fail because default file doesn't exist
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing-default.txt")
+	assert.IsError(t, err, os.ErrNotExist)
+}
