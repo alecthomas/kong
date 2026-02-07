@@ -616,6 +616,12 @@ func fileMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
+
+		// Skip if value was already set to avoid opening the default file when an explicit value was provided
+		if ctx.Value.HasDefault && ctx.Value.Set {
+			return nil
+		}
+
 		var file *os.File
 		if path == "-" {
 			file = os.Stdin
