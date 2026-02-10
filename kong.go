@@ -56,9 +56,10 @@ type Kong struct {
 	registry     *Registry
 	ignoreFields []*regexp.Regexp
 
-	noDefaultHelp   bool
-	allowHyphenated bool
-	usageOnError    usageOnError
+	noDefaultHelp        bool
+	allowHyphenated      bool
+	strictDuplicateFlags bool
+	usageOnError         usageOnError
 	help            HelpPrinter
 	shortHelp       HelpPrinter
 	helpFormatter   HelpValueFormatter
