@@ -16,7 +16,7 @@ jobs:
         go: ["1.23", "1.24"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Init Hermit
         run: ./bin/hermit env -r >> "$GITHUB_ENV"
       - name: Install Go ${{ matrix.go }}
@@ -38,7 +38,7 @@ jobs:
         go: ["1.23.x", "1.24.x"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Init Hermit
         run: ./bin/hermit env -r >> "$GITHUB_ENV"
       - name: golangci-lint
