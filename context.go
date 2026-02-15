@@ -874,7 +874,12 @@ func (c *Context) Run(binds ...any) (err error) {
 	}
 	runErr := c.RunNode(node, binds...)
 	err = c.Kong.applyHook(c, "AfterRun")
-	return errors.Join(runErr, err)
+	if runErr != nil && err != nil {
+		return errors.Join(runErr, err)
+	} else if runErr != nil {
+		return runErr
+	}
+	return err
 }
 
 // PrintUsage to Kong's stdout.
