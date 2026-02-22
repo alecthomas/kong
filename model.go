@@ -160,7 +160,7 @@ func (n *Node) Summary() string {
 			continue
 		}
 		if !flag.Required {
-			summary += " [flags]"
+			summary += " [<flags>]"
 			break
 		}
 	}
