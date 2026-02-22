@@ -105,7 +105,7 @@ func TestHelp(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app --required <command> [flags]
+		expected := `Usage: test-app --required [flags] <command>
 
 A test app.
 
@@ -216,7 +216,7 @@ func TestFlagsLast(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		assert.True(t, exited)
-		expected := `Usage: test-app --required <command> [flags]
+		expected := `Usage: test-app --required [flags] <command>
 
 A test app.
 
@@ -690,7 +690,7 @@ func TestHelpGrouping(t *testing.T) {
 			assert.True(t, exited)
 			assert.NoError(t, err)
 		})
-		expected := `Usage: test-app <command> [flags]
+		expected := `Usage: test-app [flags] <command>
 
 A test app.
 
@@ -715,7 +715,7 @@ Commands:
 Group title taken from the kong.ExplicitGroups option
   A group header
 
-  one thing <arg> [flags]
+  one thing [flags] <arg>
     subcommand thing
 
   one <other> [flags]

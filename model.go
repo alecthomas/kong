@@ -144,9 +144,28 @@ func (n *Node) Depth() int {
 // Summary help string for the node (not including application name).
 func (n *Node) Summary() string {
 	summary := n.Path()
+
+	// append required flags
 	if flags := n.FlagSummary(true); flags != "" {
 		summary += " " + flags
 	}
+
+	// append placeholder for further, non-required flags
+	allFlags := n.Flags
+	if n.Parent != nil {
+		allFlags = append(allFlags, n.Parent.Flags...)
+	}
+	for _, flag := range allFlags {
+		if _, ok := flag.Target.Interface().(helpFlag); ok {
+			continue
+		}
+		if !flag.Required {
+			summary += " [flags]"
+			break
+		}
+	}
+
+	// append positional arguments
 	args := []string{}
 	optional := 0
 	for _, arg := range n.Positional {
@@ -161,19 +180,6 @@ func (n *Node) Summary() string {
 		summary += " " + strings.Join(args, " ") + strings.Repeat("]", optional)
 	} else if len(n.Children) > 0 {
 		summary += " <command>"
-	}
-	allFlags := n.Flags
-	if n.Parent != nil {
-		allFlags = append(allFlags, n.Parent.Flags...)
-	}
-	for _, flag := range allFlags {
-		if _, ok := flag.Target.Interface().(helpFlag); ok {
-			continue
-		}
-		if !flag.Required {
-			summary += " [flags]"
-			break
-		}
 	}
 	return summary
 }

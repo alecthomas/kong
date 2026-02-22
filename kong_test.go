@@ -2001,7 +2001,7 @@ func TestPassthroughCmdOnlyArgs(t *testing.T) {
 		} `cmd:"" passthrough:""`
 	}
 	_, err := kong.New(&cli)
-	assert.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [<args> ...] [flags] must not have subcommands or flags")
+	assert.EqualError(t, err, "<anonymous struct>.Command: passthrough command command [flags] [<args> ...] must not have subcommands or flags")
 }
 
 func TestPassthroughCmdOnlyStringArgs(t *testing.T) {
