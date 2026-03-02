@@ -17,15 +17,11 @@ func TestApplyDefaults(t *testing.T) {
 		target   CLI
 		expected CLI
 	}{
-		{
-			name:     "DefaultsWhenNotSet",
-			expected: CLI{Str: "str", Duration: time.Second * 30},
-		},
-		{
-			name:     "PartiallySetDefaults",
+		{name: "DefaultsWhenNotSet",
+			expected: CLI{Str: "str", Duration: time.Second * 30}},
+		{name: "PartiallySetDefaults",
 			target:   CLI{Duration: time.Second},
-			expected: CLI{Str: "str", Duration: time.Second},
-		},
+			expected: CLI{Str: "str", Duration: time.Second}},
 	}
 	for _, tt := range tests {
 		tt := tt

@@ -1152,12 +1152,10 @@ func findPotentialCandidates(needle string, haystack []string, format string, ar
 	return fmt.Errorf("%s", prefix)
 }
 
-type (
-	validatable         interface{ Validate() error }
-	extendedValidatable interface {
-		Validate(kctx *Context) error
-	}
-)
+type validatable interface{ Validate() error }
+type extendedValidatable interface {
+	Validate(kctx *Context) error
+}
 
 // Proxy a validatable function to the extendedValidatable interface
 type validatableFunc func() error
