@@ -371,6 +371,7 @@ func deprecationNotice(node *Node) string {
 }
 
 func printCommandSummary(w *helpWriter, cmd *Command) {
+
 	w.Print(cmd.Summary())
 	help := cmd.Help + deprecationNotice(cmd)
 	if help != "" {

@@ -184,7 +184,8 @@ func TestMatchingArgField(t *testing.T) {
 func TestCantMixPositionalAndBranches(t *testing.T) {
 	var cli struct {
 		Arg     string   `kong:"arg"`
-		Command struct{} `kong:"cmd"`
+		Command struct{
+		} `kong:"cmd"`
 	}
 	_, err := kong.New(&cli)
 	assert.Error(t, err)
@@ -363,7 +364,8 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 func TestTraceErrorPartiallySucceeds(t *testing.T) {
 	var cli struct {
 		One struct {
-			Two struct{} `kong:"cmd"`
+			Two struct{
+			} `kong:"cmd"`
 		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
@@ -556,7 +558,7 @@ func (h *hookCmd) AfterApply(ctx *hookContext) error {
 }
 
 func TestHooks(t *testing.T) {
-	tests := []struct {
+	var tests = []struct {
 		name   string
 		input  string
 		values hookContext
@@ -2651,7 +2653,8 @@ func TestIssue483EmptyRootNodeNoRun(t *testing.T) {
 	assert.Contains(t, err.Error(), "no command selected")
 }
 
-type providerWithoutErrorCLI struct{}
+type providerWithoutErrorCLI struct{
+}
 
 func (p *providerWithoutErrorCLI) Run(name string) error {
 	if name == "Bob" {

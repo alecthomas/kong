@@ -11,7 +11,9 @@ import (
 	"strings"
 )
 
-var callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
+var (
+	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
+)
 
 func failField(parent reflect.Value, field reflect.StructField, format string, args ...any) error {
 	name := parent.Type().Name()
