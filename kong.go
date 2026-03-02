@@ -11,9 +11,7 @@ import (
 	"strings"
 )
 
-var (
-	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
-)
+var callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
 
 func failField(parent reflect.Value, field reflect.StructField, format string, args ...any) error {
 	name := parent.Type().Name()
@@ -352,6 +350,15 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	}
 	if err = k.applyHook(ctx, "AfterApply"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
+	}
+	for _, trace := range ctx.Path {
+		if trace.Command != nil && trace.Command.Deprecated {
+			if trace.Command.DeprecatedMsg != "" {
+				fmt.Fprintf(k.Stderr, "%s: command %q: %s\n", k.Model.Name, trace.Command.Name, trace.Command.DeprecatedMsg)
+			} else {
+				fmt.Fprintf(k.Stderr, "%s: command %q is deprecated\n", k.Model.Name, trace.Command.Name)
+			}
+		}
 	}
 	return ctx, nil
 }

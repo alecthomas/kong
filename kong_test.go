@@ -183,9 +183,8 @@ func TestMatchingArgField(t *testing.T) {
 
 func TestCantMixPositionalAndBranches(t *testing.T) {
 	var cli struct {
-		Arg     string `kong:"arg"`
-		Command struct {
-		} `kong:"cmd"`
+		Arg     string   `kong:"arg"`
+		Command struct{} `kong:"cmd"`
 	}
 	_, err := kong.New(&cli)
 	assert.Error(t, err)
@@ -364,8 +363,7 @@ func TestDuplicateFlagOnPeerCommandIsOkay(t *testing.T) {
 func TestTraceErrorPartiallySucceeds(t *testing.T) {
 	var cli struct {
 		One struct {
-			Two struct {
-			} `kong:"cmd"`
+			Two struct{} `kong:"cmd"`
 		} `kong:"cmd"`
 	}
 	p := mustNew(t, &cli)
@@ -558,7 +556,7 @@ func (h *hookCmd) AfterApply(ctx *hookContext) error {
 }
 
 func TestHooks(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		input  string
 		values hookContext
@@ -2653,8 +2651,7 @@ func TestIssue483EmptyRootNodeNoRun(t *testing.T) {
 	assert.Contains(t, err.Error(), "no command selected")
 }
 
-type providerWithoutErrorCLI struct {
-}
+type providerWithoutErrorCLI struct{}
 
 func (p *providerWithoutErrorCLI) Run(name string) error {
 	if name == "Bob" {
@@ -2707,4 +2704,51 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
+}
+
+func TestDeprecatedCommandWarning(t *testing.T) {
+	var cli struct {
+		OldCmd struct{} `cmd deprecated:"use new-cmd instead"`
+	}
+	stderr := &bytes.Buffer{}
+	p := mustNew(t, &cli, kong.Writers(bytes.NewBuffer(nil), stderr))
+	_, err := p.Parse([]string{"old-cmd"})
+	assert.NoError(t, err)
+	assert.Contains(t, stderr.String(), `command "old-cmd": use new-cmd instead`)
+}
+
+func TestDeprecatedCommandWarningNoMessage(t *testing.T) {
+	var cli struct {
+		OldCmd struct{} `cmd deprecated:""`
+	}
+	stderr := &bytes.Buffer{}
+	p := mustNew(t, &cli, kong.Writers(bytes.NewBuffer(nil), stderr))
+	_, err := p.Parse([]string{"old-cmd"})
+	assert.NoError(t, err)
+	assert.Contains(t, stderr.String(), `command "old-cmd" is deprecated`)
+	assert.NotContains(t, stderr.String(), "deprecated:")
+}
+
+func TestNonDeprecatedCommandNoWarning(t *testing.T) {
+	var cli struct {
+		Cmd struct{} `cmd`
+	}
+	stderr := &bytes.Buffer{}
+	p := mustNew(t, &cli, kong.Writers(bytes.NewBuffer(nil), stderr))
+	_, err := p.Parse([]string{"cmd"})
+	assert.NoError(t, err)
+	assert.Equal(t, "", stderr.String())
+}
+
+func TestDeprecatedAndHiddenCommand(t *testing.T) {
+	var cli struct {
+		OldCmd struct{} `cmd hidden deprecated:"use new-cmd instead"`
+	}
+	stderr := &bytes.Buffer{}
+	p := mustNew(t, &cli, kong.Writers(bytes.NewBuffer(nil), stderr))
+	_, err := p.Parse([]string{"old-cmd"})
+	assert.NoError(t, err)
+	assert.Contains(t, stderr.String(), `command "old-cmd": use new-cmd instead`)
+	// Command should be hidden
+	assert.True(t, p.Model.Children[0].Hidden)
 }

@@ -253,7 +253,7 @@ func writeCompactCommandList(cmds []*Node, iw *helpWriter) {
 		if cmd.Hidden {
 			continue
 		}
-		rows = append(rows, [2]string{cmd.Path(), cmd.Help})
+		rows = append(rows, [2]string{cmd.Path(), cmd.Help + deprecationNotice(cmd)})
 	}
 	writeTwoColumns(iw, rows)
 }
@@ -360,10 +360,21 @@ func collectCommandGroups(nodes []*Node) []helpCommandGroup {
 	return out
 }
 
+func deprecationNotice(node *Node) string {
+	if !node.Deprecated {
+		return ""
+	}
+	if node.DeprecatedMsg != "" {
+		return " (deprecated: " + node.DeprecatedMsg + ")"
+	}
+	return " (deprecated)"
+}
+
 func printCommandSummary(w *helpWriter, cmd *Command) {
 	w.Print(cmd.Summary())
-	if cmd.Help != "" {
-		w.Indent().Wrap(cmd.Help)
+	help := cmd.Help + deprecationNotice(cmd)
+	if help != "" {
+		w.Indent().Wrap(help)
 	}
 }
 
@@ -528,7 +539,7 @@ func (h *HelpOptions) CommandTree(node *Node, prefix string) (rows [][2]string) 
 	case ArgumentNode:
 		nodeName += prefix + "<" + node.Name + ">"
 	}
-	rows = append(rows, [2]string{nodeName, node.Help})
+	rows = append(rows, [2]string{nodeName, node.Help + deprecationNotice(node)})
 	if h.Indenter == nil {
 		prefix = SpaceIndenter(prefix)
 	} else {

@@ -205,6 +205,26 @@ func TestTagAliasesSub(t *testing.T) {
 	assert.Equal(t, "arg", cli.Cmd.SubCmd.Arg)
 }
 
+func TestDeprecatedTag(t *testing.T) {
+	var cli struct {
+		OldCmd struct{} `cmd deprecated:"use new-cmd instead"`
+	}
+	p := mustNew(t, &cli)
+	node := p.Model.Children[0]
+	assert.True(t, node.Deprecated)
+	assert.Equal(t, "use new-cmd instead", node.DeprecatedMsg)
+}
+
+func TestDeprecatedTagEmpty(t *testing.T) {
+	var cli struct {
+		OldCmd struct{} `cmd deprecated:""`
+	}
+	p := mustNew(t, &cli)
+	node := p.Model.Children[0]
+	assert.True(t, node.Deprecated)
+	assert.Equal(t, "", node.DeprecatedMsg)
+}
+
 func TestInvalidRuneErrors(t *testing.T) {
 	cli := struct {
 		Flag bool `short:"invalid"`

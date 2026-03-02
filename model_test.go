@@ -10,8 +10,7 @@ import (
 func TestModelApplicationCommands(t *testing.T) {
 	var cli struct {
 		One struct {
-			Two struct {
-			} `kong:"cmd"`
+			Two   struct{} `kong:"cmd"`
 			Three struct {
 				Four struct {
 					Four string `kong:"arg"`
