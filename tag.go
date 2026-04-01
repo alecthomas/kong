@@ -39,6 +39,8 @@ type Tag struct {
 	Envs            []string
 	Short           rune
 	Hidden          bool
+	Deprecated      string
+	HasDeprecated   bool
 	Sep             rune
 	MapSep          rune
 	Enum            string
@@ -75,7 +77,7 @@ type tagChars struct {
 }
 
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '=', needsUnquote: false}
-var bareChars = tagChars{sep: ' ', quote: '"', assign: ':', needsUnquote: true}
+var	bareChars = tagChars{sep: ' ', quote: '"', assign: ':', needsUnquote: true}
 
 //nolint:gocyclo
 func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) {
@@ -273,6 +275,10 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 		return fmt.Errorf("invalid short flag name %q: %s", t.Get("short"), err)
 	}
 	t.Hidden = t.Has("hidden")
+	t.HasDeprecated = t.Has("deprecated")
+	if t.HasDeprecated {
+		t.Deprecated = t.Get("deprecated")
+	}
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetSep("sep", ',')
 	t.MapSep, _ = t.GetSep("mapsep", ';')

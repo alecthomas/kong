@@ -253,6 +253,10 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 	child.Parent = node
 	child.Help = tag.Help
 	child.Hidden = tag.Hidden
+	child.Deprecated = tag.HasDeprecated
+	if tag.HasDeprecated {
+		child.DeprecatedMsg = tag.Deprecated
+	}
 	child.Group = buildGroupForKey(k, tag.Group)
 	child.Aliases = tag.Aliases
 

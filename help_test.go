@@ -863,3 +863,101 @@ test: error: missing flags: --flag=STRING
 	assert.Equal(t, expected, w.String())
 	assert.Equal(t, 80, exitCode)
 }
+
+func TestHelpDeprecatedCommand(t *testing.T) {
+	var cli struct {
+		NewCmd struct{} `cmd help:"The new command."`
+		OldCmd struct{} `cmd help:"The old command." deprecated:"use new-cmd instead"`
+	}
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test"),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true)
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	t.Log(w.String())
+	assert.Contains(t, w.String(), "The old command. (deprecated: use new-cmd instead)")
+}
+
+func TestHelpDeprecatedCommandNoMessage(t *testing.T) {
+	var cli struct {
+		NewCmd struct{} `cmd help:"The new command."`
+		OldCmd struct{} `cmd help:"The old command." deprecated:""`
+	}
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test"),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true)
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	t.Log(w.String())
+	assert.Contains(t, w.String(), "The old command. (deprecated)")
+}
+
+func TestHelpDeprecatedCommandCompact(t *testing.T) {
+	var cli struct {
+		NewCmd struct{} `cmd help:"The new command."`
+		OldCmd struct{} `cmd help:"The old command." deprecated:"use new-cmd"`
+	}
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test"),
+		kong.Writers(w, w),
+		kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true)
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	t.Log(w.String())
+	assert.Contains(t, w.String(), "(deprecated: use new-cmd)")
+}
+
+func TestHelpDeprecatedCommandTree(t *testing.T) {
+	var cli struct {
+		NewCmd struct{} `cmd help:"The new command."`
+		OldCmd struct{} `cmd help:"The old command." deprecated:"use new-cmd"`
+	}
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test"),
+		kong.Writers(w, w),
+		kong.ConfigureHelp(kong.HelpOptions{Tree: true}),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true)
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	t.Log(w.String())
+	assert.Contains(t, w.String(), "(deprecated: use new-cmd)")
+}
