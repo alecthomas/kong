@@ -863,3 +863,43 @@ test: error: missing flags: --flag=STRING
 	assert.Equal(t, expected, w.String())
 	assert.Equal(t, 80, exitCode)
 }
+
+type rootHelpProvider struct {
+	Flag string `help:"A flag."`
+}
+
+func (rootHelpProvider) Help() string {
+	return `Detailed help provided by the root HelpProvider.`
+}
+
+func TestHelpProviderOnRoot(t *testing.T) {
+	var cli rootHelpProvider
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Description("A test app."),
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true)
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	expected := `Usage: test-app [flags]
+
+A test app.
+
+Detailed help provided by the root HelpProvider.
+
+Flags:
+  -h, --help           Show context-sensitive help.
+      --flag=STRING    A flag.
+`
+	t.Log(w.String())
+	assert.Equal(t, expected, w.String())
+}
