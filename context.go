@@ -284,7 +284,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
 		return err
 	}
-	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
+	if err := checkXorDuplicatedAndAndMissing(c.Path, c.Kong); err != nil {
 		return err
 	}
 
@@ -1069,7 +1069,7 @@ func checkPassthroughArg(target reflect.Value) bool {
 	}
 }
 
-func checkXorDuplicatedAndAndMissing(paths []*Path) error {
+func checkXorDuplicatedAndAndMissing(paths []*Path, kong *Kong) error {
 	errs := []string{}
 	if err := checkXorDuplicates(paths); err != nil {
 		errs = append(errs, err.Error())
@@ -1077,6 +1077,13 @@ func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 	if err := checkAndMissing(paths); err != nil {
 		errs = append(errs, err.Error())
 	}
+
+	if kong.strictDuplicateFlags {
+		if err := checkDuplicateFlags(paths); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, ", "))
 	}
@@ -1130,6 +1137,29 @@ func checkAndMissing(paths []*Path) error {
 			return fmt.Errorf("%s", strings.Join(missingMsgs, ", "))
 		}
 	}
+	return nil
+}
+
+func checkDuplicateFlags(paths []*Path) error {
+	seen := make(map[string]struct{})
+
+	for _, path := range paths {
+		if path.Flag == nil {
+			continue
+		}
+		flag := path.Flag
+
+		// Skip slice/array types - they legitimately accept multiple values
+		if flag.Value.Target.Kind() == reflect.Slice {
+			continue
+		}
+
+		if _, ok := seen[flag.Name]; ok {
+			return fmt.Errorf("flag --%s provided more than once", flag.Name)
+		}
+		seen[flag.Name] = struct{}{}
+	}
+
 	return nil
 }
 
