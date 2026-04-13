@@ -282,8 +282,17 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		if err != nil {
 			return fmt.Errorf("placeholder value for %s: %s", value.Summary(), err)
 		}
+	} else {
+		updatedVars["env"] = ""
+		if len(value.Tag.Envs) != 0 {
+			updatedVars["env"] = value.Tag.Envs[0]
+		}
 	}
-	value.Help, err = interpolate(value.Help, vars, updatedVars)
+	// Merge updatedVars into vars explicitly because interpolate() skips
+	// the merge when all updatedVars values equal the zero value of missing
+	// map keys (e.g. env="").
+	vars = vars.CloneWith(updatedVars)
+	value.Help, err = interpolate(value.Help, vars, nil)
 	if err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
 	}
