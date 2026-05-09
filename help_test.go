@@ -872,6 +872,76 @@ func (rootHelpProvider) Help() string {
 	return `Detailed help provided by the root HelpProvider.`
 }
 
+func TestHelpNoAppDescFormat(t *testing.T) {
+	// Space-separated text wraps with doc.ToText under a narrow bound; a single
+	// unbroken run of characters may not be split.
+	longLine := strings.TrimRight(strings.Repeat("alpha ", 18), " ")
+	var cli struct {
+		Sub struct{} `cmd help:"row one\nrow two"`
+	}
+
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("no-sum-app"),
+		kong.Description("intro\n"+longLine),
+		kong.HelpOptions{
+			NoAppDescFormat: true,
+			WrapUpperBound:  50,
+		},
+		kong.Writers(w, w),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true)
+		}),
+	)
+
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	out := w.String()
+
+	// App description should preserve newlines and not wrap the long line to fit WrapUpperBound.
+	assert.True(t, strings.Contains(out, longLine), "expected full unwrapped description line in output:\n%s", out)
+	lines := strings.Split(out, "\n")
+	var sawIntro bool
+	for _, line := range lines {
+		if line == "intro" {
+			sawIntro = true
+			break
+		}
+	}
+	assert.True(t, sawIntro, "expected unformatted intro line (no wrap indentation); got:\n%s", out)
+
+	// Subcommand summaries still use Wrap; multi-line help tags are reflowed to spaces.
+	assert.True(t, strings.Contains(out, "row one row two"), out)
+
+	// Control: default formatting wraps the long description so it is not one contiguous 60-char line.
+	wControl := bytes.NewBuffer(nil)
+	exitedControl := false
+	appControl := mustNew(t, &cli,
+		kong.Name("no-sum-app"),
+		kong.Description("intro\n"+longLine),
+		kong.HelpOptions{
+			WrapUpperBound: 50,
+		},
+		kong.Writers(wControl, wControl),
+		kong.Exit(func(int) {
+			exitedControl = true
+			panic(true)
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := appControl.Parse([]string{"--help"})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exitedControl)
+	controlOut := wControl.String()
+	assert.False(t, strings.Contains(controlOut, longLine), "wrapped output should not contain the full description line intact:\n%s", controlOut)
+}
+
 func TestHelpProviderOnRoot(t *testing.T) {
 	var cli rootHelpProvider
 	w := bytes.NewBuffer(nil)
