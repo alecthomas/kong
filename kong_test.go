@@ -864,6 +864,17 @@ func TestIssue244(t *testing.T) {
 	assert.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
 }
 
+func TestEnvInterpolationForPositionalArg(t *testing.T) {
+	var cli struct {
+		Foo string `arg:"" optional:"" env:"FOO" help:"Foo (${env})"`
+	}
+	w := &strings.Builder{}
+	k := mustNew(t, &cli, kong.Exit(func(int) {}), kong.Writers(w, w))
+	_, err := k.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), `Foo (FOO)`)
+}
+
 func TestErrorMissingArgs(t *testing.T) {
 	var cli struct {
 		One string `arg:""`
