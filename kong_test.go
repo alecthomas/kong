@@ -864,6 +864,17 @@ func TestIssue244(t *testing.T) {
 	assert.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
 }
 
+// Regression for #556. ${env} in a positional argument's help template
+// used to panic with "undefined variable" because the interpolation
+// path for positionals never seeded ${env} the way the flag path did.
+func TestPositionalArgWithEnvInHelp(t *testing.T) {
+	type Config struct {
+		Foo string `arg:"" help:"Foo (${env})"`
+	}
+	_, err := kong.New(&Config{})
+	assert.NoError(t, err)
+}
+
 func TestErrorMissingArgs(t *testing.T) {
 	var cli struct {
 		One string `arg:""`

@@ -26,7 +26,14 @@ func interpolate(s string, vars Vars, updatedVars map[string]string) (string, er
 		return s, nil
 	}
 	for key, val := range updatedVars {
-		if vars[key] != val {
+		// A missing key in vars looks identical to one mapped to the
+		// zero value, so the cheap `vars[key] != val` check used to
+		// silently drop the updatedVars when both sides were the empty
+		// string. That mattered for positional arguments: ${env} is
+		// updated to "" before help interpolation, but the inner
+		// vars map never carries an "env" entry, so interpolate would
+		// fail with "undefined variable". See #556.
+		if existing, ok := vars[key]; !ok || existing != val {
 			vars = vars.CloneWith(updatedVars)
 			break
 		}

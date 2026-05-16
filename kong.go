@@ -282,6 +282,12 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		if err != nil {
 			return fmt.Errorf("placeholder value for %s: %s", value.Summary(), err)
 		}
+	} else {
+		// Positional arguments can't have ${env} resolve to anything
+		// real (there's no env tag for positionals), but help is
+		// interpolated for them too, so default it to empty rather
+		// than letting the interpolation error out. See #556.
+		updatedVars["env"] = ""
 	}
 	value.Help, err = interpolate(value.Help, vars, updatedVars)
 	if err != nil {
