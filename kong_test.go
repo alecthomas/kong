@@ -2605,6 +2605,33 @@ func TestApplyCalledOnce(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+type envOnlyAfterApply struct {
+	called bool
+}
+
+func (e *envOnlyAfterApply) UnmarshalText(text []byte) error { return nil }
+
+func (e *envOnlyAfterApply) AfterApply() error {
+	e.called = true
+	return nil
+}
+
+// Regression for #596: flags whose value is supplied via env should
+// fire AfterApply just like flags set on the command line or by a
+// resolver. The Reset path that applies env values doesn't add the
+// flag to ctx.Path, so the hook used to be silently skipped.
+func TestAfterApplyFiresForEnvOnlyFlag(t *testing.T) {
+	type CLI struct {
+		Field envOnlyAfterApply `env:"KONG_ENVHOOK_FIELD"`
+	}
+	var cli CLI
+
+	t.Setenv("KONG_ENVHOOK_FIELD", "from-env")
+	_, err := mustNew(t, &cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.True(t, cli.Field.called, "AfterApply should fire for env-only flags")
+}
+
 func TestCustomTypeNoEllipsis(t *testing.T) {
 	type CLI struct {
 		Flag []byte `type:"existingfile"`
