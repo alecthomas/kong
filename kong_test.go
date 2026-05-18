@@ -864,6 +864,22 @@ func TestIssue244(t *testing.T) {
 	assert.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
 }
 
+func TestPositionalArgWithEnv(t *testing.T) {
+	type Config struct {
+		Foo string `arg:"" env:"FOO" help:"Foo (${env})"`
+	}
+	// Help template should interpolate ${env} from the env tag (#556).
+	_, err := kong.New(&Config{})
+	assert.NoError(t, err)
+
+	// Value should also fill from the env var when the positional is omitted.
+	t.Setenv("FOO", "from-env")
+	var cli Config
+	_, err = mustNew(t, &cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "from-env", cli.Foo)
+}
+
 func TestErrorMissingArgs(t *testing.T) {
 	var cli struct {
 		One string `arg:""`
