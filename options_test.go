@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -37,6 +38,23 @@ func TestBindTo(t *testing.T) {
 	var cli struct{}
 
 	p, err := New(&cli, BindTo(impl("foo"), (*iface)(nil)))
+	assert.NoError(t, err)
+	err = callFunction(reflect.ValueOf(method), p.bindings)
+	assert.NoError(t, err)
+	assert.Equal(t, "foo", saw)
+}
+
+func TestBindFor(t *testing.T) {
+	type key struct{}
+	var saw any
+	method := func(ctx context.Context) error {
+		saw = ctx.Value(key{})
+		return nil
+	}
+
+	var cli struct{}
+
+	p, err := New(&cli, BindFor(context.WithValue(context.Background(), key{}, "foo")))
 	assert.NoError(t, err)
 	err = callFunction(reflect.ValueOf(method), p.bindings)
 	assert.NoError(t, err)

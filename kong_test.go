@@ -864,6 +864,22 @@ func TestIssue244(t *testing.T) {
 	assert.Contains(t, w.String(), `Environment variable: CI_PROJECT_ID`)
 }
 
+func TestPositionalArgWithEnv(t *testing.T) {
+	type Config struct {
+		Foo string `arg:"" env:"FOO" help:"Foo (${env})"`
+	}
+	// Help template should interpolate ${env} from the env tag (#556).
+	_, err := kong.New(&Config{})
+	assert.NoError(t, err)
+
+	// Value should also fill from the env var when the positional is omitted.
+	t.Setenv("FOO", "from-env")
+	var cli Config
+	_, err = mustNew(t, &cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "from-env", cli.Foo)
+}
+
 func TestErrorMissingArgs(t *testing.T) {
 	var cli struct {
 		One string `arg:""`
@@ -2603,6 +2619,33 @@ func TestApplyCalledOnce(t *testing.T) {
 	assert.NoError(t, err)
 	err = kctx.Run()
 	assert.NoError(t, err)
+}
+
+type envOnlyAfterApply struct {
+	called bool
+}
+
+func (e *envOnlyAfterApply) UnmarshalText(text []byte) error { return nil }
+
+func (e *envOnlyAfterApply) AfterApply() error {
+	e.called = true
+	return nil
+}
+
+// Regression for #596: flags whose value is supplied via env should
+// fire AfterApply just like flags set on the command line or by a
+// resolver. The Reset path that applies env values doesn't add the
+// flag to ctx.Path, so the hook used to be silently skipped.
+func TestAfterApplyFiresForEnvOnlyFlag(t *testing.T) {
+	type CLI struct {
+		Field envOnlyAfterApply `env:"KONG_ENVHOOK_FIELD"`
+	}
+	var cli CLI
+
+	t.Setenv("KONG_ENVHOOK_FIELD", "from-env")
+	_, err := mustNew(t, &cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.True(t, cli.Field.called, "AfterApply should fire for env-only flags")
 }
 
 func TestCustomTypeNoEllipsis(t *testing.T) {

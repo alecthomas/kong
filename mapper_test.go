@@ -555,6 +555,42 @@ func TestPathMapperUsingStringPointer(t *testing.T) {
 	})
 }
 
+func TestPathMapperWithDefaultUsingStringPointer(t *testing.T) {
+	type CLI struct {
+		Path *string `type:"path" default:"foobar"`
+	}
+	var cli CLI
+
+	t.Run("With value", func(t *testing.T) {
+		pwd, err := os.Getwd()
+		assert.NoError(t, err)
+		p := mustNew(t, &cli)
+		_, err = p.Parse([]string{"--path", "."})
+		assert.NoError(t, err)
+		assert.NotZero(t, cli.Path)
+		assert.Equal(t, pwd, *cli.Path)
+	})
+
+	t.Run("Zero value", func(t *testing.T) {
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--path", ""})
+		assert.NoError(t, err)
+		assert.Equal(t, nil, cli.Path)
+	})
+
+	t.Run("Without value", func(t *testing.T) {
+		pwd, err := os.Getwd()
+		assert.NoError(t, err)
+		pwd = filepath.Join(pwd, "foobar")
+		pwd, err = filepath.Abs(pwd)
+		assert.NoError(t, err)
+		p := mustNew(t, &cli)
+		_, err = p.Parse([]string{"--"})
+		assert.NoError(t, err)
+		assert.Equal(t, pwd, *cli.Path)
+	})
+}
+
 //nolint:dupl
 func TestExistingFileMapper(t *testing.T) {
 	type CLI struct {

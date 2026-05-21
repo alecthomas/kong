@@ -109,6 +109,38 @@ func TestBareTagsWithJsonTag(t *testing.T) {
 	assert.Equal(t, "", cli.Cmd.Arg)
 }
 
+func TestBareAndKongTagsCoexist(t *testing.T) {
+	type Source struct {
+		Name string `required:"" xor:"source" kong:"predictor=session-name"`
+		Pick bool   `required:"" xor:"source"`
+	}
+	type CLI struct {
+		Source `embed:""`
+	}
+
+	cli := &CLI{}
+	p := mustNew(t, cli)
+	_, err := p.Parse(nil)
+	assert.EqualError(t, err, "missing flags: --name=STRING or --pick")
+
+	cli = &CLI{}
+	p = mustNew(t, cli)
+	_, err = p.Parse([]string{"--name=session"})
+	assert.NoError(t, err)
+	assert.Equal(t, "session", cli.Name)
+
+	cli = &CLI{}
+	p = mustNew(t, cli)
+	_, err = p.Parse([]string{"--pick"})
+	assert.NoError(t, err)
+	assert.True(t, cli.Pick)
+
+	cli = &CLI{}
+	p = mustNew(t, cli)
+	_, err = p.Parse([]string{"--name=session", "--pick"})
+	assert.EqualError(t, err, "--name and --pick can't be used together")
+}
+
 func TestManySeps(t *testing.T) {
 	var cli struct {
 		Arg string `arg    optional    default:"hi"`
