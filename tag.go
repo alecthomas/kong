@@ -77,7 +77,7 @@ type tagChars struct {
 }
 
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '=', needsUnquote: false}
-var	bareChars = tagChars{sep: ' ', quote: '"', assign: ':', needsUnquote: true}
+var bareChars = tagChars{sep: ' ', quote: '"', assign: ':', needsUnquote: true}
 
 //nolint:gocyclo
 func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) {
