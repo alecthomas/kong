@@ -1294,6 +1294,65 @@ func TestAndRequiredMany(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --one and --two")
 }
 
+func TestXorWithPositional(t *testing.T) {
+	var cli struct {
+		Defaults bool     `xor:"group1" help:"Use defaults"`
+		Args     []string `arg:"" xor:"group1" optional:"" help:"Positional args"`
+	}
+
+	// Both provided — should error
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--defaults", "foo", "bar"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "can't be used together")
+
+	// Only flag — should work
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--defaults"})
+	assert.NoError(t, err)
+
+	// Only positional — should work
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"foo", "bar"})
+	assert.NoError(t, err)
+
+	// Neither — should work
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{})
+	assert.NoError(t, err)
+}
+
+func TestXorFlagAndPositionalInverted(t *testing.T) {
+	var cli struct {
+		Args     []string `arg:"" xor:"group1" optional:"" help:"Positional args"`
+		Defaults bool     `xor:"group1" help:"Use defaults"`
+	}
+
+	// Both provided — should error regardless of field order
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--defaults", "foo"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "can't be used together")
+}
+
+func TestAndWithPositional(t *testing.T) {
+	var cli struct {
+		Defaults bool     `and:"group1"`
+		Args     []string `arg:"" and:"group1" optional:"" help:"Positional args"`
+	}
+
+	// Only flag without positional — should error (and requires both)
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--defaults"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "must be used together")
+
+	// Both provided — should work
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--defaults", "foo"})
+	assert.NoError(t, err)
+}
+
 func TestEnumSequence(t *testing.T) {
 	var cli struct {
 		State []string `enum:"a,b,c" default:"a"`
