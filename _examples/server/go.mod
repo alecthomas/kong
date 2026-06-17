@@ -2,7 +2,7 @@ module kong_server
 
 go 1.25.0
 
-toolchain go1.26.3
+toolchain go1.26.4
 
 require (
 	github.com/alecthomas/colour v0.1.0
