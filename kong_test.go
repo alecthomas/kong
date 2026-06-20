@@ -1600,6 +1600,82 @@ func TestExtendedValidateFlag(t *testing.T) {
 	assert.EqualError(t, err, "--flag: flag error")
 }
 
+type embeddedValidate struct {
+	Flag string
+}
+
+func (v *embeddedValidate) Validate() error { return errors.New("embedded error") }
+
+func TestValidateEmbed(t *testing.T) {
+	cli := struct {
+		Embedded embeddedValidate `embed:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "embedded error")
+}
+
+func TestValidateEmbedOnCommand(t *testing.T) {
+	type cmd struct {
+		Embedded embeddedValidate `embed:""`
+	}
+	cli := struct {
+		Cmd cmd `cmd:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd"})
+	assert.EqualError(t, err, "cmd: embedded error")
+}
+
+type pluginValidate struct {
+	PluginFlag string
+}
+
+func (v *pluginValidate) Validate() error { return errors.New("plugin error") }
+
+func TestValidatePlugin(t *testing.T) {
+	plugin := &pluginValidate{}
+	cli := struct {
+		Base string
+		kong.Plugins
+	}{
+		Plugins: kong.Plugins{plugin},
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "plugin error")
+}
+
+type nestedEmbedOuter struct {
+	Inner embeddedValidate `embed:""`
+}
+
+func TestValidateNestedEmbed(t *testing.T) {
+	cli := struct {
+		Outer nestedEmbedOuter `embed:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "embedded error")
+}
+
+type extendedEmbeddedValidate struct {
+	Flag string
+}
+
+func (v *extendedEmbeddedValidate) Validate(kctx *kong.Context) error {
+	return errors.New("extended embedded error")
+}
+
+func TestExtendedValidateEmbed(t *testing.T) {
+	cli := struct {
+		Embedded extendedEmbeddedValidate `embed:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "extended embedded error")
+}
+
 func TestPointers(t *testing.T) {
 	cli := struct {
 		Mapped *mappedValue
