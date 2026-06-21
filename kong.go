@@ -189,6 +189,14 @@ func checkOverlappingXorAnd(k *Kong) error {
 			andGroups[and] = append(andGroups[and], flag.Name)
 		}
 	}
+	for _, positional := range k.Model.Node.Positional {
+		for _, xor := range positional.Tag.Xor {
+			xorGroups[xor] = append(xorGroups[xor], positional.Name)
+		}
+		for _, and := range positional.Tag.And {
+			andGroups[and] = append(andGroups[and], positional.Name)
+		}
+	}
 	for xor, xorSet := range xorGroups {
 		for and, andSet := range andGroups {
 			overlappingEntries := []string{}
