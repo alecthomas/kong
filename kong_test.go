@@ -669,6 +669,16 @@ func TestAlias(t *testing.T) {
 	assert.Equal(t, "hello", cli.String)
 }
 
+func TestSingleCharAliasIsShortFlag(t *testing.T) {
+	var cli struct {
+		Number string `aliases:"n,num"`
+	}
+	app := mustNew(t, &cli)
+	_, err := app.Parse([]string{"-n", "hello"})
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", cli.Number)
+}
+
 func TestDuplicateFlagChoosesLast(t *testing.T) {
 	var cli struct {
 		Flag int

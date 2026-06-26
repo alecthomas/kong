@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Path records the nodes and parsed values from the current command-line.
@@ -746,9 +747,12 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 			candidates = append(candidates, short)
 		}
 		for _, alias := range flag.Aliases {
-			alias = "--" + alias
-			matched = matched || (alias == match)
-			candidates = append(candidates, alias)
+			aliasFlag := "--" + alias
+			if utf8.RuneCountInString(alias) == 1 {
+				aliasFlag = "-" + alias
+			}
+			matched = matched || (aliasFlag == match)
+			candidates = append(candidates, aliasFlag)
 		}
 
 		neg := negatableFlagName(flag.Name, flag.Tag.Negatable)
