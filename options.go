@@ -65,6 +65,20 @@ func WithHyphenPrefixedParameters(enable bool) Option {
 	})
 }
 
+// StrictDuplicateFlags enables strict duplicate flag checking.
+//
+// When enabled, Kong will return an error if a flag is provided multiple times.
+// By default Kong silently overwrites earlier flag values with later ones.
+//
+// Note: Slice/array flags are exempt from this check as they legitimately
+// accept multiple values via repeated flags.
+func StrictDuplicateFlags() Option {
+	return OptionFunc(func(k *Kong) error {
+		k.strictDuplicateFlags = true
+		return nil
+	})
+}
+
 type embedded struct {
 	strct any
 	tags  []string
