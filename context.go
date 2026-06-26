@@ -232,7 +232,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 			value = node.Target
 			desc = node.Path()
 		}
-		if validate := isValidatable(value); validate != nil {
+		for _, validate := range getValidators(value) {
 			if err := validate.Validate(c); err != nil {
 				if desc != "" {
 					return fmt.Errorf("%s: %w", desc, err)
@@ -1176,6 +1176,17 @@ func isValidatable(v reflect.Value) extendedValidatable {
 		return isValidatable(v.Addr())
 	}
 	return nil
+}
+
+// getValidators returns validators implemented by v and by any embedded fields,
+// matching how hooks are discovered (see getMethods).
+func getValidators(v reflect.Value) (validators []extendedValidatable) {
+	walkEmbedded(v, func(v reflect.Value) {
+		if validate := isValidatable(v); validate != nil {
+			validators = append(validators, validate)
+		}
+	})
+	return
 }
 
 func atLeastOneEnvSet(envs []string) bool {

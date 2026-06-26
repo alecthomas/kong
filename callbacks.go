@@ -132,43 +132,48 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 //
 // Returns a slice of bound methods that can be called directly.
 func getMethods(value reflect.Value, name string) (methods []reflect.Value) {
-	if value.Kind() == reflect.Ptr {
+	walkEmbedded(value, func(v reflect.Value) {
+		if method := getMethod(v, name); method.IsValid() {
+			methods = append(methods, method)
+		}
+	})
+	return
+}
+
+// walkEmbedded calls visit on v and recursively on every exported field
+// of v that is either a standard Go anonymous field or tagged `embed:""`.
+// Pointer values are dereferenced before traversal; nil/invalid pointers
+// are skipped. [Plugins] are descended into element-by-element, matching how
+// [flattenedFields] treats them at build time.
+func walkEmbedded(value reflect.Value, visit func(reflect.Value)) {
+	if value.Kind() == reflect.Pointer {
 		value = value.Elem()
 	}
 	if !value.IsValid() {
 		return
 	}
-
-	if method := getMethod(value, name); method.IsValid() {
-		methods = append(methods, method)
+	visit(value)
+	if value.Type() == reflect.TypeOf(Plugins{}) {
+		for i := 0; i < value.Len(); i++ {
+			walkEmbedded(value.Index(i).Elem(), visit)
+		}
+		return
 	}
-
 	if value.Kind() != reflect.Struct {
 		return
 	}
-	// If the current value is a struct, also consider embedded fields.
-	// Two kinds of embedded fields are considered if they're exported:
-	//
-	//   - standard Go embedded fields
-	//   - fields tagged with `embed:""`
 	t := value.Type()
 	for i := 0; i < value.NumField(); i++ {
-		fieldValue := value.Field(i)
 		field := t.Field(i)
-
 		if !field.IsExported() {
 			continue
 		}
-
-		// Consider a field embedded if it's actually embedded
-		// or if it's tagged with `embed:""`.
 		_, isEmbedded := field.Tag.Lookup("embed")
-		isEmbedded = isEmbedded || field.Anonymous
-		if isEmbedded {
-			methods = append(methods, getMethods(fieldValue, name)...)
+		if !isEmbedded && !field.Anonymous {
+			continue
 		}
+		walkEmbedded(value.Field(i), visit)
 	}
-	return
 }
 
 func callFunction(f reflect.Value, bindings bindings) error {
