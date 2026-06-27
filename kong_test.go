@@ -806,6 +806,45 @@ func TestRun(t *testing.T) {
 	assert.Equal(t, "argping", cli.Three.SubCommand.Arg)
 }
 
+type rootWithRun struct {
+	ran     bool
+	SubCmd1 struct{} `cmd:""`
+	SubCmd2 struct{} `cmd:""`
+}
+
+func (r *rootWithRun) Run() error {
+	r.ran = true
+	return nil
+}
+
+func TestRunnableNodeDoesNotRequireSubcommand(t *testing.T) {
+	t.Run("runs the node when no subcommand is given", func(t *testing.T) {
+		cli := &rootWithRun{}
+		p := mustNew(t, cli)
+		ctx, err := p.Parse([]string{})
+		assert.NoError(t, err)
+		assert.NoError(t, ctx.Run())
+		assert.True(t, cli.ran)
+	})
+
+	t.Run("still allows selecting a subcommand", func(t *testing.T) {
+		cli := &rootWithRun{}
+		p := mustNew(t, cli)
+		_, err := p.Parse([]string{"sub-cmd-1"})
+		assert.NoError(t, err)
+	})
+
+	t.Run("still requires a subcommand without a Run method", func(t *testing.T) {
+		var cli struct {
+			SubCmd1 struct{} `cmd:""`
+			SubCmd2 struct{} `cmd:""`
+		}
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{})
+		assert.Error(t, err)
+	})
+}
+
 type failCmd struct{}
 
 func (f failCmd) Run() error {

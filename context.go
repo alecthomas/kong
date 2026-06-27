@@ -972,6 +972,10 @@ func checkMissingChildren(node *Node) error {
 		missing = append(missing, strconv.Quote(strings.Join(missingArgs, " ")))
 	}
 
+	// A node with a Run() method may run on its own, so it does not require one
+	// of its subcommands to be selected.
+	runnable := node.Target.IsValid() && getMethod(node.Target, "Run").IsValid()
+
 	for _, child := range node.Children {
 		if child.Hidden {
 			continue
@@ -981,7 +985,7 @@ func checkMissingChildren(node *Node) error {
 				continue
 			}
 			missing = append(missing, strconv.Quote(child.Summary()))
-		} else {
+		} else if !runnable {
 			missing = append(missing, strconv.Quote(child.Name))
 		}
 	}
