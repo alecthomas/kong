@@ -274,6 +274,13 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 		t.Required = true
 	}
 	t.Name = t.Get("name")
+	if t.Name == "" {
+		if t.Cmd {
+			t.Name = t.Get("cmd")
+		} else if t.Arg {
+			t.Name = t.Get("arg")
+		}
+	}
 	t.Help = t.Get("help")
 	t.Type = t.Get("type")
 	t.TypeName = typeName

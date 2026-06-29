@@ -69,11 +69,11 @@ var CLI struct {
     Force     bool `help:"Force removal."`
     Recursive bool `help:"Recursively remove files."`
 
-    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+    Paths []string `arg:"path" help:"Paths to remove." type:"path"`
   } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+    Paths []string `arg:"path" optional:"" help:"Paths to list." type:"path"`
   } `cmd:"" help:"List paths."`
 }
 
@@ -220,11 +220,11 @@ var CLI struct {
     Force     bool `help:"Force removal."`
     Recursive bool `help:"Recursively remove files."`
 
-    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+    Paths []string `arg:"path" help:"Paths to remove." type:"path"`
   } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+    Paths []string `arg:"path" optional:"" help:"Paths to list." type:"path"`
   } `cmd:"" help:"List paths."`
 }
 
@@ -273,7 +273,7 @@ type RmCmd struct {
   Force     bool `help:"Force removal."`
   Recursive bool `help:"Recursively remove files."`
 
-  Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  Paths []string `arg:"path" help:"Paths to remove." type:"path"`
 }
 
 func (r *RmCmd) Run(ctx *Context) error {
@@ -282,7 +282,7 @@ func (r *RmCmd) Run(ctx *Context) error {
 }
 
 type LsCmd struct {
-  Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  Paths []string `arg:"path" optional:"" help:"Paths to list." type:"path"`
 }
 
 func (l *LsCmd) Run(ctx *Context) error {
@@ -399,7 +399,7 @@ type CLI struct {
 
 ## Commands and sub-commands
 
-Sub-commands are specified by tagging a struct field with `cmd`. Kong supports arbitrarily nested commands.
+Sub-commands are specified by tagging a struct field with `cmd`. Kong supports arbitrarily nested commands. If `cmd` has a non-empty value, that value will be used as the command name unless `name` is also specified.
 
 eg. The following struct represents the CLI structure `command [--flag="str"] sub-command`.
 
@@ -447,7 +447,9 @@ This looks a little verbose in this contrived example, but typically this will n
 
 If a field is tagged with `arg:""` it will be treated as the final positional
 value to be parsed on the command line. By default positional arguments are
-required, but specifying `optional:""` will alter this.
+required, but specifying `optional:""` will alter this. If `arg` has a
+non-empty value, that value will be used as the argument name unless `name` is
+also specified.
 
 If a positional argument is a slice, all remaining arguments will be appended
 to that slice.
@@ -569,7 +571,9 @@ Both can coexist with standard Tag parsing.
 | Tag                  | Description                                                                                                                                                                                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `cmd:""`             | If present, struct is a command.                                                                                                                                                                                                                                                                                               |
+| `cmd:"X"`            | If `name` is unset, `X` is used as the command name.                                                                                                                                                                                                                                                                           |
 | `arg:""`             | If present, field is an argument. Required by default.                                                                                                                                                                                                                                                                         |
+| `arg:"X"`            | If `name` is unset, `X` is used as the argument name.                                                                                                                                                                                                                                                                          |
 | `env:"X,Y,..."`      | Specify envars to use for default value. The envs are resolved in the declared order. The first value found is used.                                                                                                                                                                                                           |
 | `name:"X"`           | Long name, for overriding field name.                                                                                                                                                                                                                                                                                          |
 | `help:"X"`           | Help text.                                                                                                                                                                                                                                                                                                                     |

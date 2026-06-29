@@ -244,3 +244,18 @@ func TestInvalidRuneErrors(t *testing.T) {
 	_, err := kong.New(&cli)
 	assert.EqualError(t, err, "<anonymous struct>.Flag: invalid short flag name \"invalid\": invalid rune")
 }
+
+func TestTagNameFromCmdAndArg(t *testing.T) {
+	type Command struct {
+		Arg string `arg:"bar"`
+	}
+	var cli struct {
+		Cmd Command `cmd:"foo"`
+	}
+	p := mustNew(t, &cli, kong.Exit(func(int) {}))
+	ctx, err := p.Parse([]string{"foo", "arg"})
+	assert.NoError(t, err)
+	assert.Equal(t, "arg", cli.Cmd.Arg)
+	assert.Equal(t, "foo", ctx.Model.Children[0].Name)
+	assert.Equal(t, "bar", ctx.Model.Children[0].Positional[0].Name)
+}
