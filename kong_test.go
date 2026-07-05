@@ -2697,6 +2697,37 @@ func TestApplyCalledOnce(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+type EmbeddedAfterApplyLeaf struct {
+	calls *int
+}
+
+func (l EmbeddedAfterApplyLeaf) AfterApply() error {
+	(*l.calls)++
+	return nil
+}
+
+type EmbeddedAfterApplyMiddle struct {
+	EmbeddedAfterApplyLeaf
+}
+
+type EmbeddedAfterApplyRoot struct {
+	EmbeddedAfterApplyMiddle
+}
+
+func TestPromotedEmbeddedAfterApplyCalledOnce(t *testing.T) {
+	calls := 0
+	cli := &EmbeddedAfterApplyRoot{
+		EmbeddedAfterApplyMiddle: EmbeddedAfterApplyMiddle{
+			EmbeddedAfterApplyLeaf: EmbeddedAfterApplyLeaf{
+				calls: &calls,
+			},
+		},
+	}
+	_, err := mustNew(t, cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
+}
+
 type envOnlyAfterApply struct {
 	called bool
 }
