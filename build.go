@@ -360,6 +360,9 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			seenFlags["-"+string(tag.Short)] = true
 		}
 		if tag.Negatable != "" {
+			if !value.IsBool() {
+				return failField(v, ft, "negatable can only be set on booleans")
+			}
 			negFlag := negatableFlagName(value.Name, tag.Negatable)
 			if seenFlags[negFlag] {
 				return failField(v, ft, "duplicate negation flag %s", negFlag)

@@ -718,22 +718,6 @@ func (c *Context) Apply() (string, error) {
 	return strings.Join(path, " "), nil
 }
 
-func flipBoolValue(value reflect.Value) error {
-	if value.Kind() == reflect.Bool {
-		value.SetBool(!value.Bool())
-		return nil
-	}
-
-	if value.Kind() == reflect.Ptr {
-		if !value.IsNil() {
-			return flipBoolValue(value.Elem())
-		}
-		return nil
-	}
-
-	return fmt.Errorf("cannot negate a value of %s", value.Type().String())
-}
-
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 	candidates := []string{}
 
@@ -761,8 +745,22 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		}
 		// Found a matching flag.
 		c.scan.Pop()
-		if match == neg && flag.Tag.Negatable != "" {
-			flag.Negated = true
+		flag.Negated = match == neg && flag.Tag.Negatable != ""
+		if flag.Negated {
+			negatedValue := true
+			if c.scan.Peek().Type == FlagValueToken {
+				token, err := c.scan.PopValue("bool")
+				if err != nil {
+					return err
+				}
+				negatedValue, err = parseBoolToken(token)
+				if err != nil {
+					return err
+				}
+			}
+			// Invert the boolean token before Decode so custom bool mappers
+			// keep ownership of their field representation.
+			c.scan.PushTyped(!negatedValue, FlagValueToken)
 		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
@@ -771,14 +769,6 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 				return fmt.Errorf("%s; perhaps try %s=%q?", err.Error(), flag.ShortSummary(), expected.token)
 			}
 			return err
-		}
-		if flag.Negated {
-			value := c.getValue(flag.Value)
-			err := flipBoolValue(value)
-			if err != nil {
-				return err
-			}
-			flag.Value.Apply(value)
 		}
 		c.Path = append(c.Path, &Path{
 			Flag:      flag,

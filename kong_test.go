@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -469,6 +471,121 @@ func TestNegatableFlag(t *testing.T) {
 		})
 	}
 }
+
+func TestNegatableFlagWithBoolMapper(t *testing.T) {
+	var cli struct {
+		Cmd struct {
+			Flag string `kong:"type='bool-string',negatable,default='true'"`
+		} `kong:"cmd"`
+	}
+	parser, err := kong.New(&cli, kong.NamedMapper("bool-string", boolStringMapper{}))
+	assert.NoError(t, err)
+
+	_, err = parser.Parse([]string{"cmd", "--no-flag"})
+	assert.NoError(t, err)
+	assert.Equal(t, "false", cli.Cmd.Flag)
+}
+
+type boolStringMapper struct{}
+
+func (boolStringMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
+	if ctx.Scan.Peek().Type != kong.FlagValueToken {
+		target.SetString("true")
+		return nil
+	}
+	token, err := ctx.Scan.PopValue("bool")
+	if err != nil {
+		return err
+	}
+	switch value := token.Value.(type) {
+	case bool:
+		target.SetString(fmt.Sprintf("%t", value))
+	case string:
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return err
+		}
+		target.SetString(fmt.Sprintf("%t", parsed))
+	default:
+		return fmt.Errorf("expected bool but got %q (%T)", token.Value, token.Value)
+	}
+	return nil
+}
+
+func (boolStringMapper) IsBool() bool { return true }
+
+func TestNegatableFlagWithBoolMapperValue(t *testing.T) {
+	type Cmd struct {
+		Flag boolEnum `negatable:""`
+	}
+
+	tests := []struct {
+		name  string
+		input []string
+		want  boolEnum
+	}{
+		{"Default", nil, boolEnumAuto},
+		{"True", []string{"--flag"}, boolEnumAlways},
+		{"False", []string{"--no-flag"}, boolEnumNever},
+		{"Never", []string{"--flag=never"}, boolEnumNever},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cli Cmd
+			parser, err := kong.New(&cli)
+			assert.NoError(t, err)
+
+			_, err = parser.Parse(tt.input)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want, cli.Flag)
+		})
+	}
+}
+
+type boolEnum int
+
+const (
+	boolEnumAuto boolEnum = iota
+	boolEnumAlways
+	boolEnumNever
+)
+
+func (b *boolEnum) Decode(ctx *kong.DecodeContext) error {
+	if ctx.Scan.Peek().Type != kong.FlagValueToken {
+		*b = boolEnumAlways // --flag without value
+		return nil
+	}
+	token, err := ctx.Scan.PopValue("bool")
+	if err != nil {
+		return err
+	}
+	switch value := token.Value.(type) {
+	case bool:
+		if value {
+			*b = boolEnumAlways
+		} else {
+			*b = boolEnumNever
+		}
+	case string:
+		switch strings.ToLower(value) {
+		case "auto":
+			*b = boolEnumAuto
+		case "always":
+			*b = boolEnumAlways
+		case "never":
+			*b = boolEnumNever
+		default:
+			return fmt.Errorf("invalid value: %q", value)
+		}
+	default:
+		return fmt.Errorf("expected bool but got %q (%T)", token.Value, token.Value)
+	}
+	return nil
+}
+
+func (*boolEnum) IsBool() bool { return true }
 
 func TestDuplicateNegatableLong(t *testing.T) {
 	cli2 := struct {
