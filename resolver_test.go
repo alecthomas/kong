@@ -2,6 +2,7 @@ package kong_test
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -148,6 +149,83 @@ func TestEnvarsWithDefault(t *testing.T) {
 	_, err = parser.Parse(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "moo", cli.Flag)
+}
+
+type enableDisable struct {
+	enabled bool
+}
+
+func (ed *enableDisable) Decode(ctx *kong.DecodeContext) error {
+	var v string
+	err := ctx.Scan.PopValueInto("enable-disable", &v)
+	if err != nil {
+		return err
+	}
+	switch strings.ToLower(v) {
+	case "enable", "true":
+		ed.enabled = true
+	case "disable", "false":
+		ed.enabled = false
+	default:
+		return fmt.Errorf("enable-disable value should be 'enable' or 'disable' but was %q", v)
+	}
+	return nil
+}
+
+func TestEnvarsSharedBetweenCommands(t *testing.T) {
+	// An envar must only be applied and validated on the selected command,
+	// even when another command binds the same envar with incompatible
+	// constraints.
+	t.Run("enum and custom decoder", func(t *testing.T) {
+		var cli struct {
+			Cmd1 struct {
+				Action string `required:"" env:"KONG_ACTION" enum:"freeze,defrost,remove"`
+			} `cmd:""`
+			Cmd2 struct {
+				Action enableDisable `required:"" env:"KONG_ACTION"`
+			} `cmd:""`
+		}
+		parser := mustNew(t, &cli)
+
+		_, err := parser.Parse([]string{"cmd-1", "--action", "remove"})
+		assert.NoError(t, err)
+		assert.Equal(t, "remove", cli.Cmd1.Action)
+
+		t.Setenv("KONG_ACTION", "remove")
+		_, err = parser.Parse([]string{"cmd-1"})
+		assert.NoError(t, err)
+		assert.Equal(t, "remove", cli.Cmd1.Action)
+
+		t.Setenv("KONG_ACTION", "enable")
+		_, err = parser.Parse([]string{"cmd-2"})
+		assert.NoError(t, err)
+		assert.True(t, cli.Cmd2.Action.enabled)
+	})
+	t.Run("conflicting enums", func(t *testing.T) {
+		var cli struct {
+			Cmd1 struct {
+				Action string `required:"" env:"KONG_ACTION" enum:"freeze,defrost,remove"`
+			} `cmd:""`
+			Cmd2 struct {
+				Action string `required:"" env:"KONG_ACTION" enum:"enable,disable"`
+			} `cmd:""`
+		}
+		parser := mustNew(t, &cli)
+
+		_, err := parser.Parse([]string{"cmd-1", "--action", "remove"})
+		assert.NoError(t, err)
+		assert.Equal(t, "remove", cli.Cmd1.Action)
+
+		t.Setenv("KONG_ACTION", "remove")
+		_, err = parser.Parse([]string{"cmd-1"})
+		assert.NoError(t, err)
+		assert.Equal(t, "remove", cli.Cmd1.Action)
+
+		t.Setenv("KONG_ACTION", "enable")
+		_, err = parser.Parse([]string{"cmd-2"})
+		assert.NoError(t, err)
+		assert.Equal(t, "enable", cli.Cmd2.Action)
+	})
 }
 
 func TestEnv(t *testing.T) {
