@@ -163,6 +163,22 @@ func getMethods(value reflect.Value, name string) (methods []reflect.Value) {
 			methods = append(methods, method)
 		}
 	})
+	if len(methods) == 0 {
+		// No explicit method was found on the value
+		// or its exported embedded fields.
+		// An unexported anonymous field may still provide a promoted method:
+		//
+		//     type options struct{}
+		//     func (*options) AfterApply() error { return nil }
+		//     type CLI struct{ options }
+		//
+		// Reflection cannot safely visit the options field,
+		// but Go exposes CLI.AfterApply through a compiler-generated wrapper.
+		// Calling that wrapper here cannot duplicate a method found above.
+		if method := getMethod(value, name); method.IsValid() {
+			methods = append(methods, method)
+		}
+	}
 	return
 }
 
