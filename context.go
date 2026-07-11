@@ -195,7 +195,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 		if node == nil {
 			continue
 		}
-		for _, value := range nodeValues(node) {
+		for _, value := range node.Values() {
 			ok := atLeastOneEnvSet(value.Tag.Envs)
 			if value.Enum != "" && (!value.Required || value.HasDefault || (len(value.Tag.Envs) != 0 && ok)) {
 				if err := checkEnum(value, value.Target); err != nil {
@@ -343,52 +343,35 @@ func (c *Context) FlagValue(flag *Flag) any {
 
 // Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) Reset() error {
-	selected := c.selectedNodes()
-	var reset func(node *Node) error
-	reset = func(node *Node) error {
-		for _, value := range nodeValues(node) {
-			if err := value.Reset(); err != nil {
-				if selected[node] {
-					return err
-				}
-				// An envar shared with a node outside the selected command
-				// path may not parse there; that must not fail this parse.
-				value.Target.Set(reflect.Zero(value.Target.Type()))
-			}
+	selected := c.selectedValues()
+	return Visit(c.Model.Node, func(node Visitable, next Next) error {
+		value, ok := node.(*Value)
+		if !ok {
+			return next(nil)
 		}
-		for _, child := range node.Children {
-			if err := reset(child); err != nil {
-				return err
-			}
+		err := value.Reset()
+		if err != nil && !selected[value] {
+			// An envar shared with a node outside the selected command path
+			// may not parse there; that must not fail this parse.
+			value.Target.Set(reflect.Zero(value.Target.Type()))
+			err = nil
 		}
-		return nil
-	}
-	return reset(c.Model.Node)
+		return next(err)
+	})
 }
 
-// selectedNodes returns the set of nodes on the traced command path.
-func (c *Context) selectedNodes() map[*Node]bool {
-	selected := map[*Node]bool{}
+// selectedValues returns the set of values attached to nodes on the traced
+// command path.
+func (c *Context) selectedValues() map[*Value]bool {
+	selected := map[*Value]bool{}
 	for _, path := range c.Path {
 		if node := path.Node(); node != nil {
-			selected[node] = true
+			for _, value := range node.Values() {
+				selected[value] = true
+			}
 		}
 	}
 	return selected
-}
-
-// nodeValues returns the values directly attached to a node: its argument
-// value, flag values and positionals.
-func nodeValues(node *Node) []*Value {
-	values := []*Value{}
-	if node.Argument != nil {
-		values = append(values, node.Argument)
-	}
-	for _, flag := range node.Flags {
-		values = append(values, flag.Value)
-	}
-	values = append(values, node.Positional...)
-	return values
 }
 
 func (c *Context) endParsing() {
