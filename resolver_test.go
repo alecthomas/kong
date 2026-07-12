@@ -367,6 +367,25 @@ func TestResolverWithBool(t *testing.T) {
 	assert.True(t, cli.Bool)
 }
 
+func TestResolverWithFloatFromInt(t *testing.T) {
+	var cli struct {
+		Rate float64
+	}
+
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
+		if flag.Name == "rate" {
+			return 5, nil
+		}
+		return nil, nil
+	}
+
+	p := mustNew(t, &cli, kong.Resolvers(resolver))
+
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 5.0, cli.Rate)
+}
+
 func TestLastResolverWins(t *testing.T) {
 	var cli struct {
 		Int []int
