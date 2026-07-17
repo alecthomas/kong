@@ -316,7 +316,7 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	t.Vars = Vars{}
 	for _, set := range t.GetAll("set") {
 		parts := strings.SplitN(set, "=", 2)
-		if len(parts) == 0 {
+		if len(parts) != 2 {
 			return fmt.Errorf("set should be in the form key=value but got %q", set)
 		}
 		t.Vars[parts[0]] = parts[1]
