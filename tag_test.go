@@ -191,6 +191,14 @@ func TestTagSetOnFlag(t *testing.T) {
 	assert.Contains(t, buf.String(), `A key from somewhere.`)
 }
 
+func TestTagSetWithoutValueErrors(t *testing.T) {
+	cli := struct {
+		Flag string `set:"novalue"`
+	}{}
+	_, err := kong.New(&cli)
+	assert.EqualError(t, err, `<anonymous struct>.Flag: set should be in the form key=value but got "novalue"`)
+}
+
 func TestTagAliases(t *testing.T) {
 	type Command struct {
 		Arg string `arg help:"Some arg"`
