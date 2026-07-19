@@ -218,22 +218,7 @@ func TestRequiredFlag(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// HasDefault is fixed at hydrateTag time from the raw, uninterpolated tag
-// string, so "${var_flag}" looks non-empty even when var_flag is unset -
-// interpolateValue must recompute it once the default is actually resolved,
-// or a required field silently ends up with an empty value instead of
-// erroring. Reset()'s "if v.HasDefault { Parse(...) }" is type-agnostic, so
-// this is exercised once per builtin Kind: the fix must short-circuit before
-// any type-specific mapper decode runs (a required bool field, for example,
-// would otherwise try to decode "" through boolMapper and fail with a
-// confusing "bool value must be true, 1, ..." error instead of a plain
-// "required" one).
 func TestRequiredFlagWithDefault(t *testing.T) {
-	// assert.Contains(err.Error(), "missing flags") rather than a bare
-	// assert.Error: some builtin mappers (bool, int, float, duration) fail
-	// to decode "" on their own regardless of the fix, which would make a
-	// bare assert.Error pass for the wrong reason (a decode error, not the
-	// required check) and mask a regression in the fix itself.
 	t.Run("string", func(t *testing.T) {
 		var cli struct {
 			Flag string `required:"" default:"${var_flag}"`
