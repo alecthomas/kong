@@ -718,6 +718,22 @@ func TestMapFlagWithSliceValue(t *testing.T) {
 	assert.Equal(t, map[string][]int{"a": {1, 2}, "b": {3}}, cli.Set)
 }
 
+func TestMapFlagWithUnmappableValueType(t *testing.T) {
+	var cli struct {
+		Set map[string]any
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=b"})
+	assert.EqualError(t, err, "--set: no mapper for value type of map[string]interface {}")
+}
+
+func TestMapFlagWithUnmappableKeyType(t *testing.T) {
+	var cli struct {
+		Set map[complex128]string
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=b"})
+	assert.EqualError(t, err, "--set: no mapper for key type of map[complex128]string")
+}
+
 type embeddedFlags struct {
 	Embedded string
 }

@@ -515,6 +515,9 @@ func mapDecoder(r *Registry) MapperFunc {
 
 			keyScanner := ScanAsType(FlagValueToken, key)
 			keyDecoder := r.ForNamedType(keyTypeName, el.Key())
+			if keyDecoder == nil {
+				return fmt.Errorf("no mapper for key type of %s", target.Type())
+			}
 			keyValue := reflect.New(el.Key()).Elem()
 			if err := keyDecoder.Decode(ctx.WithScanner(keyScanner), keyValue); err != nil {
 				return fmt.Errorf("invalid map key %q", key)
@@ -522,6 +525,9 @@ func mapDecoder(r *Registry) MapperFunc {
 
 			valueScanner := ScanAsType(FlagValueToken, value)
 			valueDecoder := r.ForNamedType(valueTypeName, el.Elem())
+			if valueDecoder == nil {
+				return fmt.Errorf("no mapper for value type of %s", target.Type())
+			}
 			valueValue := reflect.New(el.Elem()).Elem()
 			if err := valueDecoder.Decode(ctx.WithScanner(valueScanner), valueValue); err != nil {
 				return fmt.Errorf("invalid map value %q", value)
