@@ -510,6 +510,28 @@ func TestFileContentMapper(t *testing.T) {
 	assert.Contains(t, err.Error(), "is a directory")
 }
 
+func TestFileContentMapperRejectsNonByteSlice(t *testing.T) {
+	// A non-[]byte target must return the mapper's validation error, not panic.
+	t.Run("string", func(t *testing.T) {
+		var cli struct {
+			File string `type:"filecontent"`
+		}
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--file", "testdata/file.txt"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), `"filecontent" must be applied to []byte not string`)
+	})
+	t.Run("string slice", func(t *testing.T) {
+		var cli struct {
+			File []string `type:"filecontent"`
+		}
+		p := mustNew(t, &cli)
+		_, err := p.Parse([]string{"--file", "testdata/file.txt"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), `"filecontent" must be applied to []byte not []string`)
+	})
+}
+
 func TestPathMapperUsingStringPointer(t *testing.T) {
 	type CLI struct {
 		Path *string `type:"path"`

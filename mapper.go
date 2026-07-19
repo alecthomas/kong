@@ -717,7 +717,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 
 func fileContentMapper(r *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		if target.Kind() != reflect.Slice && target.Elem().Kind() != reflect.Uint8 {
+		if target.Kind() != reflect.Slice || target.Type().Elem().Kind() != reflect.Uint8 {
 			return fmt.Errorf("\"filecontent\" must be applied to []byte not %s", target.Type())
 		}
 		var path string
