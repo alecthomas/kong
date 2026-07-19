@@ -332,6 +332,16 @@ func TestCounter(t *testing.T) {
 	_, err = p.Parse([]string{"-fff"})
 	assert.NoError(t, err)
 	assert.Equal(t, 3., cli.Float)
+
+	// Explicit --long=N on a uint or float counter must not panic (only the
+	// int field was covered before; uint/float went through SetInt).
+	_, err = p.Parse([]string{"--uint=5"})
+	assert.NoError(t, err)
+	assert.Equal(t, uint(5), cli.Uint)
+
+	_, err = p.Parse([]string{"--float=5"})
+	assert.NoError(t, err)
+	assert.Equal(t, 5., cli.Float)
 }
 
 func TestNumbers(t *testing.T) {
