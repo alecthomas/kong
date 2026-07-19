@@ -2777,6 +2777,31 @@ func TestPromotedEmbeddedAfterApplyCalledOnce(t *testing.T) {
 	assert.Equal(t, 1, calls)
 }
 
+type unexportedEmbeddedAfterApply struct {
+	calls *int
+}
+
+func (e *unexportedEmbeddedAfterApply) AfterApply() error {
+	(*e.calls)++
+	return nil
+}
+
+type rootWithUnexportedEmbeddedAfterApply struct {
+	unexportedEmbeddedAfterApply
+}
+
+func TestPromotedUnexportedEmbeddedAfterApplyCalledOnce(t *testing.T) {
+	calls := 0
+	cli := &rootWithUnexportedEmbeddedAfterApply{
+		unexportedEmbeddedAfterApply: unexportedEmbeddedAfterApply{
+			calls: &calls,
+		},
+	}
+	_, err := mustNew(t, cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
+}
+
 type envOnlyAfterApply struct {
 	called bool
 }
