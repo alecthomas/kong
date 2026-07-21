@@ -2907,3 +2907,31 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
 }
+
+func TestXorAndRequiredIssue516(t *testing.T) {
+	var cli struct {
+		Hello string `xor:"hello" required:""`
+		One   string `xor:"hello" and:"two"`
+		Two   string `and:"two"`
+	}
+
+	// Empty input must fail: the required xor group is not satisfied.
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --hello=STRING")
+
+	// Selecting the optional xor alternative alone still fails the and-group.
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one=a"})
+	assert.EqualError(t, err, "--one and --two must be used together")
+
+	// one+two satisfies the required xor group without --hello.
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one=a", "--two=b"})
+	assert.NoError(t, err)
+
+	// hello alone satisfies required xor and does not need the and-group.
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--hello=x"})
+	assert.NoError(t, err)
+}
