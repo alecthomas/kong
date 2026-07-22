@@ -204,7 +204,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 			}
 		}
 	}
-	for _, el := range c.Path {
+	validateEl := func(el *Path) error {
 		var (
 			value reflect.Value
 			desc  string
@@ -234,6 +234,42 @@ func (c *Context) Validate() error { //nolint: gocyclo
 				return err
 			}
 		}
+		return nil
+	}
+	// Each command/node's own flags and positionals are validated immediately
+	// before that command/node itself, so its Validate() runs against
+	// already-validated flag values rather than raw input. A node's own
+	// flags/positionals appear right after it on the path, so its validation
+	// is deferred until the next node boundary (or the end of the path),
+	// preserving the original relative order between different nodes.
+	//
+	// Note: Resolve() appends resolver-derived flag values to the end of
+	// c.Path without recording which node each one belongs to, so a node
+	// whose own resolved (not command-line-supplied) flags come from a
+	// Resolver can end up deferred past other nodes' resolved flags too.
+	var pendingNode *Path
+	flushPendingNode := func() error {
+		if pendingNode == nil {
+			return nil
+		}
+		node := pendingNode
+		pendingNode = nil
+		return validateEl(node)
+	}
+	for _, el := range c.Path {
+		if el.Flag != nil || el.Positional != nil {
+			if err := validateEl(el); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := flushPendingNode(); err != nil {
+			return err
+		}
+		pendingNode = el
+	}
+	if err := flushPendingNode(); err != nil {
+		return err
 	}
 	for _, resolver := range c.combineResolvers() {
 		if err := resolver.Validate(c.Model); err != nil {
