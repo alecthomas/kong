@@ -1618,6 +1618,63 @@ func TestValidateCmd(t *testing.T) {
 	assert.EqualError(t, err, "cmd: cmd error")
 }
 
+var validateOrderLog []string
+
+type validateOrderCmd struct {
+	Flag validateOrderFlag
+}
+
+func (v *validateOrderCmd) Validate() error {
+	validateOrderLog = append(validateOrderLog, "cmd")
+	return nil
+}
+
+type validateOrderFlag string
+
+func (v *validateOrderFlag) Validate() error {
+	validateOrderLog = append(validateOrderLog, "flag")
+	return nil
+}
+
+// A command's Validate() should run against already-validated flag values,
+// so its own flags must be validated first.
+func TestValidateCmdRunsAfterItsFlags(t *testing.T) {
+	validateOrderLog = nil
+	cli := struct {
+		Cmd validateOrderCmd `cmd:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"cmd", "--flag=value"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"flag", "cmd"}, validateOrderLog)
+}
+
+type validateOrderParent struct {
+	ParentFlag validateOrderFlag
+	Cmd        validateOrderCmd `cmd:""`
+}
+
+func (v *validateOrderParent) Validate() error {
+	validateOrderLog = append(validateOrderLog, "parent")
+	return nil
+}
+
+// Each command's own flags validate immediately before it, and the relative
+// order between different commands on the path (app before parent before
+// cmd) is unaffected - a command's own flags don't get held back by an
+// unrelated descendant command's flags, or vice versa.
+func TestValidateNestedCmdRunsAfterOwnFlagsOnly(t *testing.T) {
+	validateOrderLog = nil
+	cli := struct {
+		AppFlag validateOrderFlag
+		Parent  validateOrderParent `cmd:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--app-flag=a", "parent", "--parent-flag=b", "cmd", "--flag=c"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"flag", "flag", "parent", "flag", "cmd"}, validateOrderLog)
+}
+
 func TestValidateFlag(t *testing.T) {
 	cli := struct {
 		Flag validateFlag
