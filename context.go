@@ -254,7 +254,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 				return err
 			}
 		}
-		if err := checkMissingFlags(path.Flags); err != nil {
+		if err := checkMissingFlags(path.Flags, path.Positional); err != nil {
 			return err
 		}
 	}
@@ -278,7 +278,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
 		return err
 	}
-	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
+	if err := checkXorDuplicatedAndAndMissing(c.Path, node); err != nil {
 		return err
 	}
 
@@ -911,13 +911,24 @@ func (c *Context) printHelp(options HelpOptions) error {
 	return c.help(options, c)
 }
 
-func checkMissingFlags(flags []*Flag) error {
+func checkMissingFlags(flags []*Flag, positional *Value) error {
 	xorGroupSet := map[string]bool{}
 	xorGroup := map[string][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
 	missing := []string{}
 	andGroupRequired := getRequiredAndGroupMap(flags)
+
+	// Check positional arg for xor/and groups.
+	if positional != nil && positional.Set {
+		for _, xor := range positional.Tag.Xor {
+			xorGroupSet[xor] = true
+		}
+		for _, and := range positional.Tag.And {
+			andGroupSet[and] = true
+		}
+	}
+
 	for _, flag := range flags {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
@@ -1093,12 +1104,12 @@ func checkPassthroughArg(target reflect.Value) bool {
 	}
 }
 
-func checkXorDuplicatedAndAndMissing(paths []*Path) error {
+func checkXorDuplicatedAndAndMissing(paths []*Path, node *Node) error {
 	errs := []string{}
 	if err := checkXorDuplicates(paths); err != nil {
 		errs = append(errs, err.Error())
 	}
-	if err := checkAndMissing(paths); err != nil {
+	if err := checkAndMissing(paths, node); err != nil {
 		errs = append(errs, err.Error())
 	}
 	if len(errs) > 0 {
@@ -1108,51 +1119,136 @@ func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 }
 
 func checkXorDuplicates(paths []*Path) error {
+	// Group paths by command scope. Root-level paths (App != nil or no flags/positional)
+	// are grouped together. Command-level paths (Parent != nil with flags) get their own group.
+	// Positional paths at root level share the root group.
+	rootGroup := []*Path{}
+	commandGroups := map[*Node][]*Path{}
+	hasRoot := false
 	for _, path := range paths {
-		seen := map[string]*Flag{}
-		for _, flag := range path.Flags {
-			if !flag.Set {
-				continue
+		if path.App != nil || (path.Parent == nil && (len(path.Flags) > 0 || path.Positional != nil)) {
+			rootGroup = append(rootGroup, path)
+			hasRoot = true
+		} else if path.Parent != nil && len(path.Flags) > 0 {
+			commandGroups[path.Parent] = append(commandGroups[path.Parent], path)
+		} else if path.Parent != nil && path.Positional != nil {
+			// Positional args at non-root level: if there's a root group, merge into it
+			// (flat struct case where positional has a different parent pointer)
+			if hasRoot {
+				rootGroup = append(rootGroup, path)
+			} else {
+				commandGroups[path.Parent] = append(commandGroups[path.Parent], path)
 			}
-			for _, xor := range flag.Xor {
-				if seen[xor] != nil {
-					return fmt.Errorf("--%s and --%s can't be used together", seen[xor].Name, flag.Name)
+		}
+	}
+	allGroups := [][]*Path{rootGroup}
+	for _, g := range commandGroups {
+		allGroups = append(allGroups, g)
+	}
+	for _, groupPaths := range allGroups {
+		seen := map[string]*Value{}
+		for _, path := range groupPaths {
+			for _, flag := range path.Flags {
+				if !flag.Set {
+					continue
 				}
-				seen[xor] = flag
+				for _, xor := range flag.Xor {
+					if seen[xor] != nil {
+						return fmt.Errorf("%s and %s can't be used together", seen[xor].ShortSummary(), flag.ShortSummary())
+					}
+					seen[xor] = flag.Value
+				}
+			}
+			if path.Positional != nil && path.Positional.Set {
+				for _, xor := range path.Positional.Tag.Xor {
+					if seen[xor] != nil {
+						return fmt.Errorf("%s and %s can't be used together", seen[xor].ShortSummary(), path.Positional.ShortSummary())
+					}
+					seen[xor] = path.Positional
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func checkAndMissing(paths []*Path) error {
+func checkAndMissing(paths []*Path, node *Node) error {
+	// Group paths by command scope (same logic as checkXorDuplicates).
+	rootGroup := []*Path{}
+	commandGroups := map[*Node][]*Path{}
+	hasRoot := false
 	for _, path := range paths {
-		missingMsgs := []string{}
-		andGroups := map[string][]*Flag{}
-		for _, flag := range path.Flags {
-			for _, and := range flag.And {
-				andGroups[and] = append(andGroups[and], flag)
+		if path.App != nil || (path.Parent == nil && (len(path.Flags) > 0 || path.Positional != nil)) {
+			rootGroup = append(rootGroup, path)
+			hasRoot = true
+		} else if path.Parent != nil && len(path.Flags) > 0 {
+			commandGroups[path.Parent] = append(commandGroups[path.Parent], path)
+		} else if path.Parent != nil && path.Positional != nil {
+			if hasRoot {
+				rootGroup = append(rootGroup, path)
+			} else {
+				commandGroups[path.Parent] = append(commandGroups[path.Parent], path)
 			}
 		}
-		for _, flags := range andGroups {
+	}
+	allGroups := [][]*Path{rootGroup}
+	for _, g := range commandGroups {
+		allGroups = append(allGroups, g)
+	}
+	missingMsgs := []string{}
+	for _, groupPaths := range allGroups {
+		andGroups := map[string][]*Value{}
+		for _, path := range groupPaths {
+			for _, flag := range path.Flags {
+				for _, and := range flag.And {
+					andGroups[and] = append(andGroups[and], flag.Value)
+				}
+			}
+			if path.Positional != nil {
+				for _, and := range path.Positional.Tag.And {
+					andGroups[and] = append(andGroups[and], path.Positional)
+				}
+			}
+		}
+		// Also include positional args from the model node that have and/xor tags
+		// but weren't in any path (e.g., optional positional not provided).
+		if node != nil {
+			for _, pos := range node.Positional {
+				if len(pos.Tag.And) > 0 {
+					alreadyIncluded := false
+					for _, path := range groupPaths {
+						if path.Positional == pos {
+							alreadyIncluded = true
+							break
+						}
+					}
+					if !alreadyIncluded {
+						for _, and := range pos.Tag.And {
+							andGroups[and] = append(andGroups[and], pos)
+						}
+					}
+				}
+			}
+		}
+		for _, values := range andGroups {
 			oneSet := false
-			notSet := []*Flag{}
-			flagNames := []string{}
-			for _, flag := range flags {
-				flagNames = append(flagNames, flag.Name)
-				if flag.Set {
+			notSet := []*Value{}
+			names := []string{}
+			for _, value := range values {
+				names = append(names, value.ShortSummary())
+				if value.Set {
 					oneSet = true
 				} else {
-					notSet = append(notSet, flag)
+					notSet = append(notSet, value)
 				}
 			}
 			if len(notSet) > 0 && oneSet {
-				missingMsgs = append(missingMsgs, fmt.Sprintf("--%s must be used together", strings.Join(flagNames, " and --")))
+				missingMsgs = append(missingMsgs, fmt.Sprintf("%s must be used together", strings.Join(names, " and ")))
 			}
 		}
-		if len(missingMsgs) > 0 {
-			return fmt.Errorf("%s", strings.Join(missingMsgs, ", "))
-		}
+	}
+	if len(missingMsgs) > 0 {
+		return fmt.Errorf("%s", strings.Join(missingMsgs, ", "))
 	}
 	return nil
 }
