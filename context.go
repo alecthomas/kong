@@ -87,10 +87,11 @@ type Context struct {
 	// Error that occurred during trace, if any.
 	Error error
 
-	values    map[*Value]reflect.Value // Temporary values during tracing.
-	bindings  bindings
-	resolvers []Resolver // Extra context-specific resolvers.
-	scan      *Scanner
+	values      map[*Value]reflect.Value // Temporary values during tracing.
+	resetErrors map[*Value]error         // Default errors that a resolver may override.
+	bindings    bindings
+	resolvers   []Resolver // Extra context-specific resolvers.
+	scan        *Scanner
 }
 
 // Trace path of "args" through the grammar tree.
@@ -344,6 +345,7 @@ func (c *Context) FlagValue(flag *Flag) any {
 // Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) Reset() error {
 	selected := c.selectedValues()
+	c.resetErrors = map[*Value]error{}
 	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		value, ok := node.(*Value)
 		if !ok {
@@ -354,6 +356,12 @@ func (c *Context) Reset() error {
 			// An envar shared with a node outside the selected command path
 			// may not parse there; that must not fail this parse.
 			value.Target.Set(reflect.Zero(value.Target.Type()))
+			err = nil
+		}
+		if err != nil && len(c.combineResolvers()) != 0 {
+			// A resolver may supply a valid value after defaults are reset.
+			// Keep the error so Resolve can return it if no value overrides it.
+			c.resetErrors[value] = err
 			err = nil
 		}
 		return next(err)
@@ -654,6 +662,11 @@ func (c *Context) Resolve() error {
 		}
 	}
 	c.Path = append(c.Path, inserted...)
+	for value, err := range c.resetErrors {
+		if _, ok := c.values[value]; !ok {
+			return err
+		}
+	}
 	return nil
 }
 
