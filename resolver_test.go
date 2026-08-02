@@ -135,6 +135,24 @@ func TestEnvarsNestedEnvPrefix(t *testing.T) {
 	assert.Equal(t, "abc", cli.String)
 }
 
+func TestEnvarsEnvPrefixOnSubcommand(t *testing.T) {
+	type CmdCLI struct {
+		InnerFlag string `env:"INNER_FLAG"`
+	}
+	type TestCLI struct {
+		TopFlag string `env:"TOP_FLAG"`
+		Cmd     CmdCLI `cmd:"" envprefix:"CMD_"`
+	}
+	var cli struct {
+		TestCLI `envprefix:"APP_"`
+	}
+	parser := newEnvParser(t, &cli, envMap{"APP_CMD_INNER_FLAG": "abc"})
+
+	_, err := parser.Parse([]string{"cmd"})
+	assert.NoError(t, err)
+	assert.Equal(t, "abc", cli.Cmd.InnerFlag)
+}
+
 func TestEnvarsWithDefault(t *testing.T) {
 	var cli struct {
 		Flag string `env:"KONG_FLAG" default:"default"`

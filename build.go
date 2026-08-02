@@ -248,7 +248,9 @@ func validatePositionalArguments(node *Node) error {
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {
-	child, err := buildNode(k, fv, typ, newEmptyTag(), seenFlags)
+	childTag := newEmptyTag()
+	childTag.EnvPrefix = tag.EnvPrefix
+	child, err := buildNode(k, fv, typ, childTag, seenFlags)
 	if err != nil {
 		return err
 	}
