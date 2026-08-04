@@ -1823,6 +1823,23 @@ func TestSubCommandAliases(t *testing.T) {
 	assert.NoError(t, err, "dupe aliases shouldn't error if they're in separate sub commands")
 }
 
+func TestSubCommandSingleCharAliases(t *testing.T) {
+	type SubC struct {
+		Flag1 string `aliases:"f"`
+	}
+
+	cli1 := struct {
+		Sub1 SubC `cmd:"" name:"sub1"`
+		Sub2 SubC `cmd:"" name:"sub2"`
+	}{}
+
+	app, err := kong.New(&cli1)
+	assert.NoError(t, err, "dupe single-character aliases shouldn't error if they're in separate sub commands")
+	_, err = app.Parse([]string{"sub2", "-f", "hello"})
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", cli1.Sub2.Flag1)
+}
+
 func TestDuplicateAliasLong(t *testing.T) {
 	cli2 := struct {
 		Flag  string ``
