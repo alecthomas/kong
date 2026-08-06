@@ -471,6 +471,18 @@ func TestEnvarAutoHelp(t *testing.T) {
 	assert.Contains(t, w.String(), "A flag ($FLAG).")
 }
 
+func TestDisabledDefaultEnvarAutoHelp(t *testing.T) {
+	var cli struct {
+		Flag string `env:"-" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.DefaultEnvars("KONG"), kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "A flag.")
+	assert.NotContains(t, w.String(), "($-)")
+}
+
 func TestMultipleEnvarAutoHelp(t *testing.T) {
 	var cli struct {
 		Flag string `env:"FLAG1,FLAG2" help:"A flag."`
