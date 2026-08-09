@@ -342,14 +342,16 @@ func (c *Context) FlagValue(flag *Flag) any {
 }
 
 // Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
-func (c *Context) Reset() error {
+func (c *Context) Reset() error { return c.reset(false) }
+
+func (c *Context) reset(skipDefaults bool) error {
 	selected := c.selectedValues()
 	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		value, ok := node.(*Value)
 		if !ok {
 			return next(nil)
 		}
-		err := value.Reset()
+		err := value.reset(skipDefaults)
 		if err != nil && !selected[value] {
 			// An envar shared with a node outside the selected command path
 			// may not parse there; that must not fail this parse.

@@ -897,3 +897,32 @@ func TestFileMapperWithDefaultNonExistentFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing-default.txt")
 	assert.IsError(t, err, os.ErrNotExist)
 }
+
+func TestExistingFileMapperDefaultWithConfigLoader(t *testing.T) {
+	type CLI struct {
+		Path string `type:"existingfile" default:"testdata/missing.txt"`
+	}
+	var cli CLI
+	config := filepath.Join(t.TempDir(), "config.json")
+	err := os.WriteFile(config, []byte(`{"path": "testdata/file.txt"}`), 0o600)
+	assert.NoError(t, err)
+
+	p := mustNew(t, &cli, kong.Configuration(kong.JSON, config))
+	_, err = p.Parse([]string{})
+	assert.NoError(t, err)
+	assert.Contains(t, cli.Path, filepath.Join("testdata", "file.txt"))
+}
+
+func TestExistingFileMapperDefaultWithJSONResolver(t *testing.T) {
+	type CLI struct {
+		Path string `type:"existingfile" default:"testdata/missing.txt"`
+	}
+	var cli CLI
+	r, err := kong.JSON(strings.NewReader(`{"path": "testdata/file.txt"}`))
+	assert.NoError(t, err)
+
+	p := mustNew(t, &cli, kong.Resolvers(r))
+	_, err = p.Parse([]string{})
+	assert.NoError(t, err)
+	assert.Contains(t, cli.Path, filepath.Join("testdata", "file.txt"))
+}
