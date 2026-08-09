@@ -47,14 +47,17 @@ func JSON(r io.Reader) (Resolver, error) {
 		}
 		raw = values
 		for _, part := range strings.Split(name, ".") {
-			if values, ok := raw.(map[string]any); ok {
-				raw, ok = values[part]
-				if !ok {
-					return nil, nil
-				}
-			} else {
+			values, ok := raw.(map[string]any)
+			if !ok {
 				return nil, nil
 			}
+			if raw, ok = values[part]; ok {
+				continue
+			}
+			if raw, ok = values[camelize(part)]; ok {
+				continue
+			}
+			return nil, nil
 		}
 		return raw, nil
 	}
@@ -65,4 +68,15 @@ func JSON(r io.Reader) (Resolver, error) {
 func snakeCase(name string) string {
 	name = strings.Join(strings.Split(strings.Title(name), "-"), "") //nolint:staticcheck // Unicode punctuation not an issue
 	return strings.ToLower(name[:1]) + name[1:]
+}
+
+// camelize converts a snake_case segment to camelCase, e.g. "with_camel" -> "withCamel".
+func camelize(s string) string {
+	parts := strings.Split(s, "_")
+	for i := 1; i < len(parts); i++ {
+		if parts[i] != "" {
+			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+		}
+	}
+	return strings.Join(parts, "")
 }
