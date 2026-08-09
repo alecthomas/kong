@@ -7,6 +7,7 @@
 
 - [Version 1.0.0 Release](#version-100-release)
 - [Introduction](#introduction)
+- [Installation](#installation)
 - [Help](#help)
   - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
   - [Defining help in Kong](#defining-help-in-kong)
@@ -87,6 +88,26 @@ func main() {
   }
 }
 ```
+
+## Installation
+
+Kong is a library, not a binary, so "installing" it means adding it to your own Go project.
+
+Requires [Go 1.20](https://go.dev/dl/) or newer.
+
+In your project directory (run `go mod init <module>` first if you're starting a new project):
+
+```bash
+go get github.com/alecthomas/kong@latest
+```
+
+That resolves to the latest tagged release; to use a specific version, pin it explicitly:
+
+```bash
+go get github.com/alecthomas/kong@v1.16.1
+```
+
+`go get` adds `github.com/alecthomas/kong` to `go.mod`. You can now create a `main.go` with a `kong.Parse(&CLI)` call and run it with `go run .`; the following sections show how to structure `CLI`.
 
 ## Help
 
