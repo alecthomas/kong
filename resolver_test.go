@@ -283,6 +283,7 @@ func TestEnv(t *testing.T) {
 func TestJSONCamelCaseEmbedded(t *testing.T) {
 	type Embed struct {
 		WithCamelCase string
+		WithSnakeCase string
 	}
 
 	var cli struct {
@@ -291,7 +292,8 @@ func TestJSONCamelCaseEmbedded(t *testing.T) {
 
 	json := `{
 		"level": {
-			"withCamelCase": "camel value"
+			"withCamelCase": "camel value",
+			"with_snake_case": "snake value"
 		}
 	}`
 
@@ -302,6 +304,7 @@ func TestJSONCamelCaseEmbedded(t *testing.T) {
 	_, err = parser.Parse([]string{})
 	assert.NoError(t, err)
 	assert.Equal(t, "camel value", cli.Level.WithCamelCase)
+	assert.Equal(t, "snake value", cli.Level.WithSnakeCase)
 }
 
 func TestJSONBasic(t *testing.T) {

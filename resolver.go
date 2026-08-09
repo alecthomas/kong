@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // A Resolver resolves a Flag value from an external source.
@@ -74,9 +76,11 @@ func snakeCase(name string) string {
 func camelize(s string) string {
 	parts := strings.Split(s, "_")
 	for i := 1; i < len(parts); i++ {
-		if parts[i] != "" {
-			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+		if parts[i] == "" {
+			continue
 		}
+		r, size := utf8.DecodeRuneInString(parts[i])
+		parts[i] = string(unicode.ToUpper(r)) + parts[i][size:]
 	}
 	return strings.Join(parts, "")
 }
