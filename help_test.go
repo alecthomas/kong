@@ -973,3 +973,14 @@ Flags:
 	t.Log(w.String())
 	assert.Equal(t, expected, w.String())
 }
+
+func TestEnvarAutoHelpWithEnvDash(t *testing.T) {
+	var cli struct {
+		Flag string `env:"-" help:"A flag."`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.DefaultEnvars("KONG"), kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.NotContains(t, w.String(), "($-)")
+}
