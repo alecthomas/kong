@@ -280,6 +280,33 @@ func TestEnv(t *testing.T) {
 	assert.Equal(t, expected, cli)
 }
 
+func TestJSONCamelCaseEmbedded(t *testing.T) {
+	type Embed struct {
+		WithCamelCase string
+		WithSnakeCase string
+	}
+
+	var cli struct {
+		Level Embed `prefix:"level." embed:""`
+	}
+
+	json := `{
+		"level": {
+			"withCamelCase": "camel value",
+			"with_snake_case": "snake value"
+		}
+	}`
+
+	r, err := kong.JSON(strings.NewReader(json))
+	assert.NoError(t, err)
+
+	parser := mustNew(t, &cli, kong.Resolvers(r))
+	_, err = parser.Parse([]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, "camel value", cli.Level.WithCamelCase)
+	assert.Equal(t, "snake value", cli.Level.WithSnakeCase)
+}
+
 func TestJSONBasic(t *testing.T) {
 	type Embed struct {
 		String string
