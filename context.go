@@ -948,7 +948,10 @@ func checkMissingFlags(flags []*Flag) error {
 		}
 	}
 	for xor, flags := range xorGroup {
-		if !xorGroupSet[xor] && len(flags) > 1 {
+		// Report a required xor group even when only one member is tagged
+		// required (e.g. required A xor B where B is optional). Previously
+		// len(flags) > 1 hid the single required alternative (#516).
+		if !xorGroupSet[xor] && len(flags) >= 1 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}
