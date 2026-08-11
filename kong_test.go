@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
@@ -215,6 +216,105 @@ func TestRequiredFlag(t *testing.T) {
 	parser := mustNew(t, &cli)
 	_, err := parser.Parse([]string{})
 	assert.Error(t, err)
+}
+
+func TestRequiredFlagWithDefault(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		var cli struct {
+			Flag string `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		var cli struct {
+			Flag bool `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	t.Run("int", func(t *testing.T) {
+		var cli struct {
+			Flag int `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	t.Run("float64", func(t *testing.T) {
+		var cli struct {
+			Flag float64 `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	t.Run("slice", func(t *testing.T) {
+		var cli struct {
+			Flag []string `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	t.Run("map", func(t *testing.T) {
+		var cli struct {
+			Flag map[string]string `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	t.Run("duration", func(t *testing.T) {
+		var cli struct {
+			Flag time.Duration `required:"" default:"${var_flag}"`
+		}
+		parser := mustNew(t, &cli, kong.Vars{"var_flag": ""})
+		_, err := parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
+
+	// When the enum explicitly declares "" a valid member (trailing comma),
+	// a default resolving to "" is a legitimate, deliberately-chosen value -
+	// not a missing one - so the required check must not fire.
+	t.Run("enum permitting empty is not required", func(t *testing.T) {
+		var cli struct {
+			Flag string `required:"" enum:"one,two," default:"${var_flag}"`
+		}
+		parser, err := kong.New(&cli, kong.Name("test"), kong.Vars{"var_flag": ""})
+		assert.NoError(t, err)
+		_, err = parser.Parse(nil)
+		assert.NoError(t, err)
+	})
+
+	// Without a trailing comma, "" isn't a declared enum member, so a
+	// default resolving to "" is still treated as missing and the required
+	// check fires.
+	t.Run("enum not permitting empty is still required", func(t *testing.T) {
+		var cli struct {
+			Flag string `required:"" enum:"one,two" default:"${var_flag}"`
+		}
+		parser, err := kong.New(&cli, kong.Name("test"), kong.Vars{"var_flag": ""})
+		assert.NoError(t, err)
+		_, err = parser.Parse(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing flags")
+	})
 }
 
 func TestOptionalArg(t *testing.T) {

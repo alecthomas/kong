@@ -262,6 +262,18 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
+
+	// HasDefault was set from the raw, uninterpolated tag string in hydrateTag, before
+	// any ${var} substitution ran - a default like "${var}" looks non-empty at that
+	// point even when var is unset. Recompute it now that Default is resolved, so a
+	// required field whose default resolves to "" is correctly treated as still unset
+	// (see checkMissingFlags) - unless "" is itself a declared enum member (e.g.
+	// enum:"one,two,"), in which case it's a legitimate, deliberately-chosen value
+	// rather than a missing one.
+	if value.Default == "" && !(value.Enum != "" && value.EnumMap()[""]) {
+		value.HasDefault = false
+	}
+
 	updatedVars := map[string]string{
 		"default": value.Default,
 		"enum":    value.Enum,
