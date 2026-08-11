@@ -46,15 +46,22 @@ func JSON(r io.Reader) (Resolver, error) {
 			return raw, nil
 		}
 		raw = values
-		for _, part := range strings.Split(name, ".") {
-			if values, ok := raw.(map[string]any); ok {
-				raw, ok = values[part]
-				if !ok {
-					return nil, nil
-				}
-			} else {
+		// Try both the snake_case and camelCase spelling of each path segment
+		// individually, the same way the top-level lookup above does - a
+		// dotted flag name like "level.with-camel" must still find a nested
+		// "withCamel" key, not just a nested "with_camel" one.
+		for _, part := range strings.Split(flag.Name, ".") {
+			values, ok := raw.(map[string]any)
+			if !ok {
 				return nil, nil
 			}
+			if raw, ok = values[strings.ReplaceAll(part, "-", "_")]; ok {
+				continue
+			}
+			if raw, ok = values[snakeCase(part)]; ok {
+				continue
+			}
+			return nil, nil
 		}
 		return raw, nil
 	}
