@@ -1289,6 +1289,27 @@ func TestXorRequired(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --four, --one or --three, --one or --two")
 }
 
+func TestXorRequiredSingleRequiredMember(t *testing.T) {
+	var cli struct {
+		Hello string `xor:"group" required:""`
+		One   string `xor:"group" and:"pair"`
+		Two   string `and:"pair"`
+	}
+
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --hello=STRING")
+
+	// any member of the group satisfies it, required or not
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one=a", "--two=b"})
+	assert.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--hello=a"})
+	assert.NoError(t, err)
+}
+
 func TestAndRequired(t *testing.T) {
 	var cli struct {
 		One   bool `and:"one,two" required:""`
