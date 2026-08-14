@@ -1069,7 +1069,7 @@ func checkMissingFlags(flags []*Flag) error {
 		}
 	}
 	for group, flags := range choiceGroups {
-		if !choiceGroupSet[group] && len(flags) > 1 {
+		if !choiceGroupSet[group] && len(flags) > 0 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}
