@@ -777,9 +777,9 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 		}
 		// Found a matching flag.
 		c.scan.Pop()
-		if match == neg && flag.Tag.Negatable != "" {
-			flag.Negated = true
-		}
+		// Assign rather than only setting it, so that a later positive occurrence
+		// of the flag clears a Negated left behind by an earlier negative one.
+		flag.Negated = match == neg && flag.Tag.Negatable != ""
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
 			var expected *expectedError
