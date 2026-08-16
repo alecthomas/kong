@@ -348,8 +348,10 @@ func (c *Context) Validate() error { //nolint: gocyclo
 				return err
 			}
 		}
-		if err := checkMissingFlags(path.Flags); err != nil {
-			return err
+		if node := path.Node(); node != nil {
+			if err := checkMissingFlags(node.Flags, node.Positional); err != nil {
+				return err
+			}
 		}
 	}
 	// Check the terminal node.
@@ -1031,13 +1033,14 @@ func flagChoiceGroups(flag *Flag) []choiceGroup {
 	return groups
 }
 
-func checkMissingFlags(flags []*Flag) error {
+func checkMissingFlags(flags []*Flag, positionals []*Positional) error {
 	choiceGroupSet := map[choiceGroup]bool{}
 	choiceGroups := map[choiceGroup][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
 	missing := []string{}
 	andGroupRequired := getRequiredAndGroupMap(flags)
+	markSetPositionalXorGroups(choiceGroupSet, positionals)
 	for _, flag := range flags {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
@@ -1086,6 +1089,17 @@ func checkMissingFlags(flags []*Flag) error {
 	sort.Strings(missing)
 
 	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
+}
+
+func markSetPositionalXorGroups(groupSet map[choiceGroup]bool, positionals []*Positional) {
+	for _, positional := range positionals {
+		if !positional.Set {
+			continue
+		}
+		for _, xor := range positional.Tag.Xor {
+			groupSet[choiceGroup{kind: "xor", name: xor}] = true
+		}
+	}
 }
 
 func getRequiredAndGroupMap(flags []*Flag) map[string]bool {
@@ -1230,20 +1244,32 @@ func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 
 func checkXorDuplicates(paths []*Path) error {
 	for _, path := range paths {
-		seen := map[string]*Flag{}
-		for _, flag := range path.Flags {
-			if !flag.Set {
+		node := path.Node()
+		if node == nil {
+			continue
+		}
+		seen := map[string]*Value{}
+		for _, value := range nodeXorValues(node) {
+			if !value.Set {
 				continue
 			}
-			for _, xor := range flag.Xor {
+			for _, xor := range value.Tag.Xor {
 				if seen[xor] != nil {
-					return fmt.Errorf("--%s and --%s can't be used together", seen[xor].Name, flag.Name)
+					return fmt.Errorf("%s and %s can't be used together", seen[xor].ShortSummary(), value.ShortSummary())
 				}
-				seen[xor] = flag
+				seen[xor] = value
 			}
 		}
 	}
 	return nil
+}
+
+func nodeXorValues(node *Node) []*Value {
+	values := make([]*Value, 0, len(node.Flags)+len(node.Positional))
+	for _, flag := range node.Flags {
+		values = append(values, flag.Value)
+	}
+	return append(values, node.Positional...)
 }
 
 func checkAndMissing(paths []*Path) error {
