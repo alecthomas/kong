@@ -1153,6 +1153,52 @@ func TestXor(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestXorWithPositional(t *testing.T) {
+	var cli struct {
+		Defaults bool     `xor:"input"`
+		Args     []string `arg:"" optional:"" xor:"input"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--defaults", "one"})
+	assert.EqualError(t, err, "--defaults and [<args> ...] can't be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"one"})
+	assert.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--defaults"})
+	assert.NoError(t, err)
+}
+
+func TestXorWithCommandPositional(t *testing.T) {
+	var cli struct {
+		Global bool `xor:"input"`
+		Run    struct {
+			Choice bool   `xor:"input"`
+			Value  string `arg:"" optional:"" xor:"input"`
+		} `cmd`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"run", "--choice", "value"})
+	assert.EqualError(t, err, "--choice and [<value>] can't be used together")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--global", "run", "value"})
+	assert.NoError(t, err)
+}
+
+func TestXorRequiredSatisfiedByPositional(t *testing.T) {
+	var cli struct {
+		First  bool   `xor:"input" required:""`
+		Second bool   `xor:"input" required:""`
+		Value  string `arg:"" optional:"" xor:"input"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"value"})
+	assert.NoError(t, err)
+}
+
 func TestAnd(t *testing.T) {
 	var cli struct {
 		Hello bool   `and:"another"`
