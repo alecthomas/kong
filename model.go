@@ -39,22 +39,24 @@ const (
 
 // Node is a branch in the CLI. ie. a command or positional argument.
 type Node struct {
-	Type        NodeType
-	Parent      *Node
-	Name        string
-	Help        string // Short help displayed in summaries.
-	Detail      string // Detailed help displayed when describing command/arg alone.
-	Group       *Group
-	Hidden      bool
-	Flags       []*Flag
-	Positional  []*Positional
-	Children    []*Node
-	DefaultCmd  *Node
-	Target      reflect.Value // Pointer to the value in the grammar that this Node is associated with.
-	Tag         *Tag
-	Aliases     []string
-	Passthrough bool // Set to true to stop flag parsing when encountered.
-	Active      bool // Denotes the node is part of an active branch in the CLI.
+	Type          NodeType
+	Parent        *Node
+	Name          string
+	Help          string // Short help displayed in summaries.
+	Detail        string // Detailed help displayed when describing command/arg alone.
+	Group         *Group
+	Hidden        bool
+	Deprecated    bool
+	DeprecatedMsg string
+	Flags         []*Flag
+	Positional    []*Positional
+	Children      []*Node
+	DefaultCmd    *Node
+	Target        reflect.Value // Pointer to the value in the grammar that this Node is associated with.
+	Tag           *Tag
+	Aliases       []string
+	Passthrough   bool // Set to true to stop flag parsing when encountered.
+	Active        bool // Denotes the node is part of an active branch in the CLI.
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
