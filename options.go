@@ -118,6 +118,25 @@ func NoDefaultHelp() Option {
 	})
 }
 
+// NoRepeatedFlags makes Kong return an error when a non-cumulative flag is
+// provided more than once on the command line.
+//
+// By default Kong silently overwrites the value of a scalar flag with each
+// subsequent occurrence, so "--file=a --file=b" leaves the flag set to "b".
+// This can hide typos such as passing "-o" and "--output" for the same
+// underlying field. With this option enabled, such repetitions are reported as
+// an error instead.
+//
+// Flags that are intended to be repeated are exempt: slices and maps (which
+// accumulate values) and counters (which count occurrences) may still appear
+// multiple times.
+func NoRepeatedFlags() Option {
+	return OptionFunc(func(k *Kong) error {
+		k.noRepeatedFlags = true
+		return nil
+	})
+}
+
 // PostBuild provides read/write access to kong.Kong after initial construction of the model is complete but before
 // parsing occurs.
 //
