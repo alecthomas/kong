@@ -281,6 +281,11 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
 		return err
 	}
+	if c.Kong.noRepeatedFlags {
+		if err := checkRepeatedFlags(c.Path); err != nil {
+			return err
+		}
+	}
 
 	if node.Type == ArgumentNode {
 		value := node.Argument
@@ -1103,6 +1108,28 @@ func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 	}
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, ", "))
+	}
+	return nil
+}
+
+// checkRepeatedFlags reports an error if a non-cumulative flag was explicitly
+// provided more than once on the command line. Cumulative flags (slices and
+// maps) and counters are allowed to repeat, as is a value applied by a resolver
+// (eg. an environment variable) that is then overridden on the command line.
+func checkRepeatedFlags(paths []*Path) error {
+	seen := map[string]bool{}
+	for _, path := range paths {
+		flag := path.Flag
+		if flag == nil || path.Resolved {
+			continue
+		}
+		if flag.IsCumulative() || flag.IsCounter() {
+			continue
+		}
+		if seen[flag.Name] {
+			return fmt.Errorf("flag --%s cannot be repeated", flag.Name)
+		}
+		seen[flag.Name] = true
 	}
 	return nil
 }
