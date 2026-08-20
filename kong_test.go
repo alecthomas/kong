@@ -1153,6 +1153,174 @@ func TestXor(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestLastWins(t *testing.T) {
+	type CLI struct {
+		Once  bool `lastwins:"poll-exit" short:"o" aliases:"single"`
+		Drain bool `lastwins:"poll-exit" short:"d"`
+	}
+	tests := []struct {
+		name  string
+		args  []string
+		once  bool
+		drain bool
+	}{
+		{name: "neither"},
+		{name: "once", args: []string{"--once"}, once: true},
+		{name: "drain", args: []string{"--drain"}, drain: true},
+		{name: "drain last", args: []string{"--once", "--drain"}, drain: true},
+		{name: "once last", args: []string{"--drain", "--once"}, once: true},
+		{name: "short names", args: []string{"-o", "-d"}, drain: true},
+		{name: "alias", args: []string{"--drain", "--single"}, once: true},
+		{name: "explicit false wins", args: []string{"--drain", "--once=false"}},
+		{name: "repeated winner", args: []string{"--once", "--drain", "--once"}, once: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cli := CLI{}
+			_, err := mustNew(t, &cli).Parse(test.args)
+			assert.NoError(t, err)
+			assert.Equal(t, test.once, cli.Once)
+			assert.Equal(t, test.drain, cli.Drain)
+		})
+	}
+}
+
+func TestLastWinsPreservesWinningFlagDecodeSemantics(t *testing.T) {
+	var cli struct {
+		One []string `lastwins:"group"`
+		Two []string `lastwins:"group"`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--one=a", "--two=b", "--one=c"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a", "c"}, cli.One)
+	assert.Equal(t, []string(nil), cli.Two)
+}
+
+func TestLastWinsFallbacks(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group" default:"default"`
+			Two string `lastwins:"group"`
+		}
+		_, err := mustNew(t, &cli).Parse(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "default", cli.One)
+		assert.Equal(t, "", cli.Two)
+	})
+
+	t.Run("command line overrides default", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group" default:"default"`
+			Two string `lastwins:"group"`
+		}
+		_, err := mustNew(t, &cli).Parse([]string{"--two=explicit"})
+		assert.NoError(t, err)
+		assert.Equal(t, "", cli.One)
+		assert.Equal(t, "explicit", cli.Two)
+	})
+
+	t.Run("conflicting defaults", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group" default:"one"`
+			Two string `lastwins:"group" default:"two"`
+		}
+		_, err := mustNew(t, &cli).Parse(nil)
+		assert.EqualError(t, err, `lastwins group "group" has multiple fallback values: --one, --two`)
+	})
+
+	t.Run("resolver", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group"`
+			Two string `lastwins:"group"`
+		}
+		resolver := kong.ResolverFunc(func(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, error) {
+			if flag.Name == "one" {
+				return "resolved", nil
+			}
+			return nil, nil
+		})
+		_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "resolved", cli.One)
+		assert.Equal(t, "", cli.Two)
+	})
+
+	t.Run("environment", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group" env:"KONG_LASTWINS_ONE"`
+			Two string `lastwins:"group"`
+		}
+		t.Setenv("KONG_LASTWINS_ONE", "environment")
+		_, err := mustNew(t, &cli).Parse(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "environment", cli.One)
+		assert.Equal(t, "", cli.Two)
+	})
+
+	t.Run("conflicting resolvers", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group"`
+			Two string `lastwins:"group"`
+		}
+		resolver := kong.ResolverFunc(func(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, error) {
+			if flag.Name == "one" || flag.Name == "two" {
+				return flag.Name, nil
+			}
+			return nil, nil
+		})
+		_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
+		assert.EqualError(t, err, `lastwins group "group" has multiple fallback values: --one, --two`)
+	})
+
+	t.Run("command line overrides conflicting resolvers", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group"`
+			Two string `lastwins:"group"`
+		}
+		resolver := kong.ResolverFunc(func(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, error) {
+			if flag.Name == "one" || flag.Name == "two" {
+				return flag.Name, nil
+			}
+			return nil, nil
+		})
+		_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse([]string{"--two=explicit"})
+		assert.NoError(t, err)
+		assert.Equal(t, "", cli.One)
+		assert.Equal(t, "explicit", cli.Two)
+	})
+}
+
+func TestLastWinsRequired(t *testing.T) {
+	type CLI struct {
+		One bool `lastwins:"group" required:""`
+		Two bool `lastwins:"group" required:""`
+	}
+	cli := CLI{}
+	_, err := mustNew(t, &cli).Parse(nil)
+	assert.EqualError(t, err, "missing flags: --one or --two")
+
+	cli = CLI{}
+	_, err = mustNew(t, &cli).Parse([]string{"--one", "--two"})
+	assert.NoError(t, err)
+	assert.False(t, cli.One)
+	assert.True(t, cli.Two)
+}
+
+func TestLastWinsIsScopedToCommand(t *testing.T) {
+	var cli struct {
+		One bool `lastwins:"group"`
+		Cmd struct {
+			Two   bool `lastwins:"group"`
+			Three bool `lastwins:"group"`
+		} `cmd:""`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--one", "cmd", "--two", "--three"})
+	assert.NoError(t, err)
+	assert.True(t, cli.One)
+	assert.False(t, cli.Cmd.Two)
+	assert.True(t, cli.Cmd.Three)
+}
+
 func TestAnd(t *testing.T) {
 	var cli struct {
 		Hello bool   `and:"another"`
@@ -1267,6 +1435,29 @@ func TestOverLappingXorAnd(t *testing.T) {
 	}
 	_, err := kong.New(&cli)
 	assert.EqualError(t, err, "invalid xor and combination, one and two overlap with more than one: [hello one two]")
+}
+
+func TestOverlappingLastWinsGroups(t *testing.T) {
+	t.Run("xor", func(t *testing.T) {
+		var cli struct {
+			One bool `lastwins:"ordered" xor:"strict"`
+			Two bool `lastwins:"ordered" xor:"strict"`
+		}
+		_, err := kong.New(&cli)
+		assert.EqualError(t, err, "invalid lastwins and xor combination, ordered and strict overlap with more than one: [one two]")
+	})
+
+	t.Run("and in child command", func(t *testing.T) {
+		var cli struct {
+			Cmd struct {
+				One   bool `lastwins:"ordered" and:"together"`
+				Two   bool `lastwins:"ordered"`
+				Three bool `and:"together"`
+			} `cmd:""`
+		}
+		_, err := kong.New(&cli)
+		assert.EqualError(t, err, "invalid lastwins and combination, ordered and together overlap: [one]")
+	})
 }
 
 func TestXorRequired(t *testing.T) {
@@ -2854,6 +3045,29 @@ func TestPrefixXorIssue343(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = kctx.Parse([]string{"--source-password-file=foo", "--source-password=bar"})
 	assert.Error(t, err)
+}
+
+func TestPrefixLastWins(t *testing.T) {
+	type Mode struct {
+		One bool `lastwins:"mode"`
+		Two bool `lastwins:"mode"`
+	}
+	type CLI struct {
+		Source Mode `prefix:"source-" xorprefix:"source-" embed:""`
+		Target Mode `prefix:"target-" xorprefix:"target-" embed:""`
+	}
+
+	cli := CLI{}
+	_, err := mustNew(t, &cli).Parse([]string{"--source-one", "--target-one"})
+	assert.NoError(t, err)
+	assert.True(t, cli.Source.One)
+	assert.True(t, cli.Target.One)
+
+	cli = CLI{}
+	_, err = mustNew(t, &cli).Parse([]string{"--source-one", "--source-two"})
+	assert.NoError(t, err)
+	assert.False(t, cli.Source.One)
+	assert.True(t, cli.Source.Two)
 }
 
 func TestIssue483EmptyRootNodeNoRun(t *testing.T) {

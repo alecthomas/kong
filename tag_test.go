@@ -141,6 +141,25 @@ func TestBareAndKongTagsCoexist(t *testing.T) {
 	assert.EqualError(t, err, "--name and --pick can't be used together")
 }
 
+func TestLastWinsKongTag(t *testing.T) {
+	var cli struct {
+		One bool `kong:"lastwins='group'"`
+		Two bool `lastwins:"group"`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--one", "--two"})
+	assert.NoError(t, err)
+	assert.False(t, cli.One)
+	assert.True(t, cli.Two)
+}
+
+func TestLastWinsRejectsMultipleGroups(t *testing.T) {
+	var cli struct {
+		Flag bool `lastwins:"one,two"`
+	}
+	_, err := kong.New(&cli)
+	assert.EqualError(t, err, "<anonymous struct>.Flag: lastwins flags can only belong to one group")
+}
+
 func TestManySeps(t *testing.T) {
 	var cli struct {
 		Arg string `arg    optional    default:"hi"`

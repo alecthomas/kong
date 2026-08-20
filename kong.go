@@ -174,33 +174,64 @@ func New(grammar any, options ...Option) (*Kong, error) {
 	if err = checkOverlappingXorAnd(k); err != nil {
 		return nil, err
 	}
+	if err = checkOverlappingLastWins(k); err != nil {
+		return nil, err
+	}
 
 	return k, nil
 }
 
 func checkOverlappingXorAnd(k *Kong) error {
-	xorGroups := map[string][]string{}
-	andGroups := map[string][]string{}
-	for _, flag := range k.Model.Node.Flags {
-		for _, xor := range flag.Xor {
-			xorGroups[xor] = append(xorGroups[xor], flag.Name)
+	xorGroups := collectValidationFlagGroups(k.Model.Node.Flags, func(flag *Flag) []string { return flag.Xor })
+	andGroups := collectValidationFlagGroups(k.Model.Node.Flags, func(flag *Flag) []string { return flag.And })
+	return checkGroupOverlap("xor and", xorGroups, andGroups, 1)
+}
+
+func checkOverlappingLastWins(k *Kong) error {
+	return Visit(k.Model.Node, func(visitable Visitable, next Next) error {
+		node, ok := visitable.(*Node)
+		if !ok {
+			return next(nil)
 		}
-		for _, and := range flag.And {
-			andGroups[and] = append(andGroups[and], flag.Name)
+		lastWinsGroups := collectValidationFlagGroups(node.Flags, func(flag *Flag) []string { return flag.LastWins })
+		xorGroups := collectValidationFlagGroups(node.Flags, func(flag *Flag) []string { return flag.Xor })
+		if err := checkGroupOverlap("lastwins and xor", lastWinsGroups, xorGroups, 1); err != nil {
+			return err
+		}
+		andGroups := collectValidationFlagGroups(node.Flags, func(flag *Flag) []string { return flag.And })
+		if err := checkGroupOverlap("lastwins and", lastWinsGroups, andGroups, 0); err != nil {
+			return err
+		}
+		return next(nil)
+	})
+}
+
+func collectValidationFlagGroups(flags []*Flag, groups func(*Flag) []string) map[string][]string {
+	groupFlags := map[string][]string{}
+	for _, flag := range flags {
+		for _, group := range groups(flag) {
+			groupFlags[group] = append(groupFlags[group], flag.Name)
 		}
 	}
-	for xor, xorSet := range xorGroups {
-		for and, andSet := range andGroups {
-			overlappingEntries := []string{}
-			for _, xorTag := range xorSet {
-				for _, andTag := range andSet {
-					if xorTag == andTag {
-						overlappingEntries = append(overlappingEntries, xorTag)
+	return groupFlags
+}
+
+func checkGroupOverlap(description string, leftGroups, rightGroups map[string][]string, allowedOverlap int) error {
+	for left, leftFlags := range leftGroups {
+		for right, rightFlags := range rightGroups {
+			overlap := []string{}
+			for _, leftFlag := range leftFlags {
+				for _, rightFlag := range rightFlags {
+					if leftFlag == rightFlag {
+						overlap = append(overlap, leftFlag)
 					}
 				}
 			}
-			if len(overlappingEntries) > 1 {
-				return fmt.Errorf("invalid xor and combination, %s and %s overlap with more than one: %s", xor, and, overlappingEntries)
+			if len(overlap) > allowedOverlap {
+				if allowedOverlap == 0 {
+					return fmt.Errorf("invalid %s combination, %s and %s overlap: %s", description, left, right, overlap)
+				}
+				return fmt.Errorf("invalid %s combination, %s and %s overlap with more than one: %s", description, left, right, overlap)
 			}
 		}
 	}
@@ -338,6 +369,10 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Resolve(); err != nil {
+		var lastWinsErr *lastWinsError
+		if errors.As(err, &lastWinsErr) {
+			return nil, &ParseError{error: err, Context: ctx, exitCode: exitUsageError}
+		}
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = k.applyHook(ctx, "BeforeApply"); err != nil {
@@ -357,6 +392,9 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 
 func (k *Kong) applyHook(ctx *Context, name string) error {
 	for _, trace := range ctx.Path {
+		if trace.Flag != nil && ctx.isFlagInactive(trace.Flag) {
+			continue
+		}
 		var value reflect.Value
 		switch {
 		case trace.App != nil:
@@ -408,6 +446,9 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 		}
 		binds := k.bindings.clone().add(ctx).add(node.Vars().CloneWith(k.vars))
 		for _, flag := range node.Flags {
+			if ctx.isFlagInactive(flag) {
+				continue
+			}
 			// Flags handled here are the ones that won't show up in ctx.Path:
 			// they got their value from the default tag or an env var, both of
 			// which Reset() applies straight to the target without touching the

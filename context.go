@@ -91,6 +91,8 @@ type Context struct {
 	bindings  bindings
 	resolvers []Resolver // Extra context-specific resolvers.
 	scan      *Scanner
+
+	lastWinsInactive map[*Flag]bool
 }
 
 // Trace path of "args" through the grammar tree.
@@ -196,6 +198,9 @@ func (c *Context) Validate() error { //nolint: gocyclo
 			continue
 		}
 		for _, value := range node.Values() {
+			if value.Flag != nil && c.isFlagInactive(value.Flag) {
+				continue
+			}
 			ok := atLeastOneEnvSet(value.Tag.Envs)
 			if value.Enum != "" && (!value.Required || value.HasDefault || (len(value.Tag.Envs) != 0 && ok)) {
 				if err := checkEnum(value, value.Target); err != nil {
@@ -205,6 +210,9 @@ func (c *Context) Validate() error { //nolint: gocyclo
 		}
 	}
 	for _, el := range c.Path {
+		if el.Flag != nil && c.isFlagInactive(el.Flag) {
+			continue
+		}
 		var (
 			value reflect.Value
 			desc  string
@@ -612,7 +620,7 @@ func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 func (c *Context) Resolve() error {
 	resolvers := c.combineResolvers()
 	if len(resolvers) == 0 {
-		return nil
+		return c.resolveLastWins()
 	}
 
 	inserted := []*Path{}
@@ -654,7 +662,114 @@ func (c *Context) Resolve() error {
 		}
 	}
 	c.Path = append(c.Path, inserted...)
+	return c.resolveLastWins()
+}
+
+// resolveLastWins selects the effective member of each lastwins group. Command-line
+// occurrences are ordered, so the final occurrence wins. Defaults, environment
+// variables, and resolvers do not define an order across different flags and may
+// therefore provide at most one fallback value per group.
+func (c *Context) resolveLastWins() error {
+	c.lastWinsInactive = map[*Flag]bool{}
+	seenNodes := map[*Node]bool{}
+	for _, path := range c.Path {
+		node := path.Node()
+		if node == nil || seenNodes[node] {
+			continue
+		}
+		seenNodes[node] = true
+
+		for group, members := range lastWinsGroups(node.Flags) {
+			memberSet := map[*Flag]bool{}
+			for _, member := range members {
+				memberSet[member] = true
+			}
+
+			winner := lastCommandLineWinner(c.Path, memberSet)
+			if winner == nil {
+				var fallbackNames []string
+				winner, fallbackNames = lastWinsFallback(c.Path, members, memberSet)
+				if len(fallbackNames) > 1 {
+					return &lastWinsError{group: group, flags: fallbackNames}
+				}
+			}
+
+			c.deactivateLastWinsLosers(members, winner)
+		}
+	}
 	return nil
+}
+
+func lastWinsGroups(flags []*Flag) map[string][]*Flag {
+	groups := map[string][]*Flag{}
+	for _, flag := range flags {
+		for _, group := range flag.LastWins {
+			groups[group] = append(groups[group], flag)
+		}
+	}
+	return groups
+}
+
+func lastCommandLineWinner(paths []*Path, members map[*Flag]bool) *Flag {
+	var winner *Flag
+	for _, occurrence := range paths {
+		if occurrence.Flag != nil && !occurrence.Resolved && members[occurrence.Flag] {
+			winner = occurrence.Flag
+		}
+	}
+	return winner
+}
+
+func lastWinsFallback(paths []*Path, members []*Flag, memberSet map[*Flag]bool) (*Flag, []string) {
+	fallbacks := map[*Flag]bool{}
+	for _, occurrence := range paths {
+		if occurrence.Flag != nil && occurrence.Resolved && memberSet[occurrence.Flag] {
+			fallbacks[occurrence.Flag] = true
+		}
+	}
+	for _, member := range members {
+		if member.HasDefault || atLeastOneEnvSet(member.Tag.Envs) {
+			fallbacks[member] = true
+		}
+	}
+
+	var winner *Flag
+	names := []string{}
+	for _, member := range members {
+		if fallbacks[member] {
+			winner = member
+			names = append(names, member.ShortSummary())
+		}
+	}
+	return winner, names
+}
+
+func (c *Context) deactivateLastWinsLosers(members []*Flag, winner *Flag) {
+	if winner == nil {
+		return
+	}
+	for _, member := range members {
+		if member == winner {
+			continue
+		}
+		c.lastWinsInactive[member] = true
+		delete(c.values, member.Value)
+		member.Target.Set(reflect.Zero(member.Target.Type()))
+		member.Set = false
+	}
+}
+
+func (c *Context) isFlagInactive(flag *Flag) bool {
+	return c.lastWinsInactive[flag]
+}
+
+type lastWinsError struct {
+	group string
+	flags []string
+}
+
+func (e *lastWinsError) Error() string {
+	return fmt.Sprintf("lastwins group %q has multiple fallback values: %s", e.group, strings.Join(e.flags, ", "))
 }
 
 // Combine application-level resolvers and context resolvers.
@@ -719,6 +834,9 @@ func (c *Context) Apply() (string, error) {
 		case trace.Command != nil:
 			path = append(path, trace.Command.Name)
 		case trace.Flag != nil:
+			if c.isFlagInactive(trace.Flag) {
+				continue
+			}
 			value = trace.Flag.Value
 		case trace.Positional != nil:
 			path = append(path, "<"+trace.Positional.Name+">")
@@ -911,9 +1029,25 @@ func (c *Context) printHelp(options HelpOptions) error {
 	return c.help(options, c)
 }
 
+type choiceGroup struct {
+	kind string
+	name string
+}
+
+func flagChoiceGroups(flag *Flag) []choiceGroup {
+	groups := make([]choiceGroup, 0, len(flag.Xor)+len(flag.LastWins))
+	for _, name := range flag.Xor {
+		groups = append(groups, choiceGroup{kind: "xor", name: name})
+	}
+	for _, name := range flag.LastWins {
+		groups = append(groups, choiceGroup{kind: "lastwins", name: name})
+	}
+	return groups
+}
+
 func checkMissingFlags(flags []*Flag) error {
-	xorGroupSet := map[string]bool{}
-	xorGroup := map[string][]string{}
+	choiceGroupSet := map[choiceGroup]bool{}
+	choiceGroups := map[choiceGroup][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
 	missing := []string{}
@@ -922,9 +1056,10 @@ func checkMissingFlags(flags []*Flag) error {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
 		}
+		groups := flagChoiceGroups(flag)
 		if flag.Set {
-			for _, xor := range flag.Xor {
-				xorGroupSet[xor] = true
+			for _, group := range groups {
+				choiceGroupSet[group] = true
 			}
 			for _, and := range flag.And {
 				andGroupSet[and] = true
@@ -933,12 +1068,12 @@ func checkMissingFlags(flags []*Flag) error {
 		if !flag.Required || flag.Set {
 			continue
 		}
-		if len(flag.Xor) > 0 || len(flag.And) > 0 {
-			for _, xor := range flag.Xor {
-				if xorGroupSet[xor] {
+		if len(groups) > 0 || len(flag.And) > 0 {
+			for _, group := range groups {
+				if choiceGroupSet[group] {
 					continue
 				}
-				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
+				choiceGroups[group] = append(choiceGroups[group], flag.Summary())
 			}
 			for _, and := range flag.And {
 				andGroup[and] = append(andGroup[and], flag.Summary())
@@ -947,8 +1082,8 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, flag.Summary())
 		}
 	}
-	for xor, flags := range xorGroup {
-		if !xorGroupSet[xor] && len(flags) > 1 {
+	for group, flags := range choiceGroups {
+		if !choiceGroupSet[group] && len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}

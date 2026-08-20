@@ -591,10 +591,11 @@ Both can coexist with standard Tag parsing.
 | `enum:"X,Y,..."`     | Set of valid values allowed for this flag. An enum field must be `required` or have a valid `default`.                                                                                                                                                                                                                         |
 | `group:"X"`          | Logical group for a flag or command.                                                                                                                                                                                                                                                                                           |
 | `xor:"X,Y,..."`      | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.                                                                                                                            |
+| `lastwins:"X"`       | Ordered exclusive group for flags. When multiple flags in the group occur on the command line, only the last is applied. When combined with `required`, at least one flag in the group is required.                                                                                                                           |
 | `and:"X,Y,..."`      | AND groups for flags. All flags in the group must be used in the same command. When combined with `required`, all flags in the group will be required.                                                                                                                                                                         |
 | `prefix:"X"`         | Prefix for all sub-flags.                                                                                                                                                                                                                                                                                                      |
 | `envprefix:"X"`      | Envar prefix for all sub-flags.                                                                                                                                                                                                                                                                                                |
-| `xorprefix:"X"`      | Prefix for all sub-flags in XOR/AND groups.                                                                                                                                                                                                                                                                                  |
+| `xorprefix:"X"`      | Prefix for all sub-flags in XOR/AND/last-wins groups.                                                                                                                                                                                                                                                                          |
 | `set:"K=V"`          | Set a variable for expansion by child elements. Multiples can occur.                                                                                                                                                                                                                                                           |
 | `embed:""`           | If present, this field's children will be embedded in the parent. Useful for composition.                                                                                                                                                                                                                                      |
 | `passthrough:"<mode>"`[^1] | If present on a positional argument, it stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`. On a command it requires that the command contains only one argument of type `[]string` which is then filled with everything following the command, unparsed. |
@@ -602,6 +603,17 @@ Both can coexist with standard Tag parsing.
 
 [^1]: `<mode>` can be `partial` or `all` (the default). `all` will pass through all arguments including flags. `partial` will validate flags until the first positional argument is encountered, then pass through all remaining
 positional arguments.
+
+Each flag may belong to one `lastwins` group. Flags in the group retain their normal decoding behavior: repeated scalar values use the last value, while slices and maps continue to accumulate. A command-line occurrence, including an explicit false boolean value, takes precedence over defaults, environment variables, and resolvers. If no group member occurs on the command line, at most one member may receive a fallback value because fallback sources do not define an order across different flags.
+
+```go
+var cli struct {
+  Once  bool `lastwins:"poll-exit"`
+  Drain bool `lastwins:"poll-exit"`
+}
+```
+
+With this grammar, `--once --drain` selects `Drain`, while `--drain --once` selects `Once`.
 
 ## Plugins
 
