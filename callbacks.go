@@ -221,6 +221,15 @@ func callFunction(f reflect.Value, bindings bindings) error {
 	return ferr.(error) //nolint:forcetypeassert
 }
 
+func isNil(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
+}
+
 func callAnyFunction(f reflect.Value, bindings bindings) (out []any, err error) {
 	if f.Kind() != reflect.Func {
 		return nil, fmt.Errorf("expected function, got %s", f.Type())
@@ -245,7 +254,7 @@ func callAnyFunction(f reflect.Value, bindings bindings) (out []any, err error) 
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", pt, err)
 		}
-		if ferrv := reflect.ValueOf(argv[len(argv)-1]); ferrv.IsValid() && ferrv.Type().Implements(callbackReturnSignature) && !ferrv.IsNil() {
+		if ferrv := reflect.ValueOf(argv[len(argv)-1]); ferrv.IsValid() && ferrv.Type().Implements(callbackReturnSignature) && !isNil(ferrv) {
 			return nil, ferrv.Interface().(error) //nolint:forcetypeassert
 		}
 
