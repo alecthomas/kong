@@ -201,3 +201,24 @@ func TestCallbackNonPointerError(t *testing.T) {
 	err = callFunction(reflect.ValueOf(method), p.bindings)
 	assert.EqualError(t, err, "ERROR: failed")
 }
+
+type structError struct {
+	msg string
+}
+
+func (e structError) Error() string {
+	return "ERROR: " + e.msg
+}
+
+func TestBindSingletonProviderValueTypedError(t *testing.T) {
+	var cli struct{}
+	app, err := New(&cli, BindSingletonProvider(func() (string, error) {
+		return "", structError{msg: "failed"}
+	}))
+	assert.NoError(t, err)
+
+	ctx, err := app.Parse(nil)
+	assert.NoError(t, err)
+	_, err = ctx.Call(func(string) {})
+	assert.EqualError(t, err, "ERROR: failed")
+}
