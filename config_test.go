@@ -39,6 +39,32 @@ func TestConfigValidation(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestConfigOverridesInvalidDefaultForExistingFile(t *testing.T) {
+	var cli struct {
+		Path string `json:"path" default:"missing-file" type:"existingfile"`
+	}
+
+	existingFile := t.TempDir() + "/configured-file"
+	assert.NoError(t, os.WriteFile(existingFile, nil, 0o600))
+	config := makeConfig(t, map[string]string{"path": existingFile})
+
+	p := mustNew(t, &cli, kong.Configuration(kong.JSON, config))
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, existingFile, cli.Path)
+}
+
+func TestConfigDoesNotMaskInvalidDefaultWithoutOverride(t *testing.T) {
+	var cli struct {
+		Path string `json:"path" default:"missing-file" type:"existingfile"`
+	}
+
+	config := makeConfig(t, map[string]string{"other": "value"})
+	p := mustNew(t, &cli, kong.Configuration(kong.JSON, config))
+	_, err := p.Parse(nil)
+	assert.Error(t, err)
+}
+
 func makeConfig(t *testing.T, config any) (path string) {
 	t.Helper()
 	w, err := os.CreateTemp(t.TempDir(), "")
