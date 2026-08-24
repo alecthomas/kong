@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -470,6 +472,121 @@ func TestNegatableFlag(t *testing.T) {
 	}
 }
 
+func TestNegatableFlagWithBoolMapper(t *testing.T) {
+	var cli struct {
+		Cmd struct {
+			Flag string `kong:"type='bool-string',negatable,default='true'"`
+		} `kong:"cmd"`
+	}
+	parser, err := kong.New(&cli, kong.NamedMapper("bool-string", boolStringMapper{}))
+	assert.NoError(t, err)
+
+	_, err = parser.Parse([]string{"cmd", "--no-flag"})
+	assert.NoError(t, err)
+	assert.Equal(t, "false", cli.Cmd.Flag)
+}
+
+type boolStringMapper struct{}
+
+func (boolStringMapper) Decode(ctx *kong.DecodeContext, target reflect.Value) error {
+	if ctx.Scan.Peek().Type != kong.FlagValueToken {
+		target.SetString("true")
+		return nil
+	}
+	token, err := ctx.Scan.PopValue("bool")
+	if err != nil {
+		return err
+	}
+	switch value := token.Value.(type) {
+	case bool:
+		target.SetString(fmt.Sprintf("%t", value))
+	case string:
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return err
+		}
+		target.SetString(fmt.Sprintf("%t", parsed))
+	default:
+		return fmt.Errorf("expected bool but got %q (%T)", token.Value, token.Value)
+	}
+	return nil
+}
+
+func (boolStringMapper) IsBool() bool { return true }
+
+func TestNegatableFlagWithBoolMapperValue(t *testing.T) {
+	type Cmd struct {
+		Flag boolEnum `negatable:""`
+	}
+
+	tests := []struct {
+		name  string
+		input []string
+		want  boolEnum
+	}{
+		{"Default", nil, boolEnumAuto},
+		{"True", []string{"--flag"}, boolEnumAlways},
+		{"False", []string{"--no-flag"}, boolEnumNever},
+		{"Never", []string{"--flag=never"}, boolEnumNever},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cli Cmd
+			parser, err := kong.New(&cli)
+			assert.NoError(t, err)
+
+			_, err = parser.Parse(tt.input)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want, cli.Flag)
+		})
+	}
+}
+
+type boolEnum int
+
+const (
+	boolEnumAuto boolEnum = iota
+	boolEnumAlways
+	boolEnumNever
+)
+
+func (b *boolEnum) Decode(ctx *kong.DecodeContext) error {
+	if ctx.Scan.Peek().Type != kong.FlagValueToken {
+		*b = boolEnumAlways // --flag without value
+		return nil
+	}
+	token, err := ctx.Scan.PopValue("bool")
+	if err != nil {
+		return err
+	}
+	switch value := token.Value.(type) {
+	case bool:
+		if value {
+			*b = boolEnumAlways
+		} else {
+			*b = boolEnumNever
+		}
+	case string:
+		switch strings.ToLower(value) {
+		case "auto":
+			*b = boolEnumAuto
+		case "always":
+			*b = boolEnumAlways
+		case "never":
+			*b = boolEnumNever
+		default:
+			return fmt.Errorf("invalid value: %q", value)
+		}
+	default:
+		return fmt.Errorf("expected bool but got %q (%T)", token.Value, token.Value)
+	}
+	return nil
+}
+
+func (*boolEnum) IsBool() bool { return true }
+
 func TestDuplicateNegatableLong(t *testing.T) {
 	cli2 := struct {
 		NoFlag bool
@@ -716,6 +833,22 @@ func TestMapFlagWithSliceValue(t *testing.T) {
 	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=1,2", "--set", "b=3"})
 	assert.NoError(t, err)
 	assert.Equal(t, map[string][]int{"a": {1, 2}, "b": {3}}, cli.Set)
+}
+
+func TestMapFlagWithUnmappableValueType(t *testing.T) {
+	var cli struct {
+		Set map[string]any
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=b"})
+	assert.EqualError(t, err, "--set: no mapper for value type of map[string]interface {}")
+}
+
+func TestMapFlagWithUnmappableKeyType(t *testing.T) {
+	var cli struct {
+		Set map[complex128]string
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--set", "a=b"})
+	assert.EqualError(t, err, "--set: no mapper for key type of map[complex128]string")
 }
 
 type embeddedFlags struct {
@@ -1880,6 +2013,23 @@ func TestSubCommandAliases(t *testing.T) {
 	assert.NoError(t, err, "dupe aliases shouldn't error if they're in separate sub commands")
 }
 
+func TestSubCommandSingleCharAliases(t *testing.T) {
+	type SubC struct {
+		Flag1 string `aliases:"f"`
+	}
+
+	cli1 := struct {
+		Sub1 SubC `cmd:"" name:"sub1"`
+		Sub2 SubC `cmd:"" name:"sub2"`
+	}{}
+
+	app, err := kong.New(&cli1)
+	assert.NoError(t, err, "dupe single-character aliases shouldn't error if they're in separate sub commands")
+	_, err = app.Parse([]string{"sub2", "-f", "hello"})
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", cli1.Sub2.Flag1)
+}
+
 func TestDuplicateAliasLong(t *testing.T) {
 	cli2 := struct {
 		Flag  string ``
@@ -2827,6 +2977,31 @@ func TestPromotedEmbeddedAfterApplyCalledOnce(t *testing.T) {
 			EmbeddedAfterApplyLeaf: EmbeddedAfterApplyLeaf{
 				calls: &calls,
 			},
+		},
+	}
+	_, err := mustNew(t, cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
+}
+
+type unexportedEmbeddedAfterApply struct {
+	calls *int
+}
+
+func (e *unexportedEmbeddedAfterApply) AfterApply() error {
+	(*e.calls)++
+	return nil
+}
+
+type rootWithUnexportedEmbeddedAfterApply struct {
+	unexportedEmbeddedAfterApply
+}
+
+func TestPromotedUnexportedEmbeddedAfterApplyCalledOnce(t *testing.T) {
+	calls := 0
+	cli := &rootWithUnexportedEmbeddedAfterApply{
+		unexportedEmbeddedAfterApply: unexportedEmbeddedAfterApply{
+			calls: &calls,
 		},
 	}
 	_, err := mustNew(t, cli).Parse(nil)
