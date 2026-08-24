@@ -1325,10 +1325,24 @@ func TestXorRequiredSatisfiedByPositional(t *testing.T) {
 	var cli struct {
 		First  bool   `xor:"input" required:""`
 		Second bool   `xor:"input" required:""`
-		Value  string `arg:"" optional:"" xor:"input"`
+		Value  string `arg:"" xor:"input"`
 	}
 	p := mustNew(t, &cli)
 	_, err := p.Parse([]string{"value"})
+	assert.NoError(t, err)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--first"})
+	assert.NoError(t, err)
+}
+
+func TestOverlappingXorAndWithMatchingValueNames(t *testing.T) {
+	var cli struct {
+		Same         bool   `xor:"xor" and:"and"`
+		AndCollision bool   `name:"collision" and:"and"`
+		XorCollision string `arg:"" name:"collision" xor:"xor"`
+	}
+	_, err := kong.New(&cli)
 	assert.NoError(t, err)
 }
 

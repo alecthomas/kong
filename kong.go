@@ -179,25 +179,25 @@ func New(grammar any, options ...Option) (*Kong, error) {
 }
 
 func checkOverlappingXorAnd(k *Kong) error {
-	xorGroups := map[string][]string{}
-	andGroups := map[string][]string{}
+	xorGroups := map[string][]*Value{}
+	andGroups := map[string][]*Value{}
 	for _, value := range nodeXorValues(k.Model.Node) {
 		for _, xor := range value.Tag.Xor {
-			xorGroups[xor] = append(xorGroups[xor], value.Name)
+			xorGroups[xor] = append(xorGroups[xor], value)
 		}
 		if value.Flag != nil {
 			for _, and := range value.Flag.And {
-				andGroups[and] = append(andGroups[and], value.Name)
+				andGroups[and] = append(andGroups[and], value)
 			}
 		}
 	}
 	for xor, xorSet := range xorGroups {
 		for and, andSet := range andGroups {
 			overlappingEntries := []string{}
-			for _, xorTag := range xorSet {
-				for _, andTag := range andSet {
-					if xorTag == andTag {
-						overlappingEntries = append(overlappingEntries, xorTag)
+			for _, xorValue := range xorSet {
+				for _, andValue := range andSet {
+					if xorValue == andValue {
+						overlappingEntries = append(overlappingEntries, xorValue.Name)
 					}
 				}
 			}

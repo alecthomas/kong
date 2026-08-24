@@ -371,7 +371,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingChildren(node); err != nil {
 		return err
 	}
-	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
+	if err := checkMissingPositionals(positionals, node); err != nil {
 		return err
 	}
 	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
@@ -1119,7 +1119,7 @@ func checkMissingChildren(node *Node) error {
 
 	missingArgs := []string{}
 	for _, arg := range node.Positional {
-		if arg.Required && !arg.Set {
+		if arg.Required && !arg.Set && !xorGroupIsSet(arg, nodeXorValues(node)) {
 			missingArgs = append(missingArgs, arg.Summary())
 		}
 	}
@@ -1158,7 +1158,8 @@ func checkMissingChildren(node *Node) error {
 }
 
 // If we're missing any positionals and they're required, return an error.
-func checkMissingPositionals(positional int, values []*Value) error {
+func checkMissingPositionals(positional int, node *Node) error {
+	values := node.Positional
 	// All the positionals are in.
 	if positional >= len(values) {
 		return nil
@@ -1172,6 +1173,9 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	missing := []string{}
 	for ; positional < len(values); positional++ {
 		arg := values[positional]
+		if xorGroupIsSet(arg, nodeXorValues(node)) {
+			continue
+		}
 		// TODO(aat): Fix hardcoding of these env checks all over the place :\
 		if len(arg.Tag.Envs) != 0 {
 			if atLeastOneEnvSet(arg.Tag.Envs) {
@@ -1184,6 +1188,22 @@ func checkMissingPositionals(positional int, values []*Value) error {
 		return nil
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+}
+
+func xorGroupIsSet(value *Value, values []*Value) bool {
+	for _, xor := range value.Tag.Xor {
+		for _, candidate := range values {
+			if candidate == value || !candidate.Set {
+				continue
+			}
+			for _, candidateXor := range candidate.Tag.Xor {
+				if candidateXor == xor {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func checkEnum(value *Value, target reflect.Value) error {
