@@ -248,12 +248,8 @@ func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 
 func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	var typeName string
-	var isBool bool
-	var isBoolPtr bool
 	if typ != nil {
 		typeName = typ.Name()
-		isBool = typ.Kind() == reflect.Bool
-		isBoolPtr = typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Bool
 	}
 	var err error
 	t.Cmd = t.Has("cmd")
@@ -300,9 +296,6 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	t.XorPrefix = t.Get("xorprefix")
 	t.Embed = t.Has("embed")
 	if t.Has("negatable") {
-		if !isBool && !isBoolPtr {
-			return fmt.Errorf("negatable can only be set on booleans")
-		}
 		negatable := t.Get("negatable")
 		if negatable == "" {
 			negatable = negatableDefault // placeholder for default negation of --no-<flag>
