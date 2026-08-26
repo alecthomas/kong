@@ -604,7 +604,7 @@ Both can coexist with standard Tag parsing.
 [^1]: `<mode>` can be `partial` or `all` (the default). `all` will pass through all arguments including flags. `partial` will validate flags until the first positional argument is encountered, then pass through all remaining
 positional arguments.
 
-Each flag may belong to one `lastwins` group. Flags in the group retain their normal decoding behavior: repeated scalar values use the last value, while slices and maps continue to accumulate. A command-line occurrence, including an explicit false boolean value, takes precedence over defaults, environment variables, and resolvers. If no group member occurs on the command line, at most one member may receive a fallback value because fallback sources do not define an order across different flags.
+Each flag may belong to one `lastwins` group, and may not also be in an `xor` or `and` group. Flags in the group retain their normal decoding behavior: repeated scalar values use the last value, while slices and maps continue to accumulate. A command-line occurrence, including an explicit false boolean value, takes precedence over defaults, environment variables, and resolvers. Losing flags are reset to their zero value and are skipped by validation and by `BeforeApply`/`AfterApply` hooks; `BeforeReset` and `BeforeResolve` hooks run before the winner is known and still fire for every member. If no group member occurs on the command line, at most one member may receive a fallback value because fallback sources do not define an order across different flags: at most one member may declare a `default` (enforced by `kong.New`), and conflicting environment or resolver values are reported at parse time.
 
 ```go
 var cli struct {

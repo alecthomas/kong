@@ -174,7 +174,7 @@ func New(grammar any, options ...Option) (*Kong, error) {
 	if err = checkOverlappingXorAnd(k); err != nil {
 		return nil, err
 	}
-	if err = checkOverlappingLastWins(k); err != nil {
+	if err = checkLastWinsGroups(k); err != nil {
 		return nil, err
 	}
 
@@ -182,60 +182,64 @@ func New(grammar any, options ...Option) (*Kong, error) {
 }
 
 func checkOverlappingXorAnd(k *Kong) error {
-	xorGroups := collectValidationFlagGroups(k.Model.Node.Flags, func(flag *Flag) []string { return flag.Xor })
-	andGroups := collectValidationFlagGroups(k.Model.Node.Flags, func(flag *Flag) []string { return flag.And })
-	return checkGroupOverlap("xor and", xorGroups, andGroups, 1)
+	xorGroups := map[string][]string{}
+	andGroups := map[string][]string{}
+	for _, flag := range k.Model.Node.Flags {
+		for _, xor := range flag.Xor {
+			xorGroups[xor] = append(xorGroups[xor], flag.Name)
+		}
+		for _, and := range flag.And {
+			andGroups[and] = append(andGroups[and], flag.Name)
+		}
+	}
+	for xor, xorSet := range xorGroups {
+		for and, andSet := range andGroups {
+			overlappingEntries := []string{}
+			for _, xorTag := range xorSet {
+				for _, andTag := range andSet {
+					if xorTag == andTag {
+						overlappingEntries = append(overlappingEntries, xorTag)
+					}
+				}
+			}
+			if len(overlappingEntries) > 1 {
+				return fmt.Errorf("invalid xor and combination, %s and %s overlap with more than one: %s", xor, and, overlappingEntries)
+			}
+		}
+	}
+	return nil
 }
 
-func checkOverlappingLastWins(k *Kong) error {
+// checkLastWinsGroups validates lastwins groups at construction time: a flag may
+// not also be in an xor or and group, and at most one member of a lastwins group
+// may declare a default value, since defaults have no cross-flag ordering.
+func checkLastWinsGroups(k *Kong) error {
 	return Visit(k.Model.Node, func(visitable Visitable, next Next) error {
 		node, ok := visitable.(*Node)
 		if !ok {
 			return next(nil)
 		}
-		lastWinsGroups := collectValidationFlagGroups(node.Flags, func(flag *Flag) []string { return flag.LastWins })
-		xorGroups := collectValidationFlagGroups(node.Flags, func(flag *Flag) []string { return flag.Xor })
-		if err := checkGroupOverlap("lastwins and xor", lastWinsGroups, xorGroups, 1); err != nil {
-			return err
+		defaulted := map[string][]string{}
+		for _, flag := range node.Flags {
+			for _, group := range flag.LastWins {
+				if len(flag.Xor) > 0 {
+					return fmt.Errorf("--%s cannot combine lastwins group %q with xor group %q", flag.Name, group, flag.Xor[0])
+				}
+				if len(flag.And) > 0 {
+					return fmt.Errorf("--%s cannot combine lastwins group %q with and group %q", flag.Name, group, flag.And[0])
+				}
+				if flag.HasDefault {
+					defaulted[group] = append(defaulted[group], "--"+flag.Name)
+				}
+			}
 		}
-		andGroups := collectValidationFlagGroups(node.Flags, func(flag *Flag) []string { return flag.And })
-		if err := checkGroupOverlap("lastwins and", lastWinsGroups, andGroups, 0); err != nil {
-			return err
+		for group, flags := range defaulted {
+			if len(flags) > 1 {
+				return fmt.Errorf("lastwins group %q has multiple flags with default values: %s", group, strings.Join(flags, ", "))
+			}
 		}
 		return next(nil)
 	})
-}
-
-func collectValidationFlagGroups(flags []*Flag, groups func(*Flag) []string) map[string][]string {
-	groupFlags := map[string][]string{}
-	for _, flag := range flags {
-		for _, group := range groups(flag) {
-			groupFlags[group] = append(groupFlags[group], flag.Name)
-		}
-	}
-	return groupFlags
-}
-
-func checkGroupOverlap(description string, leftGroups, rightGroups map[string][]string, allowedOverlap int) error {
-	for left, leftFlags := range leftGroups {
-		for right, rightFlags := range rightGroups {
-			overlap := []string{}
-			for _, leftFlag := range leftFlags {
-				for _, rightFlag := range rightFlags {
-					if leftFlag == rightFlag {
-						overlap = append(overlap, leftFlag)
-					}
-				}
-			}
-			if len(overlap) > allowedOverlap {
-				if allowedOverlap == 0 {
-					return fmt.Errorf("invalid %s combination, %s and %s overlap: %s", description, left, right, overlap)
-				}
-				return fmt.Errorf("invalid %s combination, %s and %s overlap with more than one: %s", description, left, right, overlap)
-			}
-		}
-	}
-	return nil
 }
 
 type varStack []Vars
@@ -369,10 +373,6 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = ctx.Resolve(); err != nil {
-		var lastWinsErr *lastWinsError
-		if errors.As(err, &lastWinsErr) {
-			return nil, &ParseError{error: err, Context: ctx, exitCode: exitUsageError}
-		}
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = k.applyHook(ctx, "BeforeApply"); err != nil {

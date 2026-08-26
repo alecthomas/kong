@@ -1219,11 +1219,32 @@ func TestLastWinsFallbacks(t *testing.T) {
 		assert.Equal(t, "explicit", cli.Two)
 	})
 
-	t.Run("conflicting defaults", func(t *testing.T) {
+	t.Run("conflicting defaults are rejected at construction", func(t *testing.T) {
 		var cli struct {
 			One string `lastwins:"group" default:"one"`
 			Two string `lastwins:"group" default:"two"`
 		}
+		_, err := kong.New(&cli)
+		assert.EqualError(t, err, `lastwins group "group" has multiple flags with default values: --one, --two`)
+	})
+
+	t.Run("conflicting environment fallbacks", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group" env:"KONG_LASTWINS_ONE"`
+			Two string `lastwins:"group" env:"KONG_LASTWINS_TWO"`
+		}
+		t.Setenv("KONG_LASTWINS_ONE", "one")
+		t.Setenv("KONG_LASTWINS_TWO", "two")
+		_, err := mustNew(t, &cli).Parse(nil)
+		assert.EqualError(t, err, `lastwins group "group" has multiple fallback values: --one, --two`)
+	})
+
+	t.Run("default conflicts with environment fallback", func(t *testing.T) {
+		var cli struct {
+			One string `lastwins:"group" default:"one"`
+			Two string `lastwins:"group" env:"KONG_LASTWINS_TWO"`
+		}
+		t.Setenv("KONG_LASTWINS_TWO", "two")
 		_, err := mustNew(t, &cli).Parse(nil)
 		assert.EqualError(t, err, `lastwins group "group" has multiple fallback values: --one, --two`)
 	})
@@ -1319,6 +1340,84 @@ func TestLastWinsIsScopedToCommand(t *testing.T) {
 	assert.True(t, cli.One)
 	assert.False(t, cli.Cmd.Two)
 	assert.True(t, cli.Cmd.Three)
+}
+
+func TestLastWinsNegatable(t *testing.T) {
+	type CLI struct {
+		Once  bool `lastwins:"group" negatable:""`
+		Drain bool `lastwins:"group"`
+	}
+
+	cli := CLI{}
+	_, err := mustNew(t, &cli).Parse([]string{"--drain", "--no-once"})
+	assert.NoError(t, err)
+	assert.False(t, cli.Once) // Once won, with its negated value.
+	assert.False(t, cli.Drain)
+
+	cli = CLI{}
+	_, err = mustNew(t, &cli).Parse([]string{"--no-once", "--drain"})
+	assert.NoError(t, err)
+	assert.False(t, cli.Once)
+	assert.True(t, cli.Drain)
+}
+
+func TestLastWinsLoserSkipsEnumValidation(t *testing.T) {
+	var cli struct {
+		Mode  string `lastwins:"group" enum:"alpha,beta" default:"alpha"`
+		Other string `lastwins:"group"`
+	}
+	// The loser is reset to its zero value, which is not a valid enum; it must
+	// be excluded from enum validation.
+	_, err := mustNew(t, &cli).Parse([]string{"--other=value"})
+	assert.NoError(t, err)
+	assert.Equal(t, "", cli.Mode)
+	assert.Equal(t, "value", cli.Other)
+}
+
+type lastWinsHookContext struct {
+	calls []string
+}
+
+type lastWinsHookFlag bool
+
+func (l *lastWinsHookFlag) BeforeReset(ctx *lastWinsHookContext) error {
+	ctx.calls = append(ctx.calls, "BeforeReset")
+	return nil
+}
+
+func (l *lastWinsHookFlag) BeforeResolve(ctx *lastWinsHookContext) error {
+	ctx.calls = append(ctx.calls, "BeforeResolve")
+	return nil
+}
+
+func (l *lastWinsHookFlag) BeforeApply(ctx *lastWinsHookContext) error {
+	ctx.calls = append(ctx.calls, "BeforeApply")
+	return nil
+}
+
+func (l *lastWinsHookFlag) AfterApply(ctx *lastWinsHookContext) error {
+	ctx.calls = append(ctx.calls, "AfterApply")
+	return nil
+}
+
+func TestLastWinsLoserHooks(t *testing.T) {
+	var cli struct {
+		Once  lastWinsHookFlag `lastwins:"group"`
+		Drain bool             `lastwins:"group"`
+	}
+	hookCtx := &lastWinsHookContext{}
+	_, err := mustNew(t, &cli, kong.Bind(hookCtx)).Parse([]string{"--once", "--drain"})
+	assert.NoError(t, err)
+	// The winner is only known after Resolve, so hooks that run earlier still
+	// fire for losing flags; BeforeApply/AfterApply are skipped.
+	assert.Equal(t, []string{"BeforeReset", "BeforeResolve"}, hookCtx.calls)
+
+	hookCtx.calls = nil
+	cli.Once = false
+	cli.Drain = false
+	_, err = mustNew(t, &cli, kong.Bind(hookCtx)).Parse([]string{"--drain", "--once"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"BeforeReset", "BeforeResolve", "BeforeApply", "AfterApply"}, hookCtx.calls)
 }
 
 func TestAnd(t *testing.T) {
@@ -1444,7 +1543,17 @@ func TestOverlappingLastWinsGroups(t *testing.T) {
 			Two bool `lastwins:"ordered" xor:"strict"`
 		}
 		_, err := kong.New(&cli)
-		assert.EqualError(t, err, "invalid lastwins and xor combination, ordered and strict overlap with more than one: [one two]")
+		assert.EqualError(t, err, `--one cannot combine lastwins group "ordered" with xor group "strict"`)
+	})
+
+	t.Run("xor with a single shared flag", func(t *testing.T) {
+		var cli struct {
+			One   bool `lastwins:"ordered" xor:"strict"`
+			Two   bool `lastwins:"ordered"`
+			Three bool `xor:"strict"`
+		}
+		_, err := kong.New(&cli)
+		assert.EqualError(t, err, `--one cannot combine lastwins group "ordered" with xor group "strict"`)
 	})
 
 	t.Run("and in child command", func(t *testing.T) {
@@ -1456,7 +1565,7 @@ func TestOverlappingLastWinsGroups(t *testing.T) {
 			} `cmd:""`
 		}
 		_, err := kong.New(&cli)
-		assert.EqualError(t, err, "invalid lastwins and combination, ordered and together overlap: [one]")
+		assert.EqualError(t, err, `--one cannot combine lastwins group "ordered" with and group "together"`)
 	})
 }
 
