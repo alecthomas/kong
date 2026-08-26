@@ -113,7 +113,72 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		bindings: bindings{},
 	}
 	c.Error = c.trace(c.Model.Node)
+	if c.Error == nil {
+		c.filterLastWins()
+	}
 	return c, nil
+}
+
+// filterLastWins applies lastwins groups to the traced command-line. Among each
+// group's command-line occurrences only the last one is kept; occurrences of
+// other group members are removed from the trace as if they had not been given,
+// and those flags revert to their normal fallback behavior (zero value, default,
+// envar or resolver).
+func (c *Context) filterLastWins() {
+	losers := map[*Flag]bool{}
+	seenNodes := map[*Node]bool{}
+	for _, path := range c.Path {
+		node := path.Node()
+		if node == nil || seenNodes[node] {
+			continue
+		}
+		seenNodes[node] = true
+		for _, members := range lastWinsGroups(node.Flags) {
+			memberSet := map[*Flag]bool{}
+			for _, member := range members {
+				memberSet[member] = true
+			}
+			var winner *Flag
+			for _, occurrence := range c.Path {
+				if occurrence.Flag != nil && memberSet[occurrence.Flag] {
+					winner = occurrence.Flag
+				}
+			}
+			if winner == nil {
+				continue
+			}
+			for _, member := range members {
+				if member != winner {
+					losers[member] = true
+				}
+			}
+		}
+	}
+	if len(losers) == 0 {
+		return
+	}
+	for flag := range losers {
+		flag.Set = false
+		delete(c.values, flag.Value)
+	}
+	path := c.Path[:0]
+	for _, trace := range c.Path {
+		if trace.Flag != nil && losers[trace.Flag] {
+			continue
+		}
+		path = append(path, trace)
+	}
+	c.Path = path
+}
+
+func lastWinsGroups(flags []*Flag) map[string][]*Flag {
+	groups := map[string][]*Flag{}
+	for _, flag := range flags {
+		for _, group := range flag.LastWins {
+			groups[group] = append(groups[group], flag)
+		}
+	}
+	return groups
 }
 
 // Bind adds bindings to the Context.
@@ -914,9 +979,27 @@ func (c *Context) printHelp(options HelpOptions) error {
 	return c.help(options, c)
 }
 
+// choiceGroup identifies a group of flags of which one is expected to be
+// chosen: an xor group or a lastwins group.
+type choiceGroup struct {
+	kind string
+	name string
+}
+
+func flagChoiceGroups(flag *Flag) []choiceGroup {
+	groups := make([]choiceGroup, 0, len(flag.Xor)+len(flag.LastWins))
+	for _, name := range flag.Xor {
+		groups = append(groups, choiceGroup{kind: "xor", name: name})
+	}
+	for _, name := range flag.LastWins {
+		groups = append(groups, choiceGroup{kind: "lastwins", name: name})
+	}
+	return groups
+}
+
 func checkMissingFlags(flags []*Flag) error {
-	xorGroupSet := map[string]bool{}
-	xorGroup := map[string][]string{}
+	choiceGroupSet := map[choiceGroup]bool{}
+	choiceGroups := map[choiceGroup][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
 	missing := []string{}
@@ -925,9 +1008,10 @@ func checkMissingFlags(flags []*Flag) error {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
 		}
+		groups := flagChoiceGroups(flag)
 		if flag.Set {
-			for _, xor := range flag.Xor {
-				xorGroupSet[xor] = true
+			for _, group := range groups {
+				choiceGroupSet[group] = true
 			}
 			for _, and := range flag.And {
 				andGroupSet[and] = true
@@ -936,12 +1020,12 @@ func checkMissingFlags(flags []*Flag) error {
 		if !flag.Required || flag.Set {
 			continue
 		}
-		if len(flag.Xor) > 0 || len(flag.And) > 0 {
-			for _, xor := range flag.Xor {
-				if xorGroupSet[xor] {
+		if len(groups) > 0 || len(flag.And) > 0 {
+			for _, group := range groups {
+				if choiceGroupSet[group] {
 					continue
 				}
-				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
+				choiceGroups[group] = append(choiceGroups[group], flag.Summary())
 			}
 			for _, and := range flag.And {
 				andGroup[and] = append(andGroup[and], flag.Summary())
@@ -950,8 +1034,8 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, flag.Summary())
 		}
 	}
-	for xor, flags := range xorGroup {
-		if !xorGroupSet[xor] && len(flags) > 1 {
+	for group, flags := range choiceGroups {
+		if !choiceGroupSet[group] && len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}

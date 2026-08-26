@@ -44,11 +44,12 @@ type Tag struct {
 	Enum            string
 	Group           string
 	Xor             []string
+	LastWins        []string
 	And             []string
 	Vars            Vars
 	Prefix          string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
 	EnvPrefix       string
-	XorPrefix       string // Optional prefix on XOR/AND groups.
+	XorPrefix       string // Optional prefix on XOR/AND/last-wins groups.
 	Embed           bool
 	Aliases         []string
 	Negatable       string
@@ -287,6 +288,18 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	t.Group = t.Get("group")
 	for _, xor := range t.GetAll("xor") {
 		t.Xor = append(t.Xor, strings.FieldsFunc(xor, tagSplitFn)...)
+	}
+	for _, lastWins := range t.GetAll("lastwins") {
+		t.LastWins = append(t.LastWins, strings.FieldsFunc(lastWins, tagSplitFn)...)
+	}
+	if len(t.LastWins) > 0 {
+		group := t.LastWins[0]
+		for _, lastWins := range t.LastWins[1:] {
+			if lastWins != group {
+				return fmt.Errorf("lastwins flags can only belong to one group")
+			}
+		}
+		t.LastWins = t.LastWins[:1]
 	}
 	for _, and := range t.GetAll("and") {
 		t.And = append(t.And, strings.FieldsFunc(and, tagSplitFn)...)
