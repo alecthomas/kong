@@ -1509,13 +1509,24 @@ func TestLastWins(t *testing.T) {
 }
 
 func TestLastWinsInterleavedSequences(t *testing.T) {
-	var cli struct {
+	type CLI struct {
 		One []string `lastwins:"group"`
 		Two []string `lastwins:"group"`
 	}
+
+	// An intervening occurrence of another member discards earlier
+	// accumulation, as clap's overrides_with does.
+	var cli CLI
 	_, err := mustNew(t, &cli).Parse([]string{"--one=a", "--two=b", "--one=c"})
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"a", "c"}, cli.One)
+	assert.Equal(t, []string{"c"}, cli.One)
+	assert.Equal(t, []string(nil), cli.Two)
+
+	// Without an intervening member, occurrences accumulate as normal.
+	cli = CLI{}
+	_, err = mustNew(t, &cli).Parse([]string{"--two=x", "--one=a", "--one=b"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a", "b"}, cli.One)
 	assert.Equal(t, []string(nil), cli.Two)
 }
 

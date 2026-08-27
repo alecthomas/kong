@@ -87,11 +87,12 @@ type Context struct {
 	// Error that occurred during trace, if any.
 	Error error
 
-	values      map[*Value]reflect.Value // Temporary values during tracing.
-	resetErrors map[*Value]error         // Default errors that a resolver may override.
-	bindings    bindings
-	resolvers   []Resolver // Extra context-specific resolvers.
-	scan        *Scanner
+	values        map[*Value]reflect.Value // Temporary values during tracing.
+	resetErrors   map[*Value]error         // Default errors that a resolver may override.
+	bindings      bindings
+	resolvers     []Resolver // Extra context-specific resolvers.
+	scan          *Scanner
+	lastWinsPeers map[*Flag][]*Flag // Other members of each flag's lastwins group.
 }
 
 // Trace path of "args" through the grammar tree.
@@ -108,9 +109,10 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		Path: []*Path{
 			{App: k.Model, Flags: k.Model.Flags, remainder: s.PeekAll()},
 		},
-		values:   map[*Value]reflect.Value{},
-		scan:     s,
-		bindings: bindings{},
+		values:        map[*Value]reflect.Value{},
+		scan:          s,
+		bindings:      bindings{},
+		lastWinsPeers: lastWinsPeers(k.Model.Node),
 	}
 	c.Error = c.trace(c.Model.Node)
 	if c.Error == nil {
@@ -119,66 +121,96 @@ func Trace(k *Kong, args []string) (*Context, error) {
 	return c, nil
 }
 
-// filterLastWins applies lastwins groups to the traced command-line. Among each
-// group's command-line occurrences only the last one is kept; occurrences of
-// other group members are removed from the trace as if they had not been given,
-// and those flags revert to their normal fallback behavior (zero value, default,
-// envar or resolver).
+// filterLastWins removes trace occurrences overridden by a later occurrence of
+// another flag in the same lastwins group, following the model of clap's
+// overrides_with: an overridden occurrence is treated as if it had never been
+// given. Overridden values were already discarded during the trace (see
+// parseFlag); here the overridden occurrences are removed from the trace so
+// that hooks and validation do not observe them. Overridden flags revert to
+// their normal fallback behavior (zero value, default, envar or resolver).
 func (c *Context) filterLastWins() {
-	losers := map[*Flag]bool{}
-	seenNodes := map[*Node]bool{}
-	for _, path := range c.Path {
-		node := path.Node()
-		if node == nil || seenNodes[node] {
-			continue
-		}
-		seenNodes[node] = true
-		for _, members := range lastWinsGroups(node.Flags) {
-			memberSet := map[*Flag]bool{}
-			for _, member := range members {
-				memberSet[member] = true
-			}
-			var winner *Flag
-			for _, occurrence := range c.Path {
-				if occurrence.Flag != nil && memberSet[occurrence.Flag] {
-					winner = occurrence.Flag
-				}
-			}
-			if winner == nil {
-				continue
-			}
-			for _, member := range members {
-				if member != winner {
-					losers[member] = true
-				}
-			}
-		}
-	}
-	if len(losers) == 0 {
+	if len(c.lastWinsPeers) == 0 {
 		return
 	}
-	for flag := range losers {
-		flag.Set = false
-		delete(c.values, flag.Value)
+	drop := map[*Path]bool{}
+	visited := map[*Flag]bool{}
+	for _, path := range c.Path {
+		flag := path.Flag
+		if flag == nil || visited[flag] {
+			continue
+		}
+		peers, ok := c.lastWinsPeers[flag]
+		if !ok {
+			continue
+		}
+		members := map[*Flag]bool{flag: true}
+		visited[flag] = true
+		for _, peer := range peers {
+			members[peer] = true
+			visited[peer] = true
+		}
+		occurrences := []*Path{}
+		for _, occurrence := range c.Path {
+			if occurrence.Flag != nil && members[occurrence.Flag] {
+				occurrences = append(occurrences, occurrence)
+			}
+		}
+		// Only the trailing run of occurrences of a single flag survives:
+		// everything before the last occurrence of any other member was
+		// overridden.
+		winner := occurrences[len(occurrences)-1].Flag
+		overridden := 0
+		for i, occurrence := range occurrences {
+			if occurrence.Flag != winner {
+				overridden = i + 1
+			}
+		}
+		for _, occurrence := range occurrences[:overridden] {
+			drop[occurrence] = true
+		}
+	}
+	if len(drop) == 0 {
+		return
 	}
 	path := c.Path[:0]
 	for _, trace := range c.Path {
-		if trace.Flag != nil && losers[trace.Flag] {
-			continue
+		if !drop[trace] {
+			path = append(path, trace)
 		}
-		path = append(path, trace)
 	}
 	c.Path = path
 }
 
-func lastWinsGroups(flags []*Flag) map[string][]*Flag {
-	groups := map[string][]*Flag{}
-	for _, flag := range flags {
-		for _, group := range flag.LastWins {
-			groups[group] = append(groups[group], flag)
+// lastWinsPeers maps each member of a lastwins group to the other members of
+// its group. Groups are scoped to the node their flags are declared on.
+func lastWinsPeers(node *Node) map[*Flag][]*Flag {
+	peers := map[*Flag][]*Flag{}
+	_ = Visit(node, func(v Visitable, next Next) error {
+		if n, ok := v.(*Node); ok {
+			groups := map[string][]*Flag{}
+			for _, flag := range n.Flags {
+				for _, group := range flag.LastWins {
+					groups[group] = append(groups[group], flag)
+				}
+			}
+			for _, members := range groups {
+				if len(members) < 2 {
+					continue
+				}
+				for _, member := range members {
+					others := make([]*Flag, 0, len(members)-1)
+					for _, other := range members {
+						if other != member {
+							others = append(others, other)
+						}
+					}
+					peers[member] = others
+				}
+			}
 		}
-	}
-	return groups
+		return next(nil)
+	})
+	return peers
 }
 
 // Bind adds bindings to the Context.
@@ -855,6 +887,12 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 			// Invert the boolean token before Decode so custom bool mappers
 			// keep ownership of their field representation.
 			c.scan.PushTyped(!negatedValue, FlagValueToken)
+		}
+		// An occurrence of a lastwins group member overrides the accumulated
+		// state of the other members, as if they had never been given.
+		for _, peer := range c.lastWinsPeers[flag] {
+			peer.Set = false
+			delete(c.values, peer.Value)
 		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
