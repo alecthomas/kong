@@ -122,12 +122,8 @@ func Trace(k *Kong, args []string) (*Context, error) {
 }
 
 // filterLastWins removes trace occurrences overridden by a later occurrence of
-// another flag in the same lastwins group, following the model of clap's
-// overrides_with: an overridden occurrence is treated as if it had never been
-// given. Overridden values were already discarded during the trace (see
-// parseFlag); here the overridden occurrences are removed from the trace so
-// that hooks and validation do not observe them. Overridden flags revert to
-// their normal fallback behavior (zero value, default, envar or resolver).
+// another flag in the same lastwins group, as if they had never been given.
+// Their values were already discarded during the trace (see parseFlag).
 func (c *Context) filterLastWins() {
 	if len(c.lastWinsPeers) == 0 {
 		return
