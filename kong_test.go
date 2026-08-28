@@ -1476,6 +1476,201 @@ func TestAndRequiredMany(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --one and --two")
 }
 
+func TestLastWins(t *testing.T) {
+	type CLI struct {
+		Once  bool `lastwins:"mode" short:"o" aliases:"single"`
+		Drain bool `lastwins:"mode" short:"d"`
+	}
+	tests := []struct {
+		name  string
+		args  []string
+		once  bool
+		drain bool
+	}{
+		{"Neither", []string{}, false, false},
+		{"OnlyOnce", []string{"--once"}, true, false},
+		{"OnlyDrain", []string{"--drain"}, false, true},
+		{"DrainLast", []string{"--once", "--drain"}, false, true},
+		{"OnceLast", []string{"--drain", "--once"}, true, false},
+		{"Shorts", []string{"-o", "-d"}, false, true},
+		{"Alias", []string{"--drain", "--single"}, true, false},
+		{"ExplicitFalseStillWins", []string{"--once", "--drain=false"}, false, false},
+		{"RepeatedWinner", []string{"--once", "--drain", "--drain"}, false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var cli CLI
+			_, err := mustNew(t, &cli).Parse(test.args)
+			assert.NoError(t, err)
+			assert.Equal(t, test.once, cli.Once)
+			assert.Equal(t, test.drain, cli.Drain)
+		})
+	}
+}
+
+func TestLastWinsInterleavedSequences(t *testing.T) {
+	type CLI struct {
+		One []string `lastwins:"group"`
+		Two []string `lastwins:"group"`
+	}
+
+	// An intervening occurrence of another member discards earlier
+	// accumulation, as clap's overrides_with does.
+	var cli CLI
+	_, err := mustNew(t, &cli).Parse([]string{"--one=a", "--two=b", "--one=c"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"c"}, cli.One)
+	assert.Equal(t, []string(nil), cli.Two)
+
+	// Without an intervening member, occurrences accumulate as normal.
+	cli = CLI{}
+	_, err = mustNew(t, &cli).Parse([]string{"--two=x", "--one=a", "--one=b"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a", "b"}, cli.One)
+	assert.Equal(t, []string(nil), cli.Two)
+}
+
+func TestLastWinsLoserRevertsToDefault(t *testing.T) {
+	var cli struct {
+		One string `lastwins:"group" default:"one-default"`
+		Two string `lastwins:"group" default:"two-default"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--two=explicit"})
+	assert.NoError(t, err)
+	assert.Equal(t, "one-default", cli.One)
+	assert.Equal(t, "explicit", cli.Two)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one=first", "--two=last"})
+	assert.NoError(t, err)
+	assert.Equal(t, "one-default", cli.One)
+	assert.Equal(t, "last", cli.Two)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "one-default", cli.One)
+	assert.Equal(t, "two-default", cli.Two)
+}
+
+func TestLastWinsLoserRevertsToEnv(t *testing.T) {
+	var cli struct {
+		One string `lastwins:"group" env:"KONG_LASTWINS_ONE"`
+		Two string `lastwins:"group"`
+	}
+	t.Setenv("KONG_LASTWINS_ONE", "from-env")
+	_, err := mustNew(t, &cli).Parse([]string{"--one=explicit", "--two=winner"})
+	assert.NoError(t, err)
+	assert.Equal(t, "from-env", cli.One)
+	assert.Equal(t, "winner", cli.Two)
+}
+
+func TestLastWinsLoserRevertsToResolver(t *testing.T) {
+	var cli struct {
+		One string `lastwins:"group"`
+		Two string `lastwins:"group"`
+	}
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
+		if flag.Name == "one" {
+			return "from-resolver", nil
+		}
+		return nil, nil
+	}
+	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse([]string{"--one=explicit", "--two=winner"})
+	assert.NoError(t, err)
+	assert.Equal(t, "from-resolver", cli.One)
+	assert.Equal(t, "winner", cli.Two)
+}
+
+func TestLastWinsRequired(t *testing.T) {
+	var cli struct {
+		One bool `lastwins:"group" required:""`
+		Two bool `lastwins:"group" required:""`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	assert.EqualError(t, err, "missing flags: --one or --two")
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--one", "--two"})
+	assert.NoError(t, err)
+	assert.False(t, cli.One)
+	assert.True(t, cli.Two)
+}
+
+func TestLastWinsIsScopedToCommand(t *testing.T) {
+	var cli struct {
+		One bool `lastwins:"group"`
+		Cmd struct {
+			Two bool `lastwins:"group"`
+		} `cmd:""`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--one", "cmd", "--two"})
+	assert.NoError(t, err)
+	assert.True(t, cli.One)
+	assert.True(t, cli.Cmd.Two)
+}
+
+func TestPrefixLastWins(t *testing.T) {
+	type Nested struct {
+		One bool `lastwins:"group"`
+		Two bool `lastwins:"group"`
+	}
+	var cli struct {
+		A Nested `prefix:"a-" xorprefix:"a-" embed:""`
+		B Nested `prefix:"b-" xorprefix:"b-" embed:""`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--a-one", "--a-two", "--b-two", "--b-one"})
+	assert.NoError(t, err)
+	assert.False(t, cli.A.One)
+	assert.True(t, cli.A.Two)
+	assert.True(t, cli.B.One)
+	assert.False(t, cli.B.Two)
+}
+
+func TestLastWinsNegatable(t *testing.T) {
+	var cli struct {
+		Once  bool `lastwins:"mode" negatable:"" default:"true"`
+		Drain bool `lastwins:"mode"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--drain", "--no-once"})
+	assert.NoError(t, err)
+	assert.False(t, cli.Once)
+	assert.False(t, cli.Drain)
+
+	p = mustNew(t, &cli)
+	_, err = p.Parse([]string{"--no-once", "--drain"})
+	assert.NoError(t, err)
+	assert.True(t, cli.Once)
+	assert.True(t, cli.Drain)
+}
+
+func TestLastWinsEnumLoserRevertsToDefault(t *testing.T) {
+	var cli struct {
+		Mode  string `lastwins:"group" enum:"alpha,beta" default:"alpha"`
+		Other string `lastwins:"group"`
+	}
+	_, err := mustNew(t, &cli).Parse([]string{"--mode=beta", "--other=winner"})
+	assert.NoError(t, err)
+	assert.Equal(t, "alpha", cli.Mode)
+	assert.Equal(t, "winner", cli.Other)
+}
+
+func TestLastWinsHooks(t *testing.T) {
+	var cli struct {
+		One hookValue `lastwins:"group"`
+		Two hookValue `lastwins:"group"`
+	}
+	ctx := &hookContext{}
+	_, err := mustNew(t, &cli, kong.Bind(ctx)).Parse([]string{"--one=loser", "--two=winner"})
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(cli.One))
+	assert.Equal(t, "winner", string(cli.Two))
+	assert.Equal(t, []string{"before:", "after:winner"}, ctx.values)
+}
+
 func TestEnumSequence(t *testing.T) {
 	var cli struct {
 		State []string `enum:"a,b,c" default:"a"`
