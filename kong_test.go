@@ -3277,3 +3277,76 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
 }
+
+func TestNoRepeatedFlags(t *testing.T) {
+	t.Run("repeated scalar flag is allowed by default", func(t *testing.T) {
+		var cli struct {
+			Flag string
+		}
+		_, err := mustNew(t, &cli).Parse([]string{"--flag=first", "--flag=second"})
+		assert.NoError(t, err)
+		assert.Equal(t, "second", cli.Flag)
+	})
+
+	t.Run("repeated scalar flag errors when enabled", func(t *testing.T) {
+		var cli struct {
+			Flag string
+		}
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"--flag=first", "--flag=second"})
+		assert.EqualError(t, err, "flag --flag cannot be repeated")
+	})
+
+	t.Run("short and long forms of the same flag count as a repetition", func(t *testing.T) {
+		var cli struct {
+			Flag string `short:"f"`
+		}
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"-f", "first", "--flag", "second"})
+		assert.EqualError(t, err, "flag --flag cannot be repeated")
+	})
+
+	t.Run("distinct flags are allowed", func(t *testing.T) {
+		var cli struct {
+			One string
+			Two string
+		}
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"--one=1", "--two=2"})
+		assert.NoError(t, err)
+	})
+
+	t.Run("slice flags may be repeated", func(t *testing.T) {
+		var cli struct {
+			Flag []string
+		}
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"--flag=a", "--flag=b"})
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"a", "b"}, cli.Flag)
+	})
+
+	t.Run("map flags may be repeated", func(t *testing.T) {
+		var cli struct {
+			Flag map[string]int
+		}
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"--flag", "a=1", "--flag", "b=2"})
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]int{"a": 1, "b": 2}, cli.Flag)
+	})
+
+	t.Run("counter flags may be repeated", func(t *testing.T) {
+		var cli struct {
+			Verbose int `short:"v" type:"counter"`
+		}
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"-v", "-v", "-v"})
+		assert.NoError(t, err)
+		assert.Equal(t, 3, cli.Verbose)
+	})
+
+	t.Run("a resolved value overridden on the command line is not a repetition", func(t *testing.T) {
+		var cli struct {
+			Flag string `env:"KONG_NRF_FLAG"`
+		}
+		t.Setenv("KONG_NRF_FLAG", "from-env")
+		_, err := mustNew(t, &cli, kong.NoRepeatedFlags()).Parse([]string{"--flag=from-cli"})
+		assert.NoError(t, err)
+		assert.Equal(t, "from-cli", cli.Flag)
+	})
+}
