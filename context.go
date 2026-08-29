@@ -348,8 +348,10 @@ func (c *Context) Validate() error { //nolint: gocyclo
 				return err
 			}
 		}
-		if err := checkMissingFlags(path.Flags); err != nil {
-			return err
+		if node := path.Node(); node != nil {
+			if err := checkMissingFlags(node.Flags, node.Positional); err != nil {
+				return err
+			}
 		}
 	}
 	// Check the terminal node.
@@ -369,7 +371,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkMissingChildren(node); err != nil {
 		return err
 	}
-	if err := checkMissingPositionals(positionals, node.Positional); err != nil {
+	if err := checkMissingPositionals(positionals, node); err != nil {
 		return err
 	}
 	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
@@ -1031,13 +1033,14 @@ func flagChoiceGroups(flag *Flag) []choiceGroup {
 	return groups
 }
 
-func checkMissingFlags(flags []*Flag) error {
+func checkMissingFlags(flags []*Flag, positionals []*Positional) error {
 	choiceGroupSet := map[choiceGroup]bool{}
 	choiceGroups := map[choiceGroup][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
 	missing := []string{}
 	andGroupRequired := getRequiredAndGroupMap(flags)
+	markSetPositionalXorGroups(choiceGroupSet, positionals)
 	for _, flag := range flags {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
@@ -1088,6 +1091,17 @@ func checkMissingFlags(flags []*Flag) error {
 	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
 }
 
+func markSetPositionalXorGroups(groupSet map[choiceGroup]bool, positionals []*Positional) {
+	for _, positional := range positionals {
+		if !positional.Set {
+			continue
+		}
+		for _, xor := range positional.Tag.Xor {
+			groupSet[choiceGroup{kind: "xor", name: xor}] = true
+		}
+	}
+}
+
 func getRequiredAndGroupMap(flags []*Flag) map[string]bool {
 	andGroupRequired := map[string]bool{}
 	for _, flag := range flags {
@@ -1105,7 +1119,7 @@ func checkMissingChildren(node *Node) error {
 
 	missingArgs := []string{}
 	for _, arg := range node.Positional {
-		if arg.Required && !arg.Set {
+		if arg.Required && !arg.Set && !xorGroupIsSet(arg, nodeXorValues(node)) {
 			missingArgs = append(missingArgs, arg.Summary())
 		}
 	}
@@ -1144,7 +1158,8 @@ func checkMissingChildren(node *Node) error {
 }
 
 // If we're missing any positionals and they're required, return an error.
-func checkMissingPositionals(positional int, values []*Value) error {
+func checkMissingPositionals(positional int, node *Node) error {
+	values := node.Positional
 	// All the positionals are in.
 	if positional >= len(values) {
 		return nil
@@ -1158,6 +1173,9 @@ func checkMissingPositionals(positional int, values []*Value) error {
 	missing := []string{}
 	for ; positional < len(values); positional++ {
 		arg := values[positional]
+		if xorGroupIsSet(arg, nodeXorValues(node)) {
+			continue
+		}
 		// TODO(aat): Fix hardcoding of these env checks all over the place :\
 		if len(arg.Tag.Envs) != 0 {
 			if atLeastOneEnvSet(arg.Tag.Envs) {
@@ -1170,6 +1188,22 @@ func checkMissingPositionals(positional int, values []*Value) error {
 		return nil
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
+}
+
+func xorGroupIsSet(value *Value, values []*Value) bool {
+	for _, xor := range value.Tag.Xor {
+		for _, candidate := range values {
+			if candidate == value || !candidate.Set {
+				continue
+			}
+			for _, candidateXor := range candidate.Tag.Xor {
+				if candidateXor == xor {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func checkEnum(value *Value, target reflect.Value) error {
@@ -1230,20 +1264,32 @@ func checkXorDuplicatedAndAndMissing(paths []*Path) error {
 
 func checkXorDuplicates(paths []*Path) error {
 	for _, path := range paths {
-		seen := map[string]*Flag{}
-		for _, flag := range path.Flags {
-			if !flag.Set {
+		node := path.Node()
+		if node == nil {
+			continue
+		}
+		seen := map[string]*Value{}
+		for _, value := range nodeXorValues(node) {
+			if !value.Set {
 				continue
 			}
-			for _, xor := range flag.Xor {
+			for _, xor := range value.Tag.Xor {
 				if seen[xor] != nil {
-					return fmt.Errorf("--%s and --%s can't be used together", seen[xor].Name, flag.Name)
+					return fmt.Errorf("%s and %s can't be used together", seen[xor].ShortSummary(), value.ShortSummary())
 				}
-				seen[xor] = flag
+				seen[xor] = value
 			}
 		}
 	}
 	return nil
+}
+
+func nodeXorValues(node *Node) []*Value {
+	values := make([]*Value, 0, len(node.Flags)+len(node.Positional))
+	for _, flag := range node.Flags {
+		values = append(values, flag.Value)
+	}
+	return append(values, node.Positional...)
 }
 
 func checkAndMissing(paths []*Path) error {
