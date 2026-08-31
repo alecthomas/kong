@@ -65,10 +65,7 @@ func TestConfigDoesNotMaskInvalidDefaultWithoutOverride(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// Regression test for https://github.com/alecthomas/kong/issues/489: camelCase
-// keys nested inside an embedded struct's JSON object were not found, only
-// the top-level ones were.
-func TestConfigReallyLoadsValues(t *testing.T) {
+func TestRegressionIssue489(t *testing.T) {
 	type Level struct {
 		Flag      string `json:"flag" required:""`
 		WithSnake string `json:"with_snake,omitempty" required:""`
