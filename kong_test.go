@@ -1808,6 +1808,21 @@ func TestValidateNestedCmdRunsAfterOwnFlagsOnly(t *testing.T) {
 	assert.Equal(t, []string{"flag", "flag", "parent", "flag", "cmd"}, validateOrderLog)
 }
 
+// An ancestor's flag may be supplied after a descendant command on the command
+// line (e.g. "parent cmd --parent-flag=b"), which puts it after the descendant
+// on the path. The ancestor's Validate() must still run after its own flag, not
+// before it.
+func TestValidateCmdRunsAfterOwnFlagSuppliedAfterSubcommand(t *testing.T) {
+	validateOrderLog = nil
+	cli := struct {
+		Parent validateOrderParent `cmd:""`
+	}{}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"parent", "cmd", "--parent-flag=b"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"flag", "parent", "cmd"}, validateOrderLog)
+}
+
 func TestValidateFlag(t *testing.T) {
 	cli := struct {
 		Flag validateFlag

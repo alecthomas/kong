@@ -205,71 +205,7 @@ func (c *Context) Validate() error { //nolint: gocyclo
 			}
 		}
 	}
-	validateEl := func(el *Path) error {
-		var (
-			value reflect.Value
-			desc  string
-		)
-		switch node := el.Visitable().(type) {
-		case *Value:
-			value = node.Target
-			desc = node.ShortSummary()
-
-		case *Flag:
-			value = node.Target
-			desc = node.ShortSummary()
-
-		case *Application:
-			value = node.Target
-			desc = ""
-
-		case *Node:
-			value = node.Target
-			desc = node.Path()
-		}
-		for _, validate := range getValidators(value) {
-			if err := validate.Validate(c); err != nil {
-				if desc != "" {
-					return fmt.Errorf("%s: %w", desc, err)
-				}
-				return err
-			}
-		}
-		return nil
-	}
-	// Each command/node's own flags and positionals are validated immediately
-	// before that command/node itself, so its Validate() runs against
-	// already-validated flag values rather than raw input. A node's own
-	// flags/positionals appear right after it on the path, so its validation
-	// is deferred until the next node boundary (or the end of the path),
-	// preserving the original relative order between different nodes.
-	//
-	// Note: Resolve() appends resolver-derived flag values to the end of
-	// c.Path without recording which node each one belongs to, so a node
-	// whose own resolved (not command-line-supplied) flags come from a
-	// Resolver can end up deferred past other nodes' resolved flags too.
-	var pendingNode *Path
-	flushPendingNode := func() error {
-		if pendingNode == nil {
-			return nil
-		}
-		node := pendingNode
-		pendingNode = nil
-		return validateEl(node)
-	}
-	for _, el := range c.Path {
-		if el.Flag != nil || el.Positional != nil {
-			if err := validateEl(el); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := flushPendingNode(); err != nil {
-			return err
-		}
-		pendingNode = el
-	}
-	if err := flushPendingNode(); err != nil {
+	if err := c.validatePathValues(); err != nil {
 		return err
 	}
 	for _, resolver := range c.combineResolvers() {
@@ -323,6 +259,99 @@ func (c *Context) Validate() error { //nolint: gocyclo
 		value := node.Argument
 		if value.Required && !value.Set {
 			return fmt.Errorf("%s is required", node.Summary())
+		}
+	}
+	return nil
+}
+
+// validatePathValues runs each path element's Validate() hooks. A node's hook
+// must run after its own flags and positionals. Because a flag can be supplied
+// after a descendant command, each is mapped to its owning node and a node is
+// deferred until none of its values are still outstanding.
+func (c *Context) validatePathValues() error {
+	flagOwner := map[*Flag]*Node{}
+	for _, el := range c.Path {
+		for _, flag := range el.Flags {
+			flagOwner[flag] = el.Node()
+		}
+	}
+	outstanding := map[*Node]int{}
+	for _, el := range c.Path {
+		switch {
+		case el.Flag != nil:
+			if owner := flagOwner[el.Flag]; owner != nil {
+				outstanding[owner]++
+			}
+		case el.Positional != nil:
+			outstanding[el.Parent]++
+		}
+	}
+	// Nodes flush in path order, so a parent still precedes its child.
+	var pending []*Path
+	flushReady := func() error {
+		for len(pending) > 0 && outstanding[pending[0].Node()] == 0 {
+			node := pending[0]
+			pending = pending[1:]
+			if err := c.validateValue(node); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, el := range c.Path {
+		switch {
+		case el.Flag != nil:
+			if err := c.validateValue(el); err != nil {
+				return err
+			}
+			if owner := flagOwner[el.Flag]; owner != nil {
+				outstanding[owner]--
+			}
+		case el.Positional != nil:
+			if err := c.validateValue(el); err != nil {
+				return err
+			}
+			outstanding[el.Parent]--
+		default:
+			if err := flushReady(); err != nil {
+				return err
+			}
+			pending = append(pending, el)
+		}
+	}
+	return flushReady()
+}
+
+// validateValue runs the user-defined Validate() hooks bound to a single path
+// element (a flag, positional, node or the application).
+func (c *Context) validateValue(el *Path) error {
+	var (
+		value reflect.Value
+		desc  string
+	)
+	switch node := el.Visitable().(type) {
+	case *Value:
+		value = node.Target
+		desc = node.ShortSummary()
+
+	case *Flag:
+		value = node.Target
+		desc = node.ShortSummary()
+
+	case *Application:
+		value = node.Target
+		desc = ""
+
+	case *Node:
+		value = node.Target
+		desc = node.Path()
+	}
+	for _, validate := range getValidators(value) {
+		if err := validate.Validate(c); err != nil {
+			if desc != "" {
+				return fmt.Errorf("%s: %w", desc, err)
+			}
+			return err
 		}
 	}
 	return nil
