@@ -178,6 +178,12 @@ MAIN:
 			}
 		}
 
+		if len(tag.LastWins) != 0 {
+			for i := range tag.LastWins {
+				tag.LastWins[i] = tag.XorPrefix + tag.LastWins[i]
+			}
+		}
+
 		if len(tag.And) != 0 {
 			for i := range tag.And {
 				tag.And[i] = tag.XorPrefix + tag.And[i]
@@ -252,7 +258,9 @@ func validatePositionalArguments(node *Node) error {
 }
 
 func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.StructField, fv reflect.Value, tag *Tag, name string, seenFlags map[string]bool) error {
-	child, err := buildNode(k, fv, typ, newEmptyTag(), seenFlags)
+	childTag := newEmptyTag()
+	childTag.EnvPrefix = tag.EnvPrefix
+	child, err := buildNode(k, fv, typ, childTag, seenFlags)
 	if err != nil {
 		return err
 	}
@@ -381,6 +389,7 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 			Envs:        tag.Envs,
 			Group:       buildGroupForKey(k, tag.Group),
 			Xor:         tag.Xor,
+			LastWins:    tag.LastWins,
 			And:         tag.And,
 			Hidden:      tag.Hidden,
 		}

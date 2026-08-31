@@ -87,10 +87,12 @@ type Context struct {
 	// Error that occurred during trace, if any.
 	Error error
 
-	values    map[*Value]reflect.Value // Temporary values during tracing.
-	bindings  bindings
-	resolvers []Resolver // Extra context-specific resolvers.
-	scan      *Scanner
+	values        map[*Value]reflect.Value // Temporary values during tracing.
+	resetErrors   map[*Value]error         // Default errors that a resolver may override.
+	bindings      bindings
+	resolvers     []Resolver // Extra context-specific resolvers.
+	scan          *Scanner
+	lastWinsPeers map[*Flag][]*Flag // Other members of each flag's lastwins group.
 }
 
 // Trace path of "args" through the grammar tree.
@@ -107,12 +109,104 @@ func Trace(k *Kong, args []string) (*Context, error) {
 		Path: []*Path{
 			{App: k.Model, Flags: k.Model.Flags, remainder: s.PeekAll()},
 		},
-		values:   map[*Value]reflect.Value{},
-		scan:     s,
-		bindings: bindings{},
+		values:        map[*Value]reflect.Value{},
+		scan:          s,
+		bindings:      bindings{},
+		lastWinsPeers: lastWinsPeers(k.Model.Node),
 	}
 	c.Error = c.trace(c.Model.Node)
+	if c.Error == nil {
+		c.filterLastWins()
+	}
 	return c, nil
+}
+
+// filterLastWins removes trace occurrences overridden by a later occurrence of
+// another flag in the same lastwins group, as if they had never been given.
+// Their values were already discarded during the trace (see parseFlag).
+func (c *Context) filterLastWins() {
+	if len(c.lastWinsPeers) == 0 {
+		return
+	}
+	drop := map[*Path]bool{}
+	visited := map[*Flag]bool{}
+	for _, path := range c.Path {
+		flag := path.Flag
+		if flag == nil || visited[flag] {
+			continue
+		}
+		peers, ok := c.lastWinsPeers[flag]
+		if !ok {
+			continue
+		}
+		members := map[*Flag]bool{flag: true}
+		visited[flag] = true
+		for _, peer := range peers {
+			members[peer] = true
+			visited[peer] = true
+		}
+		occurrences := []*Path{}
+		for _, occurrence := range c.Path {
+			if occurrence.Flag != nil && members[occurrence.Flag] {
+				occurrences = append(occurrences, occurrence)
+			}
+		}
+		// Only the trailing run of occurrences of a single flag survives:
+		// everything before the last occurrence of any other member was
+		// overridden.
+		winner := occurrences[len(occurrences)-1].Flag
+		overridden := 0
+		for i, occurrence := range occurrences {
+			if occurrence.Flag != winner {
+				overridden = i + 1
+			}
+		}
+		for _, occurrence := range occurrences[:overridden] {
+			drop[occurrence] = true
+		}
+	}
+	if len(drop) == 0 {
+		return
+	}
+	path := c.Path[:0]
+	for _, trace := range c.Path {
+		if !drop[trace] {
+			path = append(path, trace)
+		}
+	}
+	c.Path = path
+}
+
+// lastWinsPeers maps each member of a lastwins group to the other members of
+// its group. Groups are scoped to the node their flags are declared on.
+func lastWinsPeers(node *Node) map[*Flag][]*Flag {
+	peers := map[*Flag][]*Flag{}
+	_ = Visit(node, func(v Visitable, next Next) error {
+		if n, ok := v.(*Node); ok {
+			groups := map[string][]*Flag{}
+			for _, flag := range n.Flags {
+				for _, group := range flag.LastWins {
+					groups[group] = append(groups[group], flag)
+				}
+			}
+			for _, members := range groups {
+				if len(members) < 2 {
+					continue
+				}
+				for _, member := range members {
+					others := make([]*Flag, 0, len(members)-1)
+					for _, other := range members {
+						if other != member {
+							others = append(others, other)
+						}
+					}
+					peers[member] = others
+				}
+			}
+		}
+		return next(nil)
+	})
+	return peers
 }
 
 // Bind adds bindings to the Context.
@@ -344,6 +438,7 @@ func (c *Context) FlagValue(flag *Flag) any {
 // Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) Reset() error {
 	selected := c.selectedValues()
+	c.resetErrors = map[*Value]error{}
 	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		value, ok := node.(*Value)
 		if !ok {
@@ -354,6 +449,12 @@ func (c *Context) Reset() error {
 			// An envar shared with a node outside the selected command path
 			// may not parse there; that must not fail this parse.
 			value.Target.Set(reflect.Zero(value.Target.Type()))
+			err = nil
+		}
+		if err != nil && len(c.combineResolvers()) != 0 {
+			// A resolver may supply a valid value after defaults are reset.
+			// Keep the error so Resolve can return it if no value overrides it.
+			c.resetErrors[value] = err
 			err = nil
 		}
 		return next(err)
@@ -654,6 +755,11 @@ func (c *Context) Resolve() error {
 		}
 	}
 	c.Path = append(c.Path, inserted...)
+	for value, err := range c.resetErrors {
+		if _, ok := c.values[value]; !ok {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -778,6 +884,12 @@ func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
 			// keep ownership of their field representation.
 			c.scan.PushTyped(!negatedValue, FlagValueToken)
 		}
+		// An occurrence of a lastwins group member overrides the accumulated
+		// state of the other members, as if they had never been given.
+		for _, peer := range c.lastWinsPeers[flag] {
+			peer.Set = false
+			delete(c.values, peer.Value)
+		}
 		err := flag.Parse(c.scan, c.getValue(flag.Value))
 		if err != nil {
 			var expected *expectedError
@@ -901,9 +1013,27 @@ func (c *Context) printHelp(options HelpOptions) error {
 	return c.help(options, c)
 }
 
+// choiceGroup identifies a group of flags of which one is expected to be
+// chosen: an xor group or a lastwins group.
+type choiceGroup struct {
+	kind string
+	name string
+}
+
+func flagChoiceGroups(flag *Flag) []choiceGroup {
+	groups := make([]choiceGroup, 0, len(flag.Xor)+len(flag.LastWins))
+	for _, name := range flag.Xor {
+		groups = append(groups, choiceGroup{kind: "xor", name: name})
+	}
+	for _, name := range flag.LastWins {
+		groups = append(groups, choiceGroup{kind: "lastwins", name: name})
+	}
+	return groups
+}
+
 func checkMissingFlags(flags []*Flag) error {
-	xorGroupSet := map[string]bool{}
-	xorGroup := map[string][]string{}
+	choiceGroupSet := map[choiceGroup]bool{}
+	choiceGroups := map[choiceGroup][]string{}
 	andGroupSet := map[string]bool{}
 	andGroup := map[string][]string{}
 	missing := []string{}
@@ -912,9 +1042,10 @@ func checkMissingFlags(flags []*Flag) error {
 		for _, and := range flag.And {
 			flag.Required = andGroupRequired[and]
 		}
+		groups := flagChoiceGroups(flag)
 		if flag.Set {
-			for _, xor := range flag.Xor {
-				xorGroupSet[xor] = true
+			for _, group := range groups {
+				choiceGroupSet[group] = true
 			}
 			for _, and := range flag.And {
 				andGroupSet[and] = true
@@ -923,12 +1054,12 @@ func checkMissingFlags(flags []*Flag) error {
 		if !flag.Required || flag.Set {
 			continue
 		}
-		if len(flag.Xor) > 0 || len(flag.And) > 0 {
-			for _, xor := range flag.Xor {
-				if xorGroupSet[xor] {
+		if len(groups) > 0 || len(flag.And) > 0 {
+			for _, group := range groups {
+				if choiceGroupSet[group] {
 					continue
 				}
-				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
+				choiceGroups[group] = append(choiceGroups[group], flag.Summary())
 			}
 			for _, and := range flag.And {
 				andGroup[and] = append(andGroup[and], flag.Summary())
@@ -937,8 +1068,8 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, flag.Summary())
 		}
 	}
-	for xor, flags := range xorGroup {
-		if !xorGroupSet[xor] && len(flags) > 1 {
+	for group, flags := range choiceGroups {
+		if !choiceGroupSet[group] && len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}
