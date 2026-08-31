@@ -57,6 +57,7 @@ type Kong struct {
 	ignoreFields []*regexp.Regexp
 
 	noDefaultHelp   bool
+	helpOnEmptyArgs bool
 	allowHyphenated bool
 	usageOnError    usageOnError
 	help            HelpPrinter
@@ -324,6 +325,15 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	ctx, err = Trace(k, args)
 	if err != nil { // Trace is not expected to return an err
 		return nil, &ParseError{error: err, Context: ctx, exitCode: exitUsageError}
+	}
+	if k.helpOnEmptyArgs && len(args) == 0 {
+		options := k.helpOptions
+		options.Summary = false
+		if err = ctx.printHelp(options); err != nil {
+			return nil, &ParseError{error: err, Context: ctx}
+		}
+		k.Exit(0)
+		return ctx, nil
 	}
 	if ctx.Error != nil {
 		return nil, &ParseError{error: ctx.Error, Context: ctx, exitCode: exitUsageError}
