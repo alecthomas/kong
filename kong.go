@@ -331,7 +331,10 @@ func (k *Kong) Parse(args []string) (ctx *Context, err error) {
 	if err = k.applyHook(ctx, "BeforeReset"); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
-	if err = ctx.Reset(); err != nil {
+	// If a resolver or config loader may provide values, defer applying
+	// defaults so that mappers which perform I/O (e.g. existingfile) do not
+	// fail on defaults that will be replaced before use (see #454).
+	if err = ctx.reset(len(k.resolvers) > 0 || k.loader != nil); err != nil {
 		return nil, &ParseError{error: err, Context: ctx}
 	}
 	if err = k.applyHook(ctx, "BeforeResolve"); err != nil {
