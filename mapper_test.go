@@ -520,16 +520,16 @@ func TestFileContentMapper(t *testing.T) {
 	assert.Contains(t, err.Error(), "is a directory")
 }
 
-func TestFileContentMapperRejectsNonByteSlice(t *testing.T) {
-	// A non-[]byte target must return the mapper's validation error, not panic.
-	t.Run("string", func(t *testing.T) {
+func TestFileContentMapperRejectsUnsupportedTypes(t *testing.T) {
+	// Unsupported targets must return the mapper's validation error, not panic.
+	t.Run("integer", func(t *testing.T) {
 		var cli struct {
-			File string `type:"filecontent"`
+			File int `type:"filecontent"`
 		}
 		p := mustNew(t, &cli)
 		_, err := p.Parse([]string{"--file", "testdata/file.txt"})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), `"filecontent" must be applied to []byte not string`)
+		assert.Contains(t, err.Error(), `"filecontent" must be applied to []byte or string not int`)
 	})
 	t.Run("string slice", func(t *testing.T) {
 		var cli struct {
@@ -538,7 +538,7 @@ func TestFileContentMapperRejectsNonByteSlice(t *testing.T) {
 		p := mustNew(t, &cli)
 		_, err := p.Parse([]string{"--file", "testdata/file.txt"})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), `"filecontent" must be applied to []byte not []string`)
+		assert.Contains(t, err.Error(), `"filecontent" must be applied to []byte or string not []string`)
 	})
 }
 
@@ -896,4 +896,50 @@ func TestFileMapperWithDefaultNonExistentFile(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "missing-default.txt")
 	assert.IsError(t, err, os.ErrNotExist)
+}
+
+func TestFileContentString(t *testing.T) {
+	for _, content := range []string{"", "hello\nworld\n", "café\n", "\x00\xff"} {
+		t.Run(fmt.Sprintf("%q", content), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "content.txt")
+			assert.NoError(t, os.WriteFile(path, []byte(content), 0600))
+			var cli struct {
+				File string `type:"filecontent"`
+			}
+			_, err := mustNew(t, &cli).Parse([]string{"--file", path})
+			assert.NoError(t, err)
+			assert.Equal(t, content, cli.File)
+		})
+	}
+}
+
+func TestFileContentNamedString(t *testing.T) {
+	type text string
+	var cli struct {
+		File text `type:"filecontent" default:"testdata/file.txt"`
+	}
+	_, err := mustNew(t, &cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, text("Hello world."), cli.File)
+}
+
+func TestFileContentStringStdin(t *testing.T) {
+	input, err := os.CreateTemp(t.TempDir(), "stdin-*")
+	assert.NoError(t, err)
+	_, err = input.WriteString("from stdin\n")
+	assert.NoError(t, err)
+	_, err = input.Seek(0, 0)
+	assert.NoError(t, err)
+	original := os.Stdin
+	os.Stdin = input
+	t.Cleanup(func() {
+		os.Stdin = original
+		assert.NoError(t, input.Close())
+	})
+	var cli struct {
+		File string `type:"filecontent"`
+	}
+	_, err = mustNew(t, &cli).Parse([]string{"--file", "-"})
+	assert.NoError(t, err)
+	assert.Equal(t, "from stdin\n", cli.File)
 }
