@@ -534,6 +534,19 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 						c.scan.Pop()
 					}
 
+					// `--` already stops flag parsing. When this node has a
+					// default:"withargs" command, also stop command matching
+					// so a colliding sibling name is payload, not a dispatch.
+					if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+						c.Path = append(c.Path, &Path{
+							Parent:    node,
+							Command:   node.DefaultCmd,
+							Flags:     node.DefaultCmd.Flags,
+							remainder: c.scan.PeekAll(),
+						})
+						return c.trace(node.DefaultCmd)
+					}
+
 				// Long flag.
 				case strings.HasPrefix(v, "--"):
 					c.scan.Pop()
