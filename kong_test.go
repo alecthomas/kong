@@ -1879,6 +1879,62 @@ func TestDefaultCommandPrecedence(t *testing.T) {
 	assert.EqualError(t, err, "unknown flag --flag")
 }
 
+func TestDefaultCommandDashDashStopsCommandMatching(t *testing.T) {
+	var cli struct {
+		Project string
+		Run     struct {
+			Args []string `arg:"" optional:""`
+		} `cmd:"" default:"withargs" passthrough:""`
+		Merge struct{} `cmd:""`
+	}
+	p := mustNew(t, &cli)
+
+	ctx, err := p.Parse([]string{"echo", "hi"})
+	assert.NoError(t, err)
+	assert.Equal(t, "run <args>", ctx.Command())
+	assert.Equal(t, []string{"echo", "hi"}, cli.Run.Args)
+
+	cli.Run.Args = nil
+	ctx, err = p.Parse([]string{"--", "echo", "hi"})
+	assert.NoError(t, err)
+	assert.Equal(t, "run <args>", ctx.Command())
+	assert.Equal(t, []string{"echo", "hi"}, cli.Run.Args)
+
+	cli.Run.Args = nil
+	ctx, err = p.Parse([]string{"--", "--looks-like-a-flag"})
+	assert.NoError(t, err)
+	assert.Equal(t, "run <args>", ctx.Command())
+	assert.Equal(t, []string{"--looks-like-a-flag"}, cli.Run.Args)
+
+	cli.Run.Args = nil
+	ctx, err = p.Parse([]string{"merge"})
+	assert.NoError(t, err)
+	assert.Equal(t, "merge", ctx.Command())
+	assert.Equal(t, []string(nil), cli.Run.Args)
+
+	cli.Run.Args = nil
+	ctx, err = p.Parse([]string{"--", "merge"})
+	assert.NoError(t, err)
+	assert.Equal(t, "run <args>", ctx.Command())
+	assert.Equal(t, []string{"merge"}, cli.Run.Args)
+
+	cli.Project = ""
+	cli.Run.Args = nil
+	ctx, err = p.Parse([]string{"--", "merge", "--project", "x"})
+	assert.NoError(t, err)
+	assert.Equal(t, "run <args>", ctx.Command())
+	assert.Equal(t, "", cli.Project)
+	assert.Equal(t, []string{"merge", "--project", "x"}, cli.Run.Args)
+
+	cli.Project = ""
+	cli.Run.Args = nil
+	ctx, err = p.Parse([]string{"--project", "foo", "--", "merge"})
+	assert.NoError(t, err)
+	assert.Equal(t, "run <args>", ctx.Command())
+	assert.Equal(t, "foo", cli.Project)
+	assert.Equal(t, []string{"merge"}, cli.Run.Args)
+}
+
 func TestLoneHpyhen(t *testing.T) {
 	var cli struct {
 		Flag string
