@@ -3276,4 +3276,34 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
+
+	for _, tc := range []struct {
+		name    string
+		args    []string
+		allow   bool
+		wantErr bool
+		want    string
+	}{
+		{"MissingLong", []string{"--flag"}, true, true, ""},
+		{"MissingShort", []string{"-f"}, true, true, ""},
+		{"MissingLongDefault", []string{"--flag"}, false, true, ""},
+		{"MissingShortDefault", []string{"-f"}, false, true, ""},
+		{"SingleHyphen", []string{"--flag", "-"}, true, false, "-"},
+		{"SingleHyphenDefault", []string{"--flag", "-"}, false, false, "-"},
+		{"DoubleHyphen", []string{"--flag", "--"}, true, false, "--"},
+		{"EmptyEquals", []string{"--flag="}, true, false, ""},
+		{"EmptyArgument", []string{"--flag", ""}, true, false, ""},
+		{"EmptyEqualsDefault", []string{"--flag="}, false, false, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := &shortFlag{}
+			_, err := mustNew(t, actual, kong.WithHyphenPrefixedParameters(tc.allow)).Parse(tc.args)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, actual.Flag)
+		})
+	}
 }
