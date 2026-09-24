@@ -724,9 +724,15 @@ func (c *Context) Resolve() error {
 				continue
 			}
 
+			// An envar that takes precedence over configuration files.
+			envOverridesConfiguration := c.Kong.envOverridesConfiguration && atLeastOneEnvSet(flag.Tag.Envs)
+
 			// Pick the last resolved value.
 			var selected any
 			for _, resolver := range resolvers {
+				if _, ok := resolver.(configurationResolver); ok && envOverridesConfiguration {
+					continue
+				}
 				s, err := resolver.Resolve(c, path, flag)
 				if err != nil {
 					return fmt.Errorf("%s: %w", flag.ShortSummary(), err)

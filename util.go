@@ -18,7 +18,7 @@ func (c ConfigFlag) BeforeResolve(kong *Kong, ctx *Context, trace *Path) error {
 		return fmt.Errorf("kong must be configured with kong.Configuration(...)")
 	}
 	path := string(ctx.FlagValue(trace.Flag).(ConfigFlag)) //nolint
-	resolver, err := kong.LoadConfig(path)
+	resolver, err := kong.loadConfiguration(path)
 	if err != nil {
 		return err
 	}

@@ -717,6 +717,26 @@ kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json
 
 [See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L206) for an example of how the JSON file is structured.
 
+#### Precedence of values
+
+By default, values are applied with the following precedence, highest first:
+
+1. Command-line flags
+2. Configuration files and other resolvers
+3. Environment variables from `env` tags
+4. `default` tags
+
+Use `EnvOverridesConfiguration()` to give environment variables precedence over configuration files loaded via `Configuration(...)` or `ConfigFlag`:
+
+```go
+kong.Parse(&cli,
+	kong.Configuration(kong.JSON, "/etc/myapp.json"),
+	kong.EnvOverridesConfiguration(),
+)
+```
+
+With this option the precedence becomes flag > environment variable > configuration file > default. Other resolvers are not affected.
+
 #### List of Configuration Loaders
 
 - [YAML](https://github.com/alecthomas/kong-yaml)
