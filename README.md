@@ -6,6 +6,7 @@
 [![](https://godoc.org/github.com/alecthomas/kong?status.svg)](http://godoc.org/github.com/alecthomas/kong) [![CircleCI](https://img.shields.io/circleci/project/github/alecthomas/kong.svg)](https://circleci.com/gh/alecthomas/kong) [![Go Report Card](https://goreportcard.com/badge/github.com/alecthomas/kong)](https://goreportcard.com/report/github.com/alecthomas/kong) [![Slack chat](https://img.shields.io/static/v1?logo=slack&style=flat&label=slack&color=green&message=gophers)](https://gophers.slack.com/messages/CN9DS8YF3)
 
 - [Version 1.0.0 Release](#version-100-release)
+- [Installation](#installation)
 - [Introduction](#introduction)
 - [Help](#help)
   - [Help as a user of a Kong application](#help-as-a-user-of-a-kong-application)
@@ -45,6 +46,23 @@
 Kong has been stable for a long time, so it seemed appropriate to cut a 1.0 release.
 
 There is one breaking change, [#436](https://github.com/alecthomas/kong/pull/436), which should effect relatively few users.
+
+
+## Installation
+
+Kong is a library. Add it to your module with:
+
+```sh
+go get github.com/alecthomas/kong@latest
+```
+
+Then import it:
+
+```go
+import "github.com/alecthomas/kong"
+```
+
+Requires a [supported Go release](https://go.dev/doc/devel/release#policy).
 
 ## Introduction
 
