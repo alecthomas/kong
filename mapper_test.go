@@ -89,6 +89,33 @@ func TestNamedMapper(t *testing.T) {
 	assert.Equal(t, "MOO", cli.Flag)
 }
 
+// TestNamedMapperDefaultOnlyDecodesActiveCommand is a regression test: a named
+// mapper must not be called for the default values of sibling commands that
+// were not selected by the parse.
+func TestNamedMapperDefaultOnlyDecodesActiveCommand(t *testing.T) {
+	var defaults []string
+	var cli struct {
+		CmdA struct {
+			Val string `optional:"" type:"mytype" default:"foo"`
+		} `cmd:""`
+		CmdB struct {
+			Val string `optional:"" type:"mytype" default:"bar"`
+		} `cmd:""`
+	}
+	k := mustNew(t, &cli, kong.NamedMapper("mytype", kong.MapperFunc(
+		func(ctx *kong.DecodeContext, target reflect.Value) error {
+			var val string
+			_ = ctx.Scan.PopValueInto("val", &val)
+			defaults = append(defaults, val)
+			target.SetString(val)
+			return nil
+		},
+	)))
+	_, err := k.Parse([]string{"cmd-a"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo"}, defaults)
+}
+
 type testMooMapper struct {
 	text string
 }
