@@ -3277,3 +3277,102 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
 }
+
+func TestDynamicHiddenFlag(t *testing.T) {
+	type CLI struct {
+		VisibleFlag string `help:"Visible flag"`
+		DynamicHide string `hidden:"${flag_hidden}" help:"Dynamic flag"`
+		DefaultHide string `hidden:"${def_hide=true}" help:"Default hidden flag"`
+		DefaultShow string `hidden:"${def_show=false}" help:"Default shown flag"`
+	}
+
+	// When flag_hidden is "true", DynamicHide and DefaultHide should be hidden.
+	var cli1 CLI
+	w1 := &strings.Builder{}
+	p1 := mustNew(t, &cli1, kong.Vars{"flag_hidden": "true"}, kong.Writers(w1, w1), kong.Exit(func(int) {}))
+	_, err := p1.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	out1 := w1.String()
+	assert.Contains(t, out1, "--visible-flag")
+	assert.Contains(t, out1, "--default-show")
+	assert.False(t, strings.Contains(out1, "--dynamic-hide"))
+	assert.False(t, strings.Contains(out1, "--default-hide"))
+
+	// When flag_hidden is "false" and def_hide is overridden to "false", both should be visible.
+	var cli2 CLI
+	w2 := &strings.Builder{}
+	p2 := mustNew(t, &cli2, kong.Vars{"flag_hidden": "false", "def_hide": "false"}, kong.Writers(w2, w2), kong.Exit(func(int) {}))
+	_, err = p2.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	out2 := w2.String()
+	assert.Contains(t, out2, "--visible-flag")
+	assert.Contains(t, out2, "--dynamic-hide")
+	assert.Contains(t, out2, "--default-hide")
+	assert.Contains(t, out2, "--default-show")
+}
+
+func TestDynamicHiddenCommand(t *testing.T) {
+	type SubCmd struct {
+		Arg string `arg:"" optional:""`
+	}
+	type CLI struct {
+		Cmd1 SubCmd `cmd:"" hidden:"${cmd_hidden}" help:"Dynamic command"`
+		Cmd2 SubCmd `cmd:"" help:"Visible command"`
+	}
+
+	// When cmd_hidden is "true", Cmd1 should be hidden.
+	var cli1 CLI
+	p1 := mustNew(t, &cli1, kong.Vars{"cmd_hidden": "true"})
+	var cmd1, cmd2 *kong.Node
+	for _, child := range p1.Model.Children {
+		if child.Name == "cmd-1" {
+			cmd1 = child
+		} else if child.Name == "cmd-2" {
+			cmd2 = child
+		}
+	}
+	assert.NotZero(t, cmd1)
+	assert.NotZero(t, cmd2)
+	assert.True(t, cmd1.Hidden)
+	assert.False(t, cmd2.Hidden)
+	leaves1 := p1.Model.Leaves(true)
+	assert.Equal(t, 1, len(leaves1))
+	assert.Equal(t, "cmd-2", leaves1[0].Name)
+
+	// When cmd_hidden is "false", Cmd1 should be visible.
+	var cli2 CLI
+	p2 := mustNew(t, &cli2, kong.Vars{"cmd_hidden": "false"})
+	cmd1 = nil
+	cmd2 = nil
+	for _, child := range p2.Model.Children {
+		if child.Name == "cmd-1" {
+			cmd1 = child
+		} else if child.Name == "cmd-2" {
+			cmd2 = child
+		}
+	}
+	assert.NotZero(t, cmd1)
+	assert.NotZero(t, cmd2)
+	assert.False(t, cmd1.Hidden)
+	assert.False(t, cmd2.Hidden)
+	leaves2 := p2.Model.Leaves(true)
+	assert.Equal(t, 2, len(leaves2))
+}
+
+func TestDynamicHiddenFlagErrors(t *testing.T) {
+	type CLI struct {
+		Flag string `hidden:"${flag_hidden}"`
+	}
+
+	// Undefined variable
+	var cli1 CLI
+	_, err := kong.New(&cli1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "undefined variable ${flag_hidden}")
+
+	// Invalid boolean variable value
+	var cli2 CLI
+	_, err = kong.New(&cli2, kong.Vars{"flag_hidden": "notabool"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid boolean value "notabool" for hidden`)
+}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -230,6 +231,19 @@ func (k *Kong) interpolate(node *Node) (err error) {
 			if err != nil {
 				return fmt.Errorf("help for %s: %s", node.Path(), err)
 			}
+			if node.Tag != nil && node.Tag.Has("hidden") && node.Tag.Get("hidden") != "" {
+				raw := node.Tag.Get("hidden")
+				interpolated, err := interpolate(raw, vars, nil)
+				if err != nil {
+					return fmt.Errorf("hidden value for %s: %s", node.Path(), err)
+				}
+				hidden, err := strconv.ParseBool(interpolated)
+				if err != nil {
+					return fmt.Errorf("invalid boolean value %q for hidden on %s: %s", interpolated, node.Path(), err)
+				}
+				node.Hidden = hidden
+				node.Tag.Hidden = hidden
+			}
 			err = next(nil)
 			stack.pop()
 			return err
@@ -285,6 +299,21 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	value.Help, err = interpolate(value.Help, vars, updatedVars)
 	if err != nil {
 		return fmt.Errorf("help for %s: %s", value.Summary(), err)
+	}
+	if value.Tag != nil && value.Tag.Has("hidden") && value.Tag.Get("hidden") != "" {
+		raw := value.Tag.Get("hidden")
+		interpolated, err := interpolate(raw, vars, updatedVars)
+		if err != nil {
+			return fmt.Errorf("hidden value for %s: %s", value.Summary(), err)
+		}
+		hidden, err := strconv.ParseBool(interpolated)
+		if err != nil {
+			return fmt.Errorf("invalid boolean value %q for hidden on %s: %s", interpolated, value.Summary(), err)
+		}
+		value.Tag.Hidden = hidden
+		if value.Flag != nil {
+			value.Flag.Hidden = hidden
+		}
 	}
 	return nil
 }

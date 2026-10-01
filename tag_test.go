@@ -272,3 +272,35 @@ func TestInvalidRuneErrors(t *testing.T) {
 	_, err := kong.New(&cli)
 	assert.EqualError(t, err, "<anonymous struct>.Flag: invalid short flag name \"invalid\": invalid rune")
 }
+
+func TestHiddenTag(t *testing.T) {
+	var cli struct {
+		HiddenDefault bool `hidden:""`
+		HiddenTrue    bool `hidden:"true"`
+		HiddenFalse   bool `hidden:"false"`
+		Visible       bool
+	}
+	p := mustNew(t, &cli)
+	flags := p.Model.Flags
+	for _, flag := range flags {
+		switch flag.Name {
+		case "hidden-default":
+			assert.True(t, flag.Hidden)
+		case "hidden-true":
+			assert.True(t, flag.Hidden)
+		case "hidden-false":
+			assert.False(t, flag.Hidden)
+		case "visible":
+			assert.False(t, flag.Hidden)
+		}
+	}
+}
+
+func TestHiddenTagInvalidError(t *testing.T) {
+	cli := struct {
+		Flag bool `hidden:"invalid"`
+	}{}
+	_, err := kong.New(&cli)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid boolean value "invalid" for hidden`)
+}
