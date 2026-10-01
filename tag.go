@@ -281,7 +281,16 @@ func hydrateTag(t *Tag, typ reflect.Type) error { //nolint: gocyclo
 	if err != nil && t.Get("short") != "" {
 		return fmt.Errorf("invalid short flag name %q: %s", t.Get("short"), err)
 	}
-	t.Hidden = t.Has("hidden")
+	if t.Has("hidden") {
+		v := t.Get("hidden")
+		if !strings.Contains(v, "${") {
+			hidden, err := t.GetBool("hidden")
+			if err != nil {
+				return fmt.Errorf("invalid boolean value %q for hidden: %w", v, err)
+			}
+			t.Hidden = hidden
+		}
+	}
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetSep("sep", ',')
 	t.MapSep, _ = t.GetSep("mapsep", ';')
@@ -375,8 +384,13 @@ func (t *Tag) GetAll(k string) []string {
 }
 
 // GetBool returns true if the given tag looks like a boolean truth string.
+// If the tag is present with an empty value, it returns true.
 func (t *Tag) GetBool(k string) (bool, error) {
-	return strconv.ParseBool(t.Get(k))
+	v := t.Get(k)
+	if v == "" && t.Has(k) {
+		return true, nil
+	}
+	return strconv.ParseBool(v)
 }
 
 // GetFloat parses the given tag as a float64.
