@@ -28,6 +28,9 @@ type Path struct {
 	// True if this Path element was created as the result of a resolver.
 	Resolved bool
 
+	// Resolver that resolved this flag, if Resolved is true.
+	Resolver Resolver
+
 	// Remaining tokens after this node
 	remainder []Token
 }
@@ -435,6 +438,68 @@ func (c *Context) FlagValue(flag *Flag) any {
 	return flag.DefaultValue.Interface()
 }
 
+// FlagSource returns the provenance Source of a flag.
+func (c *Context) FlagSource(flag *Flag) Source {
+	if flag == nil || flag.Value == nil {
+		return Source{Type: ValueSourceUnset}
+	}
+	for _, trace := range c.Path {
+		if trace.Flag == flag {
+			if trace.Resolved {
+				return Source{
+					Type:         ValueSourceResolver,
+					Resolver:     trace.Resolver,
+					ResolverName: resolverName(trace.Resolver),
+				}
+			}
+			return Source{Type: ValueSourceFlag}
+		}
+	}
+	return flag.Value.SourceInfo()
+}
+
+// FlagValueSource returns the ValueSource of a flag.
+func (c *Context) FlagValueSource(flag *Flag) ValueSource {
+	return c.FlagSource(flag).Type
+}
+
+// Source returns the provenance Source of a flag.
+func (c *Context) Source(flag *Flag) Source {
+	return c.FlagSource(flag)
+}
+
+// Flag finds a flag by name, alias, or single-character short name from the parsed context flags
+// or the application model.
+func (c *Context) Flag(name string) *Flag {
+	for _, flag := range c.Flags() {
+		if flag.Name == name || (len(name) == 1 && flag.Short == rune(name[0])) {
+			return flag
+		}
+		for _, alias := range flag.Aliases {
+			if alias == name {
+				return flag
+			}
+		}
+	}
+	var found *Flag
+	_ = Visit(c.Model.Node, func(v Visitable, next Next) error {
+		if flag, ok := v.(*Flag); ok {
+			if flag.Name == name || (len(name) == 1 && flag.Short == rune(name[0])) {
+				found = flag
+				return nil
+			}
+			for _, alias := range flag.Aliases {
+				if alias == name {
+					found = flag
+					return nil
+				}
+			}
+		}
+		return next(nil)
+	})
+	return found
+}
+
 // Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) Reset() error {
 	selected := c.selectedValues()
@@ -449,6 +514,10 @@ func (c *Context) Reset() error {
 			// An envar shared with a node outside the selected command path
 			// may not parse there; that must not fail this parse.
 			value.Target.Set(reflect.Zero(value.Target.Type()))
+			value.Source = ValueSourceUnset
+			value.SourceEnv = ""
+			value.SourceResolver = nil
+			value.SourceResolverName = ""
 			err = nil
 		}
 		if err != nil && len(c.combineResolvers()) != 0 {
@@ -726,6 +795,7 @@ func (c *Context) Resolve() error {
 
 			// Pick the last resolved value.
 			var selected any
+			var selectedResolver Resolver
 			for _, resolver := range resolvers {
 				s, err := resolver.Resolve(c, path, flag)
 				if err != nil {
@@ -735,6 +805,7 @@ func (c *Context) Resolve() error {
 					continue
 				}
 				selected = s
+				selectedResolver = resolver
 			}
 
 			if selected == nil {
@@ -750,6 +821,7 @@ func (c *Context) Resolve() error {
 			inserted = append(inserted, &Path{
 				Flag:      flag,
 				Resolved:  true,
+				Resolver:  selectedResolver,
 				remainder: c.scan.PeekAll(),
 			})
 		}
@@ -822,13 +894,32 @@ func (c *Context) Apply() (string, error) {
 		case trace.Argument != nil:
 			path = append(path, "<"+trace.Argument.Name+">")
 			value = trace.Argument.Argument
+			value.Source = ValueSourceFlag
+			value.SourceEnv = ""
+			value.SourceResolver = nil
+			value.SourceResolverName = ""
 		case trace.Command != nil:
 			path = append(path, trace.Command.Name)
 		case trace.Flag != nil:
 			value = trace.Flag.Value
+			if trace.Resolved {
+				value.Source = ValueSourceResolver
+				value.SourceResolver = trace.Resolver
+				value.SourceResolverName = resolverName(trace.Resolver)
+				value.SourceEnv = ""
+			} else {
+				value.Source = ValueSourceFlag
+				value.SourceEnv = ""
+				value.SourceResolver = nil
+				value.SourceResolverName = ""
+			}
 		case trace.Positional != nil:
 			path = append(path, "<"+trace.Positional.Name+">")
 			value = trace.Positional
+			value.Source = ValueSourceFlag
+			value.SourceEnv = ""
+			value.SourceResolver = nil
+			value.SourceResolverName = ""
 		default:
 			panic("unsupported path ?!")
 		}
