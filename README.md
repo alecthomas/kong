@@ -35,6 +35,7 @@
   - [`Name(help)` and `Description(help)` - set the application name description](#namehelp-and-descriptionhelp---set-the-application-name-description)
   - [`Configuration(loader, paths...)` - load defaults from configuration files](#configurationloader-paths---load-defaults-from-configuration-files)
   - [`Resolver(...)` - support for default values from external sources](#resolver---support-for-default-values-from-external-sources)
+  - [Inspecting flag value provenance (source tracking)](#inspecting-flag-value-provenance-source-tracking)
   - [`*Mapper(...)` - customising how the command-line is mapped to Go values](#mapper---customising-how-the-command-line-is-mapped-to-go-values)
   - [`ConfigureHelp(HelpOptions)` and `Help(HelpFunc)` - customising help](#configurehelphelpoptions-and-helphelpfunc---customising-help)
   - [Injecting values into `Run()` methods](#injecting-values-into-run-methods)
@@ -729,6 +730,33 @@ kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json
 Resolvers are Kong's extension point for providing default values from external sources. As an example, support for environment variables via the `env` tag is provided by a resolver. There's also a builtin resolver for JSON configuration files.
 
 Example resolvers can be found in [resolver.go](https://github.com/alecthomas/kong/blob/master/resolver.go).
+
+### Inspecting flag value provenance (source tracking)
+
+Applications can inspect where each effective flag value came from after parsing using `ctx.FlagSource(flag)` or `ctx.FlagValueSource(flag)`:
+
+```go
+ctx, err := parser.Parse(os.Args[1:])
+for _, flag := range ctx.Flags() {
+	src := ctx.FlagSource(flag)
+	switch src.Type {
+	case kong.ValueSourceFlag:
+		fmt.Printf("%s came from command-line\n", flag.Name)
+	case kong.ValueSourceEnv:
+		fmt.Printf("%s came from environment variable %s\n", flag.Name, src.Env)
+	case kong.ValueSourceResolver:
+		fmt.Printf("%s came from resolver %s\n", flag.Name, src.ResolverName)
+	case kong.ValueSourceDefault:
+		fmt.Printf("%s used declared default\n", flag.Name)
+	case kong.ValueSourceUnset:
+		fmt.Printf("%s remains unset\n", flag.Name)
+	}
+}
+```
+
+The provenance information preserves existing precedence order (`Flag` > `Resolver` > `Env` > `Default` > `Unset`), distinguishes defaults from resolvers and unset values, treats command-line aliases and negated flags as command-line input, identifies the specific environment variable that supplied environment-backed values, and works across root, nested, and default commands.
+
+Custom resolvers can identify themselves by implementing `NamedResolver` (`Name() string`) or using `NamedResolverFunc` / `WithResolverName`.
 
 ### `*Mapper(...)` - customising how the command-line is mapped to Go values
 
