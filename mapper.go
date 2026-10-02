@@ -825,7 +825,10 @@ func counterMapper() MapperFunc {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				target.SetInt(n)
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				target.SetUint(uint64(n)) //nolint:gosec // a counter value is small and non-negative
+				if n < 0 {
+					return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
+				}
+				target.SetUint(uint64(n)) //nolint:gosec // n was rejected when negative
 			case reflect.Float32, reflect.Float64:
 				target.SetFloat(float64(n))
 			default:
