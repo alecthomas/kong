@@ -142,6 +142,20 @@ func TestSplitEscaped(t *testing.T) {
 	assert.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
 	assert.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
 	assert.Equal(t, []string{"a,b,c"}, kong.SplitEscaped(`a,b,c`, -1))
+	assert.Equal(t, []string{"a", ""}, kong.SplitEscaped("a,", ','))
+	assert.Equal(t, []string{"a", "", "b"}, kong.SplitEscaped("a,,b", ','))
+	assert.Equal(t, []string{"", ""}, kong.SplitEscaped(",", ','))
+	assert.Equal(t, []string(nil), kong.SplitEscaped("", ','))
+}
+
+func TestSliceTrailingEmptyElement(t *testing.T) {
+	var cli struct {
+		List []string `sep:","`
+	}
+	k := mustNew(t, &cli)
+	_, err := k.Parse([]string{"--list=a,"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a", ""}, cli.List)
 }
 
 func TestJoinEscaped(t *testing.T) {
