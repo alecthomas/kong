@@ -89,7 +89,7 @@ func (b bindings) addProvider(provider any, singleton bool) error {
 		return fmt.Errorf("%T must be a function", provider)
 	}
 
-	if t.NumOut() == 0 {
+	if t.NumOut() == 0 || t.NumOut() > 2 {
 		return fmt.Errorf("%T must be a function with the signature func(...)(T, error) or func(...) T", provider)
 	}
 	if t.NumOut() == 2 {
