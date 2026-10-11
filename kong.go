@@ -401,6 +401,7 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 	if node == nil {
 		return nil
 	}
+	selected := ctx.selectedValues()
 	return Visit(node, func(n Visitable, next Next) error {
 		node, ok := n.(*Node)
 		if !ok {
@@ -413,6 +414,9 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 			// which Reset() applies straight to the target without touching the
 			// parse path. Anything actually parsed off argv or set by a resolver
 			// shows up in ctx.values and is covered by the main hook loop.
+			if !selected[flag.Value] {
+				continue
+			}
 			if ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
 				continue
 			}
