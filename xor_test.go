@@ -2,6 +2,7 @@ package kong_test
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -35,6 +36,100 @@ func TestXorPositional(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestXorPositionalRepeatedParse(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		first    []string
+		second   []string
+		err      string
+		defaults bool
+		arg      string
+	}{
+		{name: "PositionalToFlag", first: []string{"one"}, second: []string{"--defaults"}, defaults: true},
+		{name: "FlagToPositional", first: []string{"--defaults"}, second: []string{"one"}, arg: "one"},
+		{name: "PositionalToNeither", first: []string{"one"}},
+		{name: "FlagToNeither", first: []string{"--defaults"}},
+		{name: "ConflictAfterPositional", first: []string{"one"}, second: []string{"--defaults", "two"}, err: "--defaults and [<arg>] can't be used together", defaults: true, arg: "two"},
+		{name: "ConflictAfterFlag", first: []string{"--defaults"}, second: []string{"--defaults=false", ""}, err: "--defaults and [<arg>] can't be used together"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var cli struct {
+				Defaults bool   `xor:"source"`
+				Arg      string `arg:"" optional:"" xor:"source"`
+			}
+			p := mustNew(t, &cli)
+			_, err := p.Parse(test.first)
+			assert.NoError(t, err)
+			_, err = p.Parse(test.second)
+			if test.err == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, test.err)
+			}
+			assert.Equal(t, test.defaults, cli.Defaults)
+			assert.Equal(t, test.arg, cli.Arg)
+			_, err = p.Parse(nil)
+			assert.NoError(t, err)
+			assert.False(t, cli.Defaults)
+			assert.Equal(t, "", cli.Arg)
+		})
+	}
+}
+
+func TestXorRequiredRepeatedParse(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		args []string
+	}{
+		{name: "Flag", args: []string{"--defaults"}},
+		{name: "Positional", args: []string{"one"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Run("RequiredPositional", func(t *testing.T) {
+				var cli struct {
+					Defaults bool   `xor:"source"`
+					Arg      string `arg:"" xor:"source"`
+				}
+				p := mustNew(t, &cli)
+				_, err := p.Parse(test.args)
+				assert.NoError(t, err)
+				_, err = p.Parse(nil)
+				assert.EqualError(t, err, `expected "<arg>"`)
+			})
+			t.Run("RequiredFlag", func(t *testing.T) {
+				var cli struct {
+					Defaults bool   `required:"" xor:"source"`
+					Arg      string `arg:"" optional:"" xor:"source"`
+				}
+				p := mustNew(t, &cli)
+				_, err := p.Parse(test.args)
+				assert.NoError(t, err)
+				_, err = p.Parse(nil)
+				assert.EqualError(t, err, "missing flags or arguments: --defaults or [<arg>]")
+			})
+		})
+	}
+}
+
+func TestXorPositionalRepeatedParseEnv(t *testing.T) {
+	var cli struct {
+		Defaults bool   `xor:"source"`
+		Arg      string `arg:"" optional:"" xor:"source" env:"KONG_XOR_REPARSE_ARG"`
+	}
+	t.Setenv("KONG_XOR_REPARSE_ARG", "from-env")
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "from-env", cli.Arg)
+	_, err = p.Parse([]string{"--defaults"})
+	assert.EqualError(t, err, "--defaults and [<arg>] can't be used together")
+	assert.NoError(t, os.Unsetenv("KONG_XOR_REPARSE_ARG"))
+	_, err = p.Parse([]string{"--defaults"})
+	assert.NoError(t, err)
+	assert.True(t, cli.Defaults)
+	assert.Equal(t, "", cli.Arg)
 }
 
 func TestXorRequiredPositional(t *testing.T) {
@@ -274,8 +369,12 @@ func TestXorPositionalDefault(t *testing.T) {
 		Defaults bool   `xor:"source"`
 		Arg      string `arg:"" default:"fallback" xor:"source"`
 	}
-	_, err := mustNew(t, &cli).Parse([]string{"--defaults"})
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--defaults"})
 	assert.EqualError(t, err, "--defaults and [<arg>] can't be used together")
+	_, err = p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "fallback", cli.Arg)
 }
 
 func TestXorFlagDefaultWithPositional(t *testing.T) {
@@ -283,8 +382,14 @@ func TestXorFlagDefaultWithPositional(t *testing.T) {
 		Defaults bool   `default:"true" xor:"source"`
 		Arg      string `arg:"" optional:"" xor:"source"`
 	}
-	_, err := mustNew(t, &cli).Parse([]string{"one"})
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	_, err = p.Parse([]string{"one"})
 	assert.EqualError(t, err, "--defaults and [<arg>] can't be used together")
+	_, err = p.Parse(nil)
+	assert.NoError(t, err)
+	assert.True(t, cli.Defaults)
 }
 
 func TestXorPositionalUsesFlagModel(t *testing.T) {

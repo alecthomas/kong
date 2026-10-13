@@ -102,6 +102,15 @@ type Context struct {
 // This just constructs a new trace. To fully apply the trace you must call Reset(), Resolve(),
 // Validate() and Apply().
 func Trace(k *Kong, args []string) (*Context, error) {
+	// Decoders may inspect presence before Reset, so clear it before tracing.
+	if err := Visit(k.Model.Node, func(node Visitable, next Next) error {
+		if value, ok := node.(*Value); ok {
+			value.Set = false
+		}
+		return next(nil)
+	}); err != nil {
+		return nil, err
+	}
 	s := Scan(args...).AllowHyphenPrefixedParameters(k.allowHyphenated)
 	c := &Context{
 		Kong: k,
