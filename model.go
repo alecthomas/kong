@@ -276,6 +276,16 @@ type Value struct {
 	Active          bool            // Denotes the value is part of an active branch in the CLI.
 }
 
+func (v *Value) xorGroups() []string {
+	if v.Flag != nil {
+		return v.Flag.Xor
+	}
+	if v.Tag != nil {
+		return v.Tag.Xor
+	}
+	return nil
+}
+
 // EnumMap returns a map of the enums in this value.
 func (v *Value) EnumMap() map[string]bool {
 	parts := strings.Split(v.Enum, ",")
