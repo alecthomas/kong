@@ -30,6 +30,28 @@ func TestValueMapper(t *testing.T) {
 	assert.Equal(t, "MOO", cli.Flag)
 }
 
+type testBoolMapperExt struct{}
+
+func (testBoolMapperExt) Decode(_ *kong.DecodeContext, target reflect.Value) error {
+	target.SetString("MOO")
+	return nil
+}
+
+func (testBoolMapperExt) IsBoolFromValue(value reflect.Value) bool {
+	return value.Kind() == reflect.String
+}
+
+func TestPointerBoolMapperExt(t *testing.T) {
+	var cli struct {
+		Flag *string `negatable:""`
+	}
+	k := mustNew(t, &cli, kong.TypeMapper(reflect.TypeOf(""), testBoolMapperExt{}))
+	_, err := k.Parse([]string{"--flag"})
+	assert.NoError(t, err)
+	assert.NotZero(t, cli.Flag)
+	assert.Equal(t, "MOO", *cli.Flag)
+}
+
 type textUnmarshalerValue int
 
 func (m *textUnmarshalerValue) UnmarshalText(text []byte) error {

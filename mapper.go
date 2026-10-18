@@ -777,7 +777,7 @@ func (p ptrMapper) IsBoolFromValue(target reflect.Value) bool {
 	if bm, ok := nestedMapper.(BoolMapper); ok && bm.IsBool() {
 		return true
 	}
-	if bm, ok := nestedMapper.(BoolMapperExt); ok && bm.IsBoolFromValue(target) {
+	if bm, ok := nestedMapper.(BoolMapperExt); ok && bm.IsBoolFromValue(elem) {
 		return true
 	}
 	return target.Kind() == reflect.Ptr && target.Type().Elem().Kind() == reflect.Bool

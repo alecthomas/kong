@@ -2812,6 +2812,29 @@ func TestBoolPtr(t *testing.T) {
 	assert.Equal(t, true, *cli.X)
 }
 
+func TestBoolPtrPtr(t *testing.T) {
+	for _, tt := range []struct {
+		arg  string
+		want bool
+	}{
+		{"--x", true},
+		{"--x=false", false},
+		{"--no-x", false},
+	} {
+		t.Run(tt.arg, func(t *testing.T) {
+			var cli struct {
+				X **bool `negatable:""`
+			}
+			k := mustNew(t, &cli)
+			_, err := k.Parse([]string{tt.arg})
+			assert.NoError(t, err)
+			assert.NotZero(t, cli.X)
+			assert.NotZero(t, *cli.X)
+			assert.Equal(t, tt.want, **cli.X)
+		})
+	}
+}
+
 func TestBoolPtrFalse(t *testing.T) {
 	var cli struct {
 		X *bool
