@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/bits"
 	"net/url"
 	"os"
@@ -447,6 +448,9 @@ func floatDecoder(bits int) MapperFunc {
 			target.SetFloat(float64(v))
 
 		case float64:
+			if bits == 32 && math.IsInf(float64(float32(v)), 0) && !math.IsInf(v, 0) {
+				return fmt.Errorf("expected a valid %d bit float but got %q (%T)", bits, t, t.Value)
+			}
 			target.SetFloat(v)
 
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:

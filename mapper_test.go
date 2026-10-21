@@ -480,6 +480,79 @@ func TestJSONLargeNumber(t *testing.T) {
 	}
 }
 
+func TestFloat32JSONOverflow(t *testing.T) {
+	for _, number := range []string{"1e40", "-1e40"} {
+		t.Run(number, func(t *testing.T) {
+			var cli struct{ Value float32 }
+			resolver, err := kong.JSON(strings.NewReader(`{"value": ` + number + `}`))
+			assert.NoError(t, err)
+			parser := mustNew(t, &cli, kong.Resolvers(resolver))
+
+			_, err = parser.Parse(nil)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestFloat32CommandLineOverflow(t *testing.T) {
+	for _, number := range []string{"1e40", "-1e40"} {
+		t.Run(number, func(t *testing.T) {
+			var cli struct{ Value float32 }
+			parser := mustNew(t, &cli)
+
+			_, err := parser.Parse([]string{"--value=" + number})
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestFloat32JSONRoundingAtLimit(t *testing.T) {
+	for _, sign := range []float64{1, -1} {
+		t.Run(fmt.Sprint(sign), func(t *testing.T) {
+			// A float64 just beyond MaxFloat32 still rounds to a finite float32.
+			value := sign * math.Nextafter(float64(math.MaxFloat32), math.Inf(1))
+			var cli struct{ Value float32 }
+			resolver, err := kong.JSON(strings.NewReader(fmt.Sprintf(`{"value": %v}`, value)))
+			assert.NoError(t, err)
+			parser := mustNew(t, &cli, kong.Resolvers(resolver))
+
+			_, err = parser.Parse(nil)
+			assert.NoError(t, err)
+			assert.Equal(t, float32(sign*math.MaxFloat32), cli.Value)
+		})
+	}
+}
+
+func TestFloat64JSONBeyondFloat32Range(t *testing.T) {
+	var cli struct{ Value float64 }
+	resolver, err := kong.JSON(strings.NewReader(`{"value": 1e40}`))
+	assert.NoError(t, err)
+	parser := mustNew(t, &cli, kong.Resolvers(resolver))
+
+	_, err = parser.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, float64(1e40), cli.Value)
+}
+
+func TestFloat32ResolvedInfinity(t *testing.T) {
+	for _, sign := range []int{1, -1} {
+		t.Run(fmt.Sprint(sign), func(t *testing.T) {
+			var cli struct{ Value float32 }
+			resolver := kong.ResolverFunc(func(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, error) {
+				if flag.Name == "value" {
+					return math.Inf(sign), nil
+				}
+				return nil, nil
+			})
+			parser := mustNew(t, &cli, kong.Resolvers(resolver))
+
+			_, err := parser.Parse(nil)
+			assert.NoError(t, err)
+			assert.True(t, math.IsInf(float64(cli.Value), sign))
+		})
+	}
+}
+
 func TestFileMapper(t *testing.T) {
 	type CLI struct {
 		File *os.File `arg:""`
