@@ -73,7 +73,8 @@ type Kong struct {
 	embedded         []embedded
 	dynamicCommands  []*dynamicCommand
 
-	hooks map[string][]reflect.Value
+	hooks        map[string][]reflect.Value
+	requirements []flagRequirement
 }
 
 // New creates a new Kong parser on grammar.
@@ -172,6 +173,9 @@ func New(grammar any, options ...Option) (*Kong, error) {
 	k.bindings.add(k.vars)
 
 	if err = checkOverlappingXorAnd(k); err != nil {
+		return nil, err
+	}
+	if err = k.buildRequirements(); err != nil {
 		return nil, err
 	}
 

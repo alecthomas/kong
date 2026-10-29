@@ -397,6 +397,32 @@ type CLI struct {
 }
 ```
 
+### Conditional flag requirements
+
+Use `requires` when supplying one flag should require other flags:
+
+```go
+type CLI struct {
+  Upload bool   `requires:"token & (file | stdin)"`
+  Token  string
+  File   string
+  Stdin  bool
+}
+```
+
+`--upload --token=secret --file=data.json` is valid; `--upload --file=data.json`
+reports the missing requirement. Expressions support `!`, `&`, `|`, and
+parentheses, in that precedence order. Names refer to canonical long flag names
+in the same command or an ancestor, including prefixes applied to embedded flags.
+Unknown names and malformed expressions are rejected by `New()`.
+
+Requirements test whether flags were supplied, not whether their values are
+truthy. Command-line arguments, environment variables, and non-nil resolver
+results count, including `false`, `0`, and empty strings. Defaults and initial
+field values do not activate requirements. Repeated `requires` tags must all
+hold, and only flags in the selected command path are checked. For conditions on
+particular values, use a validation hook.
+
 ## Commands and sub-commands
 
 Sub-commands are specified by tagging a struct field with `cmd`. Kong supports arbitrarily nested commands.
@@ -593,6 +619,7 @@ Both can coexist with standard Tag parsing.
 | `xor:"X,Y,..."`      | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.                                                                                                                            |
 | `and:"X,Y,..."`      | AND groups for flags. All flags in the group must be used in the same command. When combined with `required`, all flags in the group will be required.                                                                                                                                                                         |
 | `lastwins:"X"`       | Last-wins group for flags, restricted to the same command. Each command-line occurrence of a group member overrides earlier occurrences of the other members, as if they had not been given: the flag with the last occurrence wins, and overridden flags revert to their normal fallback behavior (zero value, default, envar or resolver). When combined with `required`, at least one of the group will be required.       |
+| `requires:"EXPR"` | Conditional requirement checked when this flag is supplied. Use canonical long flag names, with `!` before `&` before `\|` and parentheses for grouping; repeated tags must all hold. CLI, environment, and non-nil resolver inputs count even when false, zero, or empty; defaults and initial field values alone do not. |
 | `prefix:"X"`         | Prefix for all sub-flags.                                                                                                                                                                                                                                                                                                      |
 | `envprefix:"X"`      | Envar prefix for all sub-flags.                                                                                                                                                                                                                                                                                                |
 | `xorprefix:"X"`      | Prefix for all sub-flags in XOR/AND/last-wins groups.                                                                                                                                                                                                                                                                        |

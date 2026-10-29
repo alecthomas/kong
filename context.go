@@ -87,12 +87,13 @@ type Context struct {
 	// Error that occurred during trace, if any.
 	Error error
 
-	values        map[*Value]reflect.Value // Temporary values during tracing.
-	resetErrors   map[*Value]error         // Default errors that a resolver may override.
-	bindings      bindings
-	resolvers     []Resolver // Extra context-specific resolvers.
-	scan          *Scanner
-	lastWinsPeers map[*Flag][]*Flag // Other members of each flag's lastwins group.
+	values         map[*Value]reflect.Value // Temporary values during tracing.
+	resetErrors    map[*Value]error         // Default errors that a resolver may override.
+	bindings       bindings
+	resolvers      []Resolver // Extra context-specific resolvers.
+	scan           *Scanner
+	lastWinsPeers  map[*Flag][]*Flag // Other members of each flag's lastwins group.
+	requirementEnv map[*Flag]bool
 }
 
 // Trace path of "args" through the grammar tree.
@@ -375,6 +376,9 @@ func (c *Context) Validate() error { //nolint: gocyclo
 	if err := checkXorDuplicatedAndAndMissing(c.Path); err != nil {
 		return err
 	}
+	if err := c.validateRequirements(); err != nil {
+		return err
+	}
 
 	if node.Type == ArgumentNode {
 		value := node.Argument
@@ -438,11 +442,15 @@ func (c *Context) FlagValue(flag *Flag) any {
 // Reset recursively resets values to defaults (as specified in the grammar) or the zero value.
 func (c *Context) Reset() error {
 	selected := c.selectedValues()
+	c.requirementEnv = map[*Flag]bool{}
 	c.resetErrors = map[*Value]error{}
 	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		value, ok := node.(*Value)
 		if !ok {
 			return next(nil)
+		}
+		if selected[value] {
+			c.recordRequirementEnvironment(value)
 		}
 		err := value.Reset()
 		if err != nil && !selected[value] {
@@ -791,6 +799,7 @@ func (c *Context) getValue(value *Value) reflect.Value {
 
 // ApplyDefaults if they are not already set.
 func (c *Context) ApplyDefaults() error {
+	selected := c.selectedValues()
 	return Visit(c.Model.Node, func(node Visitable, next Next) error {
 		var value *Value
 		switch node := node.(type) {
@@ -803,6 +812,9 @@ func (c *Context) ApplyDefaults() error {
 		default:
 		}
 		if value != nil {
+			if selected[value] && reflectValueIsZero(value.Target) {
+				c.recordRequirementEnvironment(value)
+			}
 			if err := value.ApplyDefault(); err != nil {
 				return err
 			}
