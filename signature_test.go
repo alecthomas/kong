@@ -161,3 +161,20 @@ func TestSignatureWhitespaceIgnored(t *testing.T) {
 	_, err := p.Parse([]string{"cmd"})
 	assert.NoError(t, err)
 }
+
+// Flag type whose signature supplies an env var.
+type signatureEnvFlag string
+
+func (signatureEnvFlag) Signature() string { return `env:"SIG_ENV" help:"Flag from signature"` }
+
+func TestSignatureFieldTagOverridesEnv(t *testing.T) {
+	var cli struct {
+		Flag signatureEnvFlag `env:"FIELD_ENV"`
+	}
+	t.Setenv("SIG_ENV", "from-signature")
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	// The field tag overrode env, so the signature's env var must not be read.
+	assert.Equal(t, signatureEnvFlag(""), cli.Flag)
+}
