@@ -1035,6 +1035,21 @@ func TestInterpolationIntoModel(t *testing.T) {
 	assert.Equal(t, "God SAVE_THE_QUEEN", flag3.Help)
 }
 
+func TestEmptyInterpolationFallback(t *testing.T) {
+	type CLI struct {
+		ServerURL string `default:"${server_url=}"`
+	}
+	var cli CLI
+	_, err := mustNew(t, &cli).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "", cli.ServerURL)
+
+	cli = CLI{}
+	_, err = mustNew(t, &cli, kong.Vars{"server_url": "https://example.com"}).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "https://example.com", cli.ServerURL)
+}
+
 func TestIssue244(t *testing.T) {
 	type Config struct {
 		Project string `short:"p" env:"CI_PROJECT_ID" help:"Environment variable: ${env}"`

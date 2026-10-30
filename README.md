@@ -639,6 +639,9 @@ Variables are in the form:
     ${<name>}
     ${<name>=<default>}
 
+The default may be empty, as in `${<name>=}`, to interpolate an empty string
+when the variable is not defined.
+
 Variables are set with the `Vars{"key": "value", ...}` option. Undefined
 variable references in the grammar without a default will result in an error at
 construction time.
