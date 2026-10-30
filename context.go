@@ -638,6 +638,9 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 					candidates = append(candidates, branch.Name)
 				}
 				if branch.Type == CommandNode && branch.Name == token.Value {
+					if err := c.checkDefaultCmdFlags(node, branch); err != nil {
+						return err
+					}
 					c.scan.Pop()
 					c.Path = append(c.Path, &Path{
 						Parent:    node,
@@ -654,6 +657,9 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 				if branch.Type == ArgumentNode {
 					arg := branch.Argument
 					if err := arg.Parse(c.scan, c.getValue(arg)); err == nil {
+						if err := c.checkDefaultCmdFlags(node, branch); err != nil {
+							return err
+						}
 						c.Path = append(c.Path, &Path{
 							Parent:    node,
 							Argument:  branch,
@@ -683,6 +689,31 @@ func (c *Context) trace(node *Node) (err error) { //nolint: gocyclo
 		}
 	}
 	return c.maybeSelectDefault(flags, node)
+}
+
+// checkDefaultCmdFlags rejects flags that were parsed into node's "withargs"
+// default command when a different child, selected, has been chosen instead.
+//
+// trace() offers the default command's flags while parsing node's own tokens,
+// so a flag given before an explicitly named sibling is parsed into the default
+// command. The default command is then never selected, so without this check
+// the value would be silently dropped. The value is not moved to a same-named
+// flag on selected because the two flags may differ in type or meaning.
+func (c *Context) checkDefaultCmdFlags(node, selected *Node) error {
+	defaultCmd := node.DefaultCmd
+	if defaultCmd == nil || defaultCmd.Tag.Default != "withargs" || selected == defaultCmd {
+		return nil
+	}
+	defaultFlags := map[*Flag]bool{}
+	for _, flag := range defaultCmd.Flags {
+		defaultFlags[flag] = true
+	}
+	for _, path := range c.Path {
+		if path.Flag != nil && defaultFlags[path.Flag] {
+			return fmt.Errorf("flag --%s applies to the default command %q, not %q", path.Flag.Name, defaultCmd.Name, selected.Name)
+		}
+	}
+	return nil
 }
 
 // IgnoreDefault can be implemented by flags that want to be applied before any default commands.

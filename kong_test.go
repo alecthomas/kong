@@ -1894,6 +1894,85 @@ func TestDefaultCommandPrecedence(t *testing.T) {
 	assert.EqualError(t, err, "unknown flag --flag")
 }
 
+func TestDefaultCommandFlagsBeforeSiblingCommand(t *testing.T) {
+	type cli struct {
+		Verbose bool
+		Group   struct {
+			Parent string
+			List   struct {
+				ServerURL string `name:"server-url" default:"http://default.example"`
+			} `cmd:"" default:"withargs"`
+			Clear struct {
+				ServerURL string `name:"server-url" default:"http://default.example"`
+			} `cmd:""`
+		} `cmd:""`
+	}
+	tests := []struct {
+		name     string
+		args     []string
+		command  string
+		expected func(c *cli)
+		err      string
+	}{
+		{name: "RejectsDefaultFlagBeforeSibling",
+			args: []string{"group", "--server-url=http://x.example", "clear"},
+			err:  `flag --server-url applies to the default command "list", not "clear"`},
+		{name: "DefaultCommandWithoutName",
+			args:    []string{"group", "--server-url=http://x.example"},
+			command: "group list",
+			expected: func(c *cli) {
+				c.Group.List.ServerURL = "http://x.example"
+				c.Group.Clear.ServerURL = "http://default.example"
+			}},
+		{name: "DefaultFlagBeforeNamedDefault",
+			args:    []string{"group", "--server-url=http://x.example", "list"},
+			command: "group list",
+			expected: func(c *cli) {
+				c.Group.List.ServerURL = "http://x.example"
+				c.Group.Clear.ServerURL = "http://default.example"
+			}},
+		{name: "NamedDefaultCommand",
+			args:    []string{"group", "list", "--server-url=http://x.example"},
+			command: "group list",
+			expected: func(c *cli) {
+				c.Group.List.ServerURL = "http://x.example"
+				c.Group.Clear.ServerURL = "http://default.example"
+			}},
+		{name: "NamedSiblingCommand",
+			args:    []string{"group", "clear", "--server-url=http://x.example"},
+			command: "group clear",
+			expected: func(c *cli) {
+				c.Group.List.ServerURL = "http://default.example"
+				c.Group.Clear.ServerURL = "http://x.example"
+			}},
+		{name: "ParentAndInheritedFlagsBeforeSibling",
+			args:    []string{"group", "--parent=p", "--verbose", "clear"},
+			command: "group clear",
+			expected: func(c *cli) {
+				c.Verbose = true
+				c.Group.Parent = "p"
+				c.Group.List.ServerURL = "http://default.example"
+				c.Group.Clear.ServerURL = "http://default.example"
+			}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var actual cli
+			p := mustNew(t, &actual)
+			ctx, err := p.Parse(test.args)
+			if test.err != "" {
+				assert.EqualError(t, err, test.err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, test.command, ctx.Command())
+			var expected cli
+			test.expected(&expected)
+			assert.Equal(t, expected, actual)
+		})
+	}
+}
+
 func TestLoneHpyhen(t *testing.T) {
 	var cli struct {
 		Flag string
