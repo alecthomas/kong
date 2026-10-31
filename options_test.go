@@ -2,6 +2,8 @@ package kong
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -221,4 +223,76 @@ func TestBindSingletonProviderValueTypedError(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = ctx.Call(func(string) {})
 	assert.EqualError(t, err, "ERROR: failed")
+}
+
+func TestExpandPath(t *testing.T) {
+	wd, err := os.Getwd()
+	assert.NoError(t, err)
+
+	homeDir, err := os.UserHomeDir()
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "home dir",
+			path:     "~",
+			expected: homeDir,
+		},
+		{
+			name:     "home dir with subpath",
+			path:     "~/foo/bar",
+			expected: filepath.Join(homeDir, "foo", "bar"),
+		},
+		{
+			name:     "empty path",
+			path:     "",
+			expected: wd,
+		},
+		{
+			name:     "dot path",
+			path:     ".",
+			expected: wd,
+		},
+		{
+			name:     "working dir with subpath",
+			path:     "foo/bar",
+			expected: filepath.Join(wd, "foo", "bar"),
+		},
+		{
+			name:     "dot-relative path",
+			path:     "./foo",
+			expected: filepath.Join(wd, "foo"),
+		},
+		{
+			name:     "parent-relative path",
+			path:     "../foo",
+			expected: filepath.Join(filepath.Dir(wd), "foo"),
+		},
+		{
+			name:     "not home dir",
+			path:     "~foo",
+			expected: filepath.Join(wd, "~foo"),
+		},
+		{
+			name:     "dirty absolute path",
+			path:     wd + string(os.PathSeparator) + ".." + string(os.PathSeparator) + filepath.Base(wd),
+			expected: wd,
+		},
+		{
+			name:     "clean absolute path",
+			path:     wd,
+			expected: wd,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExpandPath(tt.path)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

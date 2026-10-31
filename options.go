@@ -486,13 +486,13 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 //
 // eg. ~/.someconf -> /home/alec/.someconf
 func ExpandPath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	if strings.HasPrefix(path, "~/") {
+	if path == "~" || strings.HasPrefix(path, "~/") {
 		user, err := user.Current()
 		if err != nil {
 			return path
+		}
+		if path == "~" {
+			return user.HomeDir
 		}
 		return filepath.Join(user.HomeDir, path[2:])
 	}
