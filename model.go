@@ -37,6 +37,85 @@ const (
 	ArgumentNode
 )
 
+// ValueSource represents the origin of a resolved flag or argument value.
+type ValueSource int
+
+// ValueSource enumerations.
+const (
+	ValueSourceUnset ValueSource = iota
+	ValueSourceFlag
+	ValueSourceEnv
+	ValueSourceResolver
+	ValueSourceDefault
+	ValueSourceNone = ValueSourceUnset
+)
+
+func (s ValueSource) String() string {
+	switch s {
+	case ValueSourceFlag:
+		return "flag"
+	case ValueSourceEnv:
+		return "env"
+	case ValueSourceResolver:
+		return "resolver"
+	case ValueSourceDefault:
+		return "default"
+	case ValueSourceUnset:
+		return "unset"
+	default:
+		return fmt.Sprintf("ValueSource(%d)", s)
+	}
+}
+
+// Source describes the origin of a resolved flag or argument value.
+type Source struct {
+	Type         ValueSource
+	Env          string
+	Resolver     Resolver
+	ResolverName string
+}
+
+func (s Source) String() string {
+	switch s.Type {
+	case ValueSourceFlag:
+		return "flag"
+	case ValueSourceEnv:
+		if s.Env != "" {
+			return fmt.Sprintf("env:%s", s.Env)
+		}
+		return "env"
+	case ValueSourceResolver:
+		if s.ResolverName != "" {
+			return fmt.Sprintf("resolver:%s", s.ResolverName)
+		}
+		return "resolver"
+	case ValueSourceDefault:
+		return "default"
+	case ValueSourceUnset:
+		return "unset"
+	default:
+		return s.Type.String()
+	}
+}
+
+// ValueSource returns the ValueSource enum type.
+func (s Source) ValueSource() ValueSource { return s.Type }
+
+// IsFlag reports whether the value came from command-line input.
+func (s Source) IsFlag() bool { return s.Type == ValueSourceFlag }
+
+// IsEnv reports whether the value came from an environment variable.
+func (s Source) IsEnv() bool { return s.Type == ValueSourceEnv }
+
+// IsResolver reports whether the value was supplied by a resolver.
+func (s Source) IsResolver() bool { return s.Type == ValueSourceResolver }
+
+// IsDefault reports whether the value was populated by its declared default.
+func (s Source) IsDefault() bool { return s.Type == ValueSourceDefault }
+
+// IsUnset reports whether the value remains unset.
+func (s Source) IsUnset() bool { return s.Type == ValueSourceUnset }
+
 // Node is a branch in the CLI. ie. a command or positional argument.
 type Node struct {
 	Type        NodeType
@@ -84,6 +163,21 @@ func (n *Node) findNode(key reflect.Value) *Node {
 	for _, child := range n.Children {
 		if found := child.findNode(key); found != nil {
 			return found
+		}
+	}
+	return nil
+}
+
+// Flag finds a flag by name, alias, or single-character short name on this Node.
+func (n *Node) Flag(name string) *Flag {
+	for _, flag := range n.Flags {
+		if flag.Name == name || (len(name) == 1 && flag.Short == rune(name[0])) {
+			return flag
+		}
+		for _, alias := range flag.Aliases {
+			if alias == name {
+				return flag
+			}
 		}
 	}
 	return nil
@@ -274,6 +368,24 @@ type Value struct {
 	Passthrough     bool            // Deprecated: Use PassthroughMode instead. Set to true to stop flag parsing when encountered.
 	PassthroughMode PassthroughMode //
 	Active          bool            // Denotes the value is part of an active branch in the CLI.
+
+	Source             ValueSource // Origin of this value (e.g. ValueSourceFlag, ValueSourceEnv, etc.).
+	SourceEnv          string      // Environment variable name that supplied the value, if Source == ValueSourceEnv.
+	SourceResolver     Resolver    // Resolver that supplied the value, if Source == ValueSourceResolver.
+	SourceResolverName string      // Name of the resolver that supplied the value, if Source == ValueSourceResolver.
+}
+
+// SourceInfo returns the Source provenance describing the origin of this value.
+func (v *Value) SourceInfo() Source {
+	if v == nil {
+		return Source{Type: ValueSourceUnset}
+	}
+	return Source{
+		Type:         v.Source,
+		Env:          v.SourceEnv,
+		Resolver:     v.SourceResolver,
+		ResolverName: v.SourceResolverName,
+	}
 }
 
 // EnumMap returns a map of the enums in this value.
@@ -394,6 +506,10 @@ func (v *Value) ApplyDefault() error {
 // Does not include resolvers.
 func (v *Value) Reset() error {
 	v.Target.Set(reflect.Zero(v.Target.Type()))
+	v.Source = ValueSourceUnset
+	v.SourceEnv = ""
+	v.SourceResolver = nil
+	v.SourceResolverName = ""
 	if len(v.Tag.Envs) != 0 {
 		for _, env := range v.Tag.Envs {
 			envar, ok := os.LookupEnv(env)
@@ -403,12 +519,18 @@ func (v *Value) Reset() error {
 				if err != nil {
 					return fmt.Errorf("%s (from envar %s=%q)", err, env, envar)
 				}
+				v.Source = ValueSourceEnv
+				v.SourceEnv = env
 				return nil
 			}
 		}
 	}
 	if v.HasDefault {
-		return v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
+		err := v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
+		if err == nil {
+			v.Source = ValueSourceDefault
+		}
+		return err
 	}
 	return nil
 }
