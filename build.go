@@ -311,7 +311,12 @@ func buildChild(k *Kong, node *Node, typ NodeType, v reflect.Value, ft reflect.S
 			if !checkPassthroughArg(child.Positional[0].Target) {
 				return failField(v, ft, "passthrough command %s must contain exactly one positional argument of []string type", child.Summary())
 			}
-			child.Passthrough = true
+			if tag.PassthroughMode == PassThroughModePartial {
+				child.Positional[0].Passthrough = true
+				child.Positional[0].PassthroughMode = PassThroughModePartial
+			} else {
+				child.Passthrough = true
+			}
 		}
 	}
 	node.Children = append(node.Children, child)
