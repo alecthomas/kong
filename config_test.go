@@ -65,6 +65,30 @@ func TestConfigDoesNotMaskInvalidDefaultWithoutOverride(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRegressionIssue489(t *testing.T) {
+	type Level struct {
+		Flag      string `json:"flag" required:""`
+		WithSnake string `json:"with_snake,omitempty" required:""`
+		WithCamel string `json:"withCamel,omitempty" required:""`
+	}
+	var cli struct {
+		TopSnake string `json:"top_snake" required:""`
+		TopCamel string `json:"topCamel" required:""`
+		Level    `json:"level" prefix:"level." embed:""`
+	}
+
+	cli.TopCamel = "filled"
+	cli.TopSnake = "filled"
+	cli.Level.WithCamel = "filled"
+	cli.Level.WithSnake = "filled"
+	cli.Level.Flag = "filled"
+	conf := makeConfig(t, &cli)
+
+	p := mustNew(t, &cli, kong.Configuration(kong.JSON, conf))
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+}
+
 func makeConfig(t *testing.T, config any) (path string) {
 	t.Helper()
 	w, err := os.CreateTemp(t.TempDir(), "")
