@@ -896,7 +896,8 @@ func SplitEscaped(s string, sep rune) (out []string) {
 			token += string(ch)
 		}
 	}
-	if token != "" {
+	// Keep a trailing empty element ("a," -> ["a", ""]), but an empty input has no elements.
+	if token != "" || len(out) > 0 {
 		out = append(out, token)
 	}
 	return
