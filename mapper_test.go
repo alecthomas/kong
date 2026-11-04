@@ -897,3 +897,146 @@ func TestFileMapperWithDefaultNonExistentFile(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing-default.txt")
 	assert.IsError(t, err, os.ErrNotExist)
 }
+
+func TestNamedMapperDefaultsNonSelectedCommands(t *testing.T) {
+	type CLI struct {
+		CmdA struct {
+			Val string `optional:"" type:"mytype" default:"foo"`
+		} `cmd:""`
+		CmdB struct {
+			Val string `optional:"" type:"mytype" default:"bar"`
+		} `cmd:""`
+	}
+
+	decoded := []string{}
+	mapper := kong.NamedMapper("mytype", kong.MapperFunc(
+		func(ctx *kong.DecodeContext, target reflect.Value) error {
+			var val string
+			_ = ctx.Scan.PopValueInto("val", &val)
+			decoded = append(decoded, val)
+			target.SetString(val)
+			return nil
+		},
+	))
+
+	var cli CLI
+	k := mustNew(t, &cli, mapper)
+	_, err := k.Parse([]string{"cmd-a"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo"}, decoded)
+	assert.Equal(t, "foo", cli.CmdA.Val)
+	assert.Equal(t, "", cli.CmdB.Val)
+
+	decoded = nil
+	cli = CLI{}
+	k = mustNew(t, &cli, mapper)
+	_, err = k.Parse([]string{"cmd-b"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"bar"}, decoded)
+	assert.Equal(t, "", cli.CmdA.Val)
+	assert.Equal(t, "bar", cli.CmdB.Val)
+}
+
+func TestNamedMapperPositionalDefaultsNonSelectedCommands(t *testing.T) {
+	type CLI struct {
+		CmdA struct {
+			Val string `arg:"" optional:"" type:"mytype" default:"foo"`
+		} `cmd:""`
+		CmdB struct {
+			Val string `arg:"" optional:"" type:"mytype" default:"bar"`
+		} `cmd:""`
+	}
+
+	decoded := []string{}
+	mapper := kong.NamedMapper("mytype", kong.MapperFunc(
+		func(ctx *kong.DecodeContext, target reflect.Value) error {
+			var val string
+			_ = ctx.Scan.PopValueInto("val", &val)
+			decoded = append(decoded, val)
+			target.SetString(val)
+			return nil
+		},
+	))
+
+	var cli CLI
+	k := mustNew(t, &cli, mapper)
+	_, err := k.Parse([]string{"cmd-a"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"foo"}, decoded)
+	assert.Equal(t, "foo", cli.CmdA.Val)
+	assert.Equal(t, "", cli.CmdB.Val)
+}
+
+func TestNamedMapperDistinctTypesNonSelectedCommands(t *testing.T) {
+	type CLI struct {
+		CmdA struct {
+			Val string `optional:"" type:"type-a" default:"alpha"`
+		} `cmd:""`
+		CmdB struct {
+			Val string `optional:"" type:"type-b" default:"beta"`
+		} `cmd:""`
+	}
+
+	decodedA := []string{}
+	mapperA := kong.NamedMapper("type-a", kong.MapperFunc(
+		func(ctx *kong.DecodeContext, target reflect.Value) error {
+			var val string
+			_ = ctx.Scan.PopValueInto("val", &val)
+			decodedA = append(decodedA, val)
+			target.SetString(val)
+			return nil
+		},
+	))
+
+	decodedB := []string{}
+	mapperB := kong.NamedMapper("type-b", kong.MapperFunc(
+		func(ctx *kong.DecodeContext, target reflect.Value) error {
+			var val string
+			_ = ctx.Scan.PopValueInto("val", &val)
+			decodedB = append(decodedB, val)
+			target.SetString(val)
+			return nil
+		},
+	))
+
+	var cli CLI
+	k := mustNew(t, &cli, mapperA, mapperB)
+	_, err := k.Parse([]string{"cmd-a"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"alpha"}, decodedA)
+	assert.Equal(t, []string{}, decodedB)
+	assert.Equal(t, "alpha", cli.CmdA.Val)
+	assert.Equal(t, "", cli.CmdB.Val)
+}
+
+func TestNamedMapperSubcommandHierarchyDefaults(t *testing.T) {
+	type CLI struct {
+		Parent struct {
+			Cmd1 struct {
+				Val string `optional:"" type:"mytype" default:"val1"`
+			} `cmd:""`
+			Cmd2 struct {
+				Val string `optional:"" type:"mytype" default:"val2"`
+			} `cmd:""`
+		} `cmd:""`
+	}
+
+	decoded := []string{}
+	mapper := kong.NamedMapper("mytype", kong.MapperFunc(
+		func(ctx *kong.DecodeContext, target reflect.Value) error {
+			var val string
+			_ = ctx.Scan.PopValueInto("val", &val)
+			decoded = append(decoded, val)
+			target.SetString(val)
+			return nil
+		},
+	))
+
+	var cli CLI
+	k := mustNew(t, &cli, mapper)
+	_, err := k.Parse([]string{"parent", "cmd-1"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"val1"}, decoded)
+	assert.Equal(t, "val1", cli.Parent.Cmd1.Val)
+	assert.Equal(t, "", cli.Parent.Cmd2.Val)
+}
