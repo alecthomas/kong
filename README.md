@@ -452,6 +452,23 @@ required, but specifying `optional:""` will alter this.
 If a positional argument is a slice, all remaining arguments will be appended
 to that slice.
 
+Positional arguments can share `xor` groups with flags on the same command.
+For example, the following accepts either `--defaults` or one or more arguments,
+but rejects using both:
+
+```go
+var CLI struct {
+  Defaults bool     `xor:"source"`
+  Args     []string `arg:"" xor:"source"`
+}
+```
+
+The positional argument is required by default, so at least one member of the
+group must be provided. Add `optional:""` to allow neither member.
+
+XOR does not change positional argument binding: choosing a flag does not skip
+an earlier positional argument to fill a later one.
+
 ## Slices
 
 Slice values are treated specially. First the input is split on the `sep:"<rune>"` tag (defaults to `,`), then each element is parsed by the slice element type and appended to the slice. If the same value is encountered multiple times, elements continue to be appended.
@@ -590,7 +607,7 @@ Both can coexist with standard Tag parsing.
 | `mapsep:"X"`         | Separator for maps (defaults to ";"). May be `none` to disable splitting.                                                                                                                                                                                                                                                      |
 | `enum:"X,Y,..."`     | Set of valid values allowed for this flag. An enum field must be `required` or have a valid `default`.                                                                                                                                                                                                                         |
 | `group:"X"`          | Logical group for a flag or command.                                                                                                                                                                                                                                                                                           |
-| `xor:"X,Y,..."`      | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.                                                                                                                            |
+| `xor:"X,Y,..."`      | Exclusive OR groups for flags and positional arguments. Only one member of a group can be used, restricted to the same command. When combined with `required`, at least one member of the `xor` group will be required. Positional arguments are required by default.                                                                                                                     |
 | `and:"X,Y,..."`      | AND groups for flags. All flags in the group must be used in the same command. When combined with `required`, all flags in the group will be required.                                                                                                                                                                         |
 | `lastwins:"X"`       | Last-wins group for flags, restricted to the same command. Each command-line occurrence of a group member overrides earlier occurrences of the other members, as if they had not been given: the flag with the last occurrence wins, and overridden flags revert to their normal fallback behavior (zero value, default, envar or resolver). When combined with `required`, at least one of the group will be required.       |
 | `prefix:"X"`         | Prefix for all sub-flags.                                                                                                                                                                                                                                                                                                      |
