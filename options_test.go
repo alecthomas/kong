@@ -174,6 +174,52 @@ func TestBindSingletonProvider(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestBindProvidersRejectTooManyReturnValues(t *testing.T) {
+	providers := []struct {
+		name     string
+		provider any
+	}{
+		{"three", func() (string, error, bool) { return "", npError("failed"), false }},
+		{"four", func() (string, int, bool, error) { return "", 0, false, nil }},
+	}
+	for _, tc := range providers {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, option := range []struct {
+				name string
+				bind func(any) Option
+			}{
+				{"provider", BindToProvider},
+				{"singleton", BindSingletonProvider},
+			} {
+				t.Run(option.name, func(t *testing.T) {
+					var cli struct{}
+					_, err := New(&cli, option.bind(tc.provider))
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "must be a function with the signature func(...)(T, error) or func(...) T")
+				})
+			}
+			for _, binding := range []struct {
+				name string
+				bind func(*Context, any) error
+			}{
+				{"context provider", (*Context).BindToProvider},
+				{"context singleton", (*Context).BindSingletonProvider},
+			} {
+				t.Run(binding.name, func(t *testing.T) {
+					var cli struct{}
+					app, err := New(&cli)
+					assert.NoError(t, err)
+					ctx, err := app.Parse(nil)
+					assert.NoError(t, err)
+					err = binding.bind(ctx, tc.provider)
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), "must be a function with the signature func(...)(T, error) or func(...) T")
+				})
+			}
+		})
+	}
+}
+
 func TestFlagNamer(t *testing.T) {
 	var cli struct {
 		SomeFlag string
