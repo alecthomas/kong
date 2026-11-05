@@ -3,6 +3,8 @@ package kong_test
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -479,4 +481,109 @@ func TestValidatingResolverErrors(t *testing.T) {
 	var cli struct{}
 	_, err := mustNew(t, &cli, kong.Resolvers(resolver)).Parse(nil)
 	assert.EqualError(t, err, "invalid")
+}
+
+func writeConfig(t *testing.T, config string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.json")
+	assert.NoError(t, os.WriteFile(path, []byte(config), 0o600))
+	return path
+}
+
+func TestConfigurationOverridesEnvByDefault(t *testing.T) {
+	var cli struct {
+		String string `env:"KONG_STRING"`
+	}
+	path := writeConfig(t, `{"string": "config"}`)
+	p := newEnvParser(t, &cli, envMap{"KONG_STRING": "env"}, kong.Configuration(kong.JSON, path))
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "config", cli.String)
+}
+
+func TestEnvOverridesConfiguration(t *testing.T) {
+	type CLI struct {
+		String  string `env:"KONG_STRING" default:"default"`
+		Unset   string `env:"KONG_UNSET"`
+		NoEnv   string
+		Command struct {
+			Nested string `env:"KONG_NESTED"`
+		} `cmd:"" default:"withargs"`
+	}
+	path := writeConfig(t, `{"string": "config", "unset": "config", "no_env": "config", "nested": "config"}`)
+	newParser := func(t *testing.T, cli *CLI, env envMap) *kong.Kong {
+		t.Helper()
+		return newEnvParser(t, cli, env, kong.Configuration(kong.JSON, path), kong.EnvOverridesConfiguration())
+	}
+
+	t.Run("EnvWins", func(t *testing.T) {
+		var cli CLI
+		p := newParser(t, &cli, envMap{"KONG_STRING": "env", "KONG_NESTED": "env"})
+		_, err := p.Parse(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "env", cli.String)
+		assert.Equal(t, "config", cli.Unset)
+		assert.Equal(t, "config", cli.NoEnv)
+		assert.Equal(t, "env", cli.Command.Nested)
+	})
+
+	t.Run("ConfigurationWinsWithoutEnv", func(t *testing.T) {
+		var cli CLI
+		p := newParser(t, &cli, nil)
+		_, err := p.Parse(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "config", cli.String)
+		assert.Equal(t, "config", cli.Command.Nested)
+	})
+
+	t.Run("FlagWins", func(t *testing.T) {
+		var cli CLI
+		p := newParser(t, &cli, envMap{"KONG_STRING": "env"})
+		_, err := p.Parse([]string{"--string=flag"})
+		assert.NoError(t, err)
+		assert.Equal(t, "flag", cli.String)
+	})
+}
+
+func TestEnvOverridesConfigFlag(t *testing.T) {
+	var cli struct {
+		Config kong.ConfigFlag
+		String string `env:"KONG_STRING"`
+	}
+	path := writeConfig(t, `{"string": "config"}`)
+	p := newEnvParser(t, &cli, envMap{"KONG_STRING": "env"},
+		kong.Configuration(kong.JSON), kong.EnvOverridesConfiguration())
+	_, err := p.Parse([]string{"--config", path})
+	assert.NoError(t, err)
+	assert.Equal(t, "env", cli.String)
+}
+
+func TestEnvOverridesConfigurationKeepsResolverPrecedence(t *testing.T) {
+	var cli struct {
+		String string `env:"KONG_STRING"`
+	}
+	var resolver kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
+		if flag.Name == "string" {
+			return "resolver", nil
+		}
+		return nil, nil
+	}
+	path := writeConfig(t, `{"string": "config"}`)
+	p := newEnvParser(t, &cli, envMap{"KONG_STRING": "env"},
+		kong.Configuration(kong.JSON, path), kong.Resolvers(resolver), kong.EnvOverridesConfiguration())
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "resolver", cli.String)
+}
+
+func TestEnvOverridesConfigurationKeepsInvalidEnvError(t *testing.T) {
+	var cli struct {
+		Int int `env:"KONG_INT"`
+	}
+	path := writeConfig(t, `{"int": 1}`)
+	p := newEnvParser(t, &cli, envMap{"KONG_INT": "invalid"},
+		kong.Configuration(kong.JSON, path), kong.EnvOverridesConfiguration())
+	_, err := p.Parse(nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `from envar KONG_INT="invalid"`)
 }
