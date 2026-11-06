@@ -161,6 +161,32 @@ func (n *Node) Summary() string {
 	if flags := n.FlagSummary(true); flags != "" {
 		summary += " " + flags
 	}
+	allFlags := n.Flags
+	if n.Parent != nil {
+		allFlags = append(allFlags, n.Parent.Flags...)
+	}
+	hasFlags := false
+	for _, flag := range allFlags {
+		if _, ok := flag.Target.Interface().(helpFlag); ok {
+			continue
+		}
+		if !flag.Required {
+			hasFlags = true
+			break
+		}
+	}
+	passthrough := n.Passthrough
+	if !passthrough {
+		for _, arg := range n.Positional {
+			if arg.Passthrough {
+				passthrough = true
+				break
+			}
+		}
+	}
+	if hasFlags && passthrough {
+		summary += " [flags]"
+	}
 	args := []string{}
 	optional := 0
 	for _, arg := range n.Positional {
@@ -176,18 +202,8 @@ func (n *Node) Summary() string {
 	} else if len(n.Children) > 0 {
 		summary += " <command>"
 	}
-	allFlags := n.Flags
-	if n.Parent != nil {
-		allFlags = append(allFlags, n.Parent.Flags...)
-	}
-	for _, flag := range allFlags {
-		if _, ok := flag.Target.Interface().(helpFlag); ok {
-			continue
-		}
-		if !flag.Required {
-			summary += " [flags]"
-			break
-		}
+	if hasFlags && !passthrough {
+		summary += " [flags]"
 	}
 	return summary
 }

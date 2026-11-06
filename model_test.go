@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/kong"
 )
 
 func TestModelApplicationCommands(t *testing.T) {
@@ -89,4 +90,27 @@ Flags:
   -h, --help          Show context-sensitive help.
       --one=STRING
 `, w.String())
+}
+
+func TestSummaryPassthroughCommand(t *testing.T) {
+	var cli struct {
+		Flag    string
+		Command struct {
+			Args []string `arg:"" optional:""`
+		} `cmd:"" passthrough:""`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	cmd := k.Model.Node.Children[0]
+	assert.Equal(t, "command [flags] [<args> ...]", cmd.Summary())
+}
+
+func TestSummaryPassthroughArg(t *testing.T) {
+	var cli struct {
+		Flag string
+		Args []string `arg:"" optional:"" passthrough:""`
+	}
+	k, err := kong.New(&cli)
+	assert.NoError(t, err)
+	assert.Equal(t, " [flags] [<args> ...]", k.Model.Node.Summary())
 }
