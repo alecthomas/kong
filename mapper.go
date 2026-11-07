@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/bits"
 	"net/url"
 	"os"
@@ -805,6 +806,8 @@ func counterMapper() MapperFunc {
 				return err
 			}
 			var n int64
+			var u uint64
+			fromUnsigned := false
 			switch v := t.Value.(type) {
 			case string:
 				n, err = strconv.ParseInt(v, 10, 64)
@@ -812,8 +815,14 @@ func counterMapper() MapperFunc {
 					return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
 				}
 
-			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-				n = reflect.ValueOf(v).Convert(reflect.TypeOf(int64(0))).Int()
+			case int, int8, int16, int32, int64:
+				n = reflect.ValueOf(v).Int()
+
+			case uint, uint8, uint16, uint32, uint64:
+				// A uint64 at or above 1<<63 is not negative. Converting it
+				// through int64 would wrap and then get rejected below.
+				u = reflect.ValueOf(v).Uint()
+				fromUnsigned = true
 
 			default:
 				return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
@@ -823,14 +832,28 @@ func counterMapper() MapperFunc {
 			// counter declared as a uint or float field doesn't panic.
 			switch target.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				if fromUnsigned {
+					if u > uint64(math.MaxInt64) {
+						return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
+					}
+					n = int64(u)
+				}
 				target.SetInt(n)
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				if fromUnsigned {
+					target.SetUint(u)
+					return nil
+				}
 				if n < 0 {
 					return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
 				}
 				target.SetUint(uint64(n)) //nolint:gosec // n was rejected when negative
 			case reflect.Float32, reflect.Float64:
-				target.SetFloat(float64(n))
+				if fromUnsigned {
+					target.SetFloat(float64(u))
+				} else {
+					target.SetFloat(float64(n))
+				}
 			default:
 				return fmt.Errorf("type:\"counter\" must be used with a numeric field")
 			}

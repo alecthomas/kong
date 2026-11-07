@@ -350,6 +350,19 @@ func TestCounter(t *testing.T) {
 	_, err = pn.Parse([]string{"--uint=-1"})
 	assert.Error(t, err)
 	assert.Equal(t, uint(0), neg.Uint)
+
+	var high struct {
+		Uint uint64 `type:"counter"`
+	}
+	resolver := kong.ResolverFunc(func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
+		if flag.Name == "uint" {
+			return uint64(1) << 63, nil
+		}
+		return nil, nil
+	})
+	_, err = mustNew(t, &high, kong.Resolvers(resolver)).Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(1)<<63, high.Uint)
 }
 
 func TestNumbers(t *testing.T) {
