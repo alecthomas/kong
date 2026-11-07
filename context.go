@@ -444,13 +444,14 @@ func (c *Context) Reset() error {
 		if !ok {
 			return next(nil)
 		}
-		err := value.Reset()
-		if err != nil && !selected[value] {
-			// An envar shared with a node outside the selected command path
-			// may not parse there; that must not fail this parse.
+		if !selected[value] {
+			// Only zero out values outside the selected command path; do not
+			// decode their defaults through the mapper — sibling commands
+			// must not have side effects during a parse.
 			value.Target.Set(reflect.Zero(value.Target.Type()))
-			err = nil
+			return next(nil)
 		}
+		err := value.Reset()
 		if err != nil && len(c.combineResolvers()) != 0 {
 			// A resolver may supply a valid value after defaults are reset.
 			// Keep the error so Resolve can return it if no value overrides it.
