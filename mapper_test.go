@@ -218,6 +218,30 @@ func TestSliceConsumesRemainingPositionalArgs(t *testing.T) {
 	assert.Equal(t, []string{"ls", "-lart"}, cli.Remainder)
 }
 
+func TestSlicePositionalArgDefaultAndEnv(t *testing.T) {
+	var cli struct {
+		Nums []int `arg:"" optional:"" default:"1,2"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, []int{1, 2}, cli.Nums)
+
+	var envCli struct {
+		Names []string `arg:"" optional:"" env:"NAMES"`
+	}
+	t.Setenv("NAMES", "a,b")
+	p = mustNew(t, &envCli)
+	_, err = p.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a", "b"}, envCli.Names)
+
+	// Values given on the command line are still not split.
+	_, err = p.Parse([]string{"c,d", "e"})
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"c,d", "e"}, envCli.Names)
+}
+
 func TestPassthroughStopsParsing(t *testing.T) {
 	type cli struct {
 		Interactive bool     `short:"i"`

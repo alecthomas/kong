@@ -572,6 +572,12 @@ func sliceDecoder(r *Registry) MapperFunc {
 		} else {
 			tokens := ctx.Scan.PopWhile(func(t Token) bool { return t.IsValue() })
 			childScanner = ScanFromTokens(tokens...)
+			// A default or envar value arrives as a single FlagValueToken, so split it like a flag value.
+			if len(tokens) == 1 && tokens[0].Type == FlagValueToken {
+				if v, ok := tokens[0].Value.(string); ok {
+					childScanner = ScanAsType(tokens[0].Type, SplitEscaped(v, sep)...)
+				}
+			}
 		}
 		childDecoder := r.ForNamedType(ctx.Value.Tag.Type, el)
 		if childDecoder == nil {
