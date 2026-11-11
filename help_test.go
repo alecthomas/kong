@@ -985,3 +985,52 @@ Flags:
 	t.Log(w.String())
 	assert.Equal(t, expected, w.String())
 }
+
+func TestHelpOnEmptyArgs(t *testing.T) {
+	var cli struct {
+		One struct {
+			Flag string `help:"Nested flag."`
+		} `cmd help:"A subcommand."`
+	}
+	w := bytes.NewBuffer(nil)
+	exited := false
+	app := mustNew(t, &cli,
+		kong.Name("test-app"),
+		kong.Writers(w, w),
+		kong.HelpOnEmptyArgs(),
+		kong.Exit(func(int) {
+			exited = true
+			panic(true) // Panic to fake "exit".
+		}),
+	)
+	panicsTrue(t, func() {
+		_, err := app.Parse([]string{})
+		assert.NoError(t, err)
+	})
+	assert.True(t, exited)
+	expected := `Usage: test-app <command>
+
+Flags:
+  -h, --help    Show context-sensitive help.
+
+Commands:
+  one [flags]
+    A subcommand.
+
+Run "test-app <command> --help" for more information on a command.
+`
+	assert.Equal(t, expected, w.String())
+}
+
+func TestHelpOnEmptyArgsDisabledByDefault(t *testing.T) {
+	var cli struct {
+		One struct {
+			Flag string `help:"Nested flag."`
+		} `cmd help:"A subcommand."`
+	}
+	w := bytes.NewBuffer(nil)
+	app := mustNew(t, &cli, kong.Name("test-app"), kong.Writers(w, w))
+	_, err := app.Parse([]string{})
+	assert.Error(t, err)
+	assert.Equal(t, "expected \"one\"", err.Error())
+}

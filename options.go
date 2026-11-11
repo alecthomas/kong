@@ -118,6 +118,15 @@ func NoDefaultHelp() Option {
 	})
 }
 
+// HelpOnEmptyArgs configures Kong to print help and exit with status 0 when Parse
+// is called with no arguments, rather than reporting a missing command or argument.
+func HelpOnEmptyArgs() Option {
+	return OptionFunc(func(k *Kong) error {
+		k.helpOnEmptyArgs = true
+		return nil
+	})
+}
+
 // PostBuild provides read/write access to kong.Kong after initial construction of the model is complete but before
 // parsing occurs.
 //
