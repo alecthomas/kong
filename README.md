@@ -13,7 +13,7 @@
 - [Command handling](#command-handling)
   - [Switch on the command string](#switch-on-the-command-string)
   - [Attach a `Run(...) error` method to each command](#attach-a-run-error-method-to-each-command)
-- [Hooks: BeforeReset(), BeforeResolve(), BeforeApply(), AfterApply()](#hooks-beforereset-beforeresolve-beforeapply-afterapply)
+- [Hooks: BeforeReset(), BeforeResolve(), BeforeApply(), AfterApply(), AfterRun()](#hooks-beforereset-beforeresolve-beforeapply-afterapply-afterrun)
 - [The Bind() option](#the-bind-option)
 - [Flags](#flags)
 - [Commands and sub-commands](#commands-and-sub-commands)
