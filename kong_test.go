@@ -1476,6 +1476,27 @@ func TestXorRequiredMany(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --one or --two or --three")
 }
 
+func TestAndRequiredFlagInRequiredAndOptionalGroups(t *testing.T) {
+	// A flag that belongs to a required group and a non-required group
+	// must stay required regardless of the group order in its tag.
+	t.Run("RequiredGroupFirst", func(t *testing.T) {
+		var cli struct {
+			A bool `and:"g1,g2"`
+			B bool `and:"g1" required:""`
+		}
+		_, err := mustNew(t, &cli).Parse([]string{})
+		assert.EqualError(t, err, "missing flags: --a and --b")
+	})
+	t.Run("RequiredGroupLast", func(t *testing.T) {
+		var cli struct {
+			A bool `and:"g2,g1"`
+			B bool `and:"g1" required:""`
+		}
+		_, err := mustNew(t, &cli).Parse([]string{})
+		assert.EqualError(t, err, "missing flags: --a and --b")
+	})
+}
+
 func TestAndRequiredMany(t *testing.T) {
 	var cli struct {
 		One   bool `and:"one" required:""`
