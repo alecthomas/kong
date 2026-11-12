@@ -449,6 +449,30 @@ func TestNegatableFlag(t *testing.T) {
 			expectedFlag:   true,
 			expectedCustom: true,
 		},
+		{
+			name:           "negated then positive boolean flag",
+			args:           []string{"cmd", "--no-flag", "--flag"},
+			expectedFlag:   true,
+			expectedCustom: true,
+		},
+		{
+			name:           "positive then negated boolean flag",
+			args:           []string{"cmd", "--flag", "--no-flag"},
+			expectedFlag:   false,
+			expectedCustom: true,
+		},
+		{
+			name:           "custom negated then positive boolean flag",
+			args:           []string{"cmd", "--standard", "--custom"},
+			expectedFlag:   true,
+			expectedCustom: true,
+		},
+		{
+			name:           "custom positive then negated boolean flag",
+			args:           []string{"cmd", "--custom", "--standard"},
+			expectedFlag:   true,
+			expectedCustom: false,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
