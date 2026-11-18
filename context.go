@@ -1071,7 +1071,9 @@ func checkMissingFlags(flags []*Flag) error {
 	andGroupRequired := getRequiredAndGroupMap(flags)
 	for _, flag := range flags {
 		for _, and := range flag.And {
-			flag.Required = andGroupRequired[and]
+			if andGroupRequired[and] {
+				flag.Required = true
+			}
 		}
 		groups := flagChoiceGroups(flag)
 		if flag.Set {

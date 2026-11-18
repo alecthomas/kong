@@ -1457,6 +1457,28 @@ func TestAndRequired(t *testing.T) {
 	assert.EqualError(t, err, "missing flags: --four, --one and --three, --one and --two")
 }
 
+func TestAndRequiredAcrossMultipleGroups(t *testing.T) {
+	var lastGroupRequired struct {
+		A bool `and:"g1,g2"`
+		B bool `and:"g1" required:""`
+	}
+	p := mustNew(t, &lastGroupRequired)
+	_, err := p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --a and --b")
+
+	var firstGroupRequired struct {
+		A bool `and:"g2,g1"`
+		B bool `and:"g1" required:""`
+	}
+	p = mustNew(t, &firstGroupRequired)
+	_, err = p.Parse([]string{})
+	assert.EqualError(t, err, "missing flags: --a and --b")
+
+	p = mustNew(t, &lastGroupRequired)
+	_, err = p.Parse([]string{"--a", "--b"})
+	assert.NoError(t, err)
+}
+
 func TestXorRequiredMany(t *testing.T) {
 	var cli struct {
 		One   bool `xor:"one" required:""`
