@@ -337,6 +337,8 @@ func durationDecoder() MapperFunc {
 		}
 		var d time.Duration
 		switch v := t.Value.(type) {
+		case time.Duration:
+			d = v
 		case string:
 			d, err = time.ParseDuration(v)
 			if err != nil {
