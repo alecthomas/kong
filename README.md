@@ -454,7 +454,13 @@ to that slice.
 
 ## Slices
 
-Slice values are treated specially. First the input is split on the `sep:"<rune>"` tag (defaults to `,`), then each element is parsed by the slice element type and appended to the slice. If the same value is encountered multiple times, elements continue to be appended.
+Kong splits slice flag values and the `default` and `env` values of positional
+slices using the `sep:"<rune>"` tag (comma by default). Use `sep:"none"` to
+disable splitting. Kong parses each part using the slice element type and
+appends it to the slice. Repeating a flag appends more elements.
+
+Each positional command-line argument supplies one slice element, including
+arguments containing the configured separator.
 
 To represent the following command-line:
 
