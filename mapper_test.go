@@ -138,6 +138,22 @@ func TestDurationMapperJSONResolver(t *testing.T) {
 	assert.Equal(t, time.Second*5, cli.Flag)
 }
 
+func TestDurationMapperTypedResolver(t *testing.T) {
+	var cli struct {
+		Delay time.Duration
+	}
+	resolver := kong.ResolverFunc(func(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, error) {
+		if flag.Name == "delay" {
+			return 250 * time.Millisecond, nil
+		}
+		return nil, nil
+	})
+	k := mustNew(t, &cli, kong.Resolvers(resolver))
+	_, err := k.Parse(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 250*time.Millisecond, cli.Delay)
+}
+
 func TestSplitEscaped(t *testing.T) {
 	assert.Equal(t, []string{"a", "b"}, kong.SplitEscaped("a,b", ','))
 	assert.Equal(t, []string{"a,b", "c"}, kong.SplitEscaped(`a\,b,c`, ','))
