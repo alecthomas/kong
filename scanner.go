@@ -171,7 +171,7 @@ func (e *expectedError) Error() string {
 // "context" is used to assist the user if the value can not be popped, eg. "expected <context> value but got <type>"
 func (s *Scanner) PopValue(context string) (Token, error) {
 	t := s.Pop()
-	if !s.allowHyphenated && !t.IsValue() {
+	if t.IsEOL() || (!s.allowHyphenated && !t.IsValue()) {
 		return t, &expectedError{context, t}
 	}
 	return t, nil
