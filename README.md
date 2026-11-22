@@ -365,24 +365,27 @@ type CLI struct {
   Ls LsCmd `cmd:"" help:"List paths."`
 }
 
+type RmCmd struct{}
+type LsCmd struct{}
+
 type AuthorName string
 
-// ...
 func (l *LsCmd) Run(cli *CLI) error {
-// use cli.Debug here !!
+  // Use cli.Debug here.
   return nil
 }
 
-func (r *RmCmd) Run(author AuthorName) error{
-// use binded author here
+func (r *RmCmd) Run(author AuthorName) error {
+  // Use the bound author here.
   return nil
 }
 
 func main() {
   var cli CLI
-  
-  ctx := kong.Parse(&cli, Bind(AuthorName("penguin")))
-  err := ctx.Run()
+
+  ctx := kong.Parse(&cli, kong.Bind(AuthorName("penguin")))
+  ctx.FatalIfErrorf(ctx.Run())
+}
 ```
 
 ## Flags
