@@ -74,6 +74,8 @@ type Kong struct {
 	dynamicCommands  []*dynamicCommand
 
 	hooks map[string][]reflect.Value
+
+	envOverridesConfiguration bool
 }
 
 // New creates a new Kong parser on grammar.
@@ -507,4 +509,18 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	defer r.Close()
 
 	return k.loader(r)
+}
+
+// configurationResolver marks a Resolver loaded via Configuration or ConfigFlag.
+type configurationResolver struct {
+	Resolver
+}
+
+// loadConfiguration is LoadConfig, but marks the Resolver as a configuration file.
+func (k *Kong) loadConfiguration(path string) (Resolver, error) {
+	resolver, err := k.LoadConfig(path)
+	if err != nil || resolver == nil {
+		return resolver, err
+	}
+	return configurationResolver{resolver}, nil
 }

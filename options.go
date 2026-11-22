@@ -446,6 +446,19 @@ func IgnoreFields(regexes ...string) Option {
 	})
 }
 
+// EnvOverridesConfiguration gives values from `env` tags precedence over
+// values from configuration files loaded via Configuration or ConfigFlag.
+//
+// By default the precedence is flag > configuration > env > default. With
+// this option it becomes flag > env > configuration > default. Other resolvers
+// are not affected.
+func EnvOverridesConfiguration() Option {
+	return OptionFunc(func(k *Kong) error {
+		k.envOverridesConfiguration = true
+		return nil
+	})
+}
+
 // ConfigurationLoader is a function that builds a resolver from a file.
 type ConfigurationLoader func(r io.Reader) (Resolver, error)
 
@@ -470,7 +483,7 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 			}
 			f.Close()
 
-			resolver, err := k.LoadConfig(path)
+			resolver, err := k.loadConfiguration(path)
 			if err != nil {
 				return fmt.Errorf("%s: %v", path, err)
 			}
