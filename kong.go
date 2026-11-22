@@ -416,7 +416,9 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 			if ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
 				continue
 			}
-			if !flag.HasDefault && !atLeastOneEnvSet(flag.Tag.Envs) {
+			// Env vars are applied by Reset(), so they cannot trigger hooks that run before it.
+			envSet := name != "BeforeReset" && atLeastOneEnvSet(flag.Tag.Envs)
+			if !flag.HasDefault && !envSet {
 				continue
 			}
 			for _, method := range getMethods(flag.Target, name) {

@@ -3268,6 +3268,37 @@ func TestAfterApplyFiresForEnvOnlyFlag(t *testing.T) {
 	assert.True(t, cli.Field.called, "AfterApply should fire for env-only flags")
 }
 
+// Regression for #680: a VersionFlag whose env var is set to any value
+// (even "false", "0" or empty) used to print the version and exit,
+// because applyHookToDefaultFlags treated the env var as set for
+// BeforeReset hooks, which run before Reset() applies env values.
+func TestVersionFlagEnvVarDoesNotTrigger(t *testing.T) {
+	type CLI struct {
+		Version kong.VersionFlag
+		Cmd     struct{} `cmd:""`
+	}
+	for _, value := range []string{"false", "0"} {
+		t.Run("APP_VERSION="+value, func(t *testing.T) {
+			var cli CLI
+			t.Setenv("APP_VERSION", value)
+			ctx, err := mustNew(t, &cli, kong.DefaultEnvars("APP"), kong.Vars{"version": "1.2.3"}).Parse([]string{"cmd"})
+			assert.NoError(t, err)
+			assert.Equal(t, "cmd", ctx.Command())
+		})
+	}
+	// Non-bool values are a parse error, as in v1.15.0 — but they must
+	// not print the version and exit 0.
+	for _, value := range []string{"", "1.2.3"} {
+		t.Run("APP_VERSION="+value, func(t *testing.T) {
+			var cli CLI
+			t.Setenv("APP_VERSION", value)
+			_, err := mustNew(t, &cli, kong.DefaultEnvars("APP"), kong.Vars{"version": "1.2.3"}).Parse([]string{"cmd"})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "bool value")
+		})
+	}
+}
+
 func TestCustomTypeNoEllipsis(t *testing.T) {
 	type CLI struct {
 		Flag []byte `type:"existingfile"`
