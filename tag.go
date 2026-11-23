@@ -233,8 +233,8 @@ func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 		return nil, err
 	}
 	for key, value := range fieldItems {
-		// Prepend field tag values
-		items[key] = append(value, items[key]...)
+		// A key set on the field replaces the signature's values for that key, rather than adding to them.
+		items[key] = value
 	}
 
 	t := &Tag{
