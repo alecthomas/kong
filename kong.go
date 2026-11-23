@@ -58,6 +58,7 @@ type Kong struct {
 
 	noDefaultHelp   bool
 	allowHyphenated bool
+	noRepeatedFlags bool
 	usageOnError    usageOnError
 	help            HelpPrinter
 	shortHelp       HelpPrinter
