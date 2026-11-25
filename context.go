@@ -1263,7 +1263,7 @@ func checkXorDuplicates(paths []*Path) error {
 	for _, path := range paths {
 		seen := map[string]*Flag{}
 		for _, flag := range path.Flags {
-			if !flag.Set {
+			if !flag.Set || flag.defaulted {
 				continue
 			}
 			for _, xor := range flag.Xor {

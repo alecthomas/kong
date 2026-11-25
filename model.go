@@ -269,6 +269,7 @@ type Value struct {
 	Target          reflect.Value
 	Required        bool
 	Set             bool            // Set to true when this value is set through some mechanism.
+	defaulted       bool            // True when the current value comes from the "default" tag rather than argv, an envar or a resolver.
 	Format          string          // Formatting directive, if applicable.
 	Position        int             // Position (for positional arguments).
 	Passthrough     bool            // Deprecated: Use PassthroughMode instead. Set to true to stop flag parsing when encountered.
@@ -377,6 +378,7 @@ func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 func (v *Value) Apply(value reflect.Value) {
 	v.Target.Set(value)
 	v.Set = true
+	v.defaulted = false
 }
 
 // ApplyDefault value to field if it is not already set.
@@ -393,6 +395,7 @@ func (v *Value) ApplyDefault() error {
 //
 // Does not include resolvers.
 func (v *Value) Reset() error {
+	v.defaulted = false
 	v.Target.Set(reflect.Zero(v.Target.Type()))
 	if len(v.Tag.Envs) != 0 {
 		for _, env := range v.Tag.Envs {
@@ -408,7 +411,11 @@ func (v *Value) Reset() error {
 		}
 	}
 	if v.HasDefault {
-		return v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
+		err := v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
+		if err != nil {
+			return err
+		}
+		v.defaulted = true
 	}
 	return nil
 }

@@ -3371,3 +3371,23 @@ func TestParseHyphenParameter(t *testing.T) {
 		assert.Equal(t, &shortFlag{Numeric: -10}, actual)
 	})
 }
+
+func TestXorEnumDefaultDoesNotConflict(t *testing.T) {
+	var cli struct {
+		One string `xor:"a" default:"None" enum:"A,B,C,None"`
+		Two bool   `xor:"a"`
+	}
+	p := mustNew(t, &cli)
+	_, err := p.Parse([]string{"--two"})
+	assert.NoError(t, err)
+	assert.Equal(t, "None", cli.One)
+
+	// Explicitly passing both flags of the group must still fail.
+	var cli2 struct {
+		One string `xor:"a" default:"None" enum:"A,B,C,None"`
+		Two bool   `xor:"a"`
+	}
+	p = mustNew(t, &cli2)
+	_, err = p.Parse([]string{"--two", "--one", "A"})
+	assert.EqualError(t, err, "--one and --two can't be used together")
+}
