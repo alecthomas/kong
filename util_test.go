@@ -43,6 +43,33 @@ func TestVersionFlag(t *testing.T) {
 	assert.Equal(t, 0, called)
 }
 
+func TestVersionFlagEnvVarDoesNotPrintVersion(t *testing.T) {
+	for _, value := range []string{"false", "0", "", "1.2.3", "true"} {
+		t.Run("value="+value, func(t *testing.T) {
+			var cli struct {
+				Version VersionFlag
+				Cmd     struct{} `cmd:""`
+			}
+			w := &strings.Builder{}
+			p := Must(&cli, Vars{"version": "0.1.1"}, DefaultEnvars("APP"))
+			p.Stdout = w
+			called := -1
+			p.Exit = func(s int) { called = s }
+
+			t.Setenv("APP_VERSION", value)
+			_, err := p.Parse([]string{"cmd"})
+			if value == "false" || value == "0" || value == "true" {
+				assert.NoError(t, err)
+			} else {
+				// A non-bool value is a parse error, not a version printout.
+				assert.Error(t, err)
+			}
+			assert.Equal(t, "", w.String())
+			assert.Equal(t, -1, called)
+		})
+	}
+}
+
 func TestChangeDirFlag(t *testing.T) {
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
