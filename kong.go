@@ -382,6 +382,14 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 			}
 		}
 	}
+	// BeforeReset runs before ctx.Reset() applies default and env var values
+	// to flag targets, so flags that only have a value through one of those
+	// cannot participate in it: their target still holds the zero value, and
+	// firing the hook merely because the env var exists is wrong (e.g.
+	// VersionFlag printing the version for APP_VERSION=false).
+	if name == "BeforeReset" {
+		return nil
+	}
 	// Path[0] will always be the app root.
 	return k.applyHookToDefaultFlags(ctx, ctx.Path[0].Node(), name)
 }
