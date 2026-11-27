@@ -392,7 +392,9 @@ func (v *Value) ApplyDefault() error {
 // or its "default" tag.
 //
 // Does not include resolvers.
-func (v *Value) Reset() error {
+func (v *Value) Reset() error { return v.reset(false) }
+
+func (v *Value) reset(skipDefaults bool) error {
 	v.Target.Set(reflect.Zero(v.Target.Type()))
 	if len(v.Tag.Envs) != 0 {
 		for _, env := range v.Tag.Envs {
@@ -407,7 +409,7 @@ func (v *Value) Reset() error {
 			}
 		}
 	}
-	if v.HasDefault {
+	if v.HasDefault && !skipDefaults {
 		return v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: v.Default}), v.Target)
 	}
 	return nil
