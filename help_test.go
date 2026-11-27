@@ -985,3 +985,15 @@ Flags:
 	t.Log(w.String())
 	assert.Equal(t, expected, w.String())
 }
+
+func TestHelpPassthroughArgsFlagsPosition(t *testing.T) {
+	var cli struct {
+		Flag string
+		Args []string `arg:"" optional:"" passthrough:""`
+	}
+	w := &strings.Builder{}
+	p := mustNew(t, &cli, kong.Writers(w, w), kong.Exit(func(int) {}))
+	_, err := p.Parse([]string{"--help"})
+	assert.NoError(t, err)
+	assert.Contains(t, w.String(), "Usage: test [flags] [<args> ...]")
+}
