@@ -67,3 +67,9 @@ func TestChangeDirFlag(t *testing.T) {
 	}
 	assert.Equal(t, file, cli.Path)
 }
+
+func TestCamelize(t *testing.T) {
+	assert.Equal(t, "withCamelCase", camelize("with_camel_case"))
+	assert.Equal(t, "seviyeÖzellik", camelize("seviye_özellik"))
+	assert.Equal(t, "alreadyCamel", camelize("alreadyCamel"))
+}
