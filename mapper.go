@@ -879,27 +879,27 @@ func SplitEscaped(s string, sep rune) (out []string) {
 		return []string{s}
 	}
 	escaped := false
-	token := ""
+	var token strings.Builder
 	for i, ch := range s {
 		switch {
 		case escaped:
 			if ch != sep {
-				token += `\`
+				token.WriteByte('\\')
 			}
-			token += string(ch)
+			token.WriteRune(ch)
 			escaped = false
 		case ch == '\\' && i < len(s)-1:
 			escaped = true
 		case ch == sep && !escaped:
-			out = append(out, token)
-			token = ""
+			out = append(out, token.String())
+			token.Reset()
 			escaped = false
 		default:
-			token += string(ch)
+			token.WriteRune(ch)
 		}
 	}
-	if token != "" {
-		out = append(out, token)
+	if token.Len() != 0 {
+		out = append(out, token.String())
 	}
 	return
 }
